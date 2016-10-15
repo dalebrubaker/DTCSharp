@@ -1,4 +1,5 @@
 ﻿// This file scraped from http://dtcprotocol.org/DTC_Files/DTCProtocol.3.proto on 10/15/2016
+// PriceDisplayFormatEnum values changed to fix error: "The first enum value must be zero in proto3"
 syntax = "proto3";
 
 package DTC_PB;
@@ -297,18 +298,18 @@ enum MarketDataFeedStatusEnum
 //============================================================================
 enum PriceDisplayFormatEnum
 {
-  PRICE_DISPLAY_FORMAT_UNSET =  -1;
+  PRICE_DISPLAY_FORMAT_UNSET =  0;
 //The following formats indicate the number of decimal places to be displayed
-  PRICE_DISPLAY_FORMAT_DECIMAL_0 = 0;
-  PRICE_DISPLAY_FORMAT_DECIMAL_1 = 1;
-  PRICE_DISPLAY_FORMAT_DECIMAL_2 = 2;
-  PRICE_DISPLAY_FORMAT_DECIMAL_3 = 3;
-  PRICE_DISPLAY_FORMAT_DECIMAL_4 = 4;
-  PRICE_DISPLAY_FORMAT_DECIMAL_5 = 5;
-  PRICE_DISPLAY_FORMAT_DECIMAL_6 = 6;
-  PRICE_DISPLAY_FORMAT_DECIMAL_7 = 7;
-  PRICE_DISPLAY_FORMAT_DECIMAL_8 = 8;
-  PRICE_DISPLAY_FORMAT_DECIMAL_9 = 9;
+  PRICE_DISPLAY_FORMAT_DECIMAL_0 = 10;
+  PRICE_DISPLAY_FORMAT_DECIMAL_1 = 11;
+  PRICE_DISPLAY_FORMAT_DECIMAL_2 = 12;
+  PRICE_DISPLAY_FORMAT_DECIMAL_3 = 13;
+  PRICE_DISPLAY_FORMAT_DECIMAL_4 = 14;
+  PRICE_DISPLAY_FORMAT_DECIMAL_5 = 15;
+  PRICE_DISPLAY_FORMAT_DECIMAL_6 = 16;
+  PRICE_DISPLAY_FORMAT_DECIMAL_7 = 17;
+  PRICE_DISPLAY_FORMAT_DECIMAL_8 = 18;
+  PRICE_DISPLAY_FORMAT_DECIMAL_9 = 19;
 //The following formats are fractional formats
   PRICE_DISPLAY_FORMAT_DENOMINATOR_256 = 356;
   PRICE_DISPLAY_FORMAT_DENOMINATOR_128 = 228;
