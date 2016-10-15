@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using DTCCommon;
 using DTCPB;
 using Timer = System.Timers.Timer;
 
@@ -19,12 +20,10 @@ namespace DTCClient
         private readonly int _port;
         private readonly Timer _heartbeatTimer;
         private bool _isDisposed;
-        private TcpClient _tcpClient;
-        private StreamWriter _streamWriter;
-        private StreamReader _streamReader;
         private CancellationToken _cancellationToken;
         private BinaryReader _binaryReader;
         private BinaryWriter _binaryWriter;
+        private TcpClient _tcpClient;
         private const int HeartbeatInterval = 60 * 1000; // 1 minute in milliseconds
 
         public Client(string server, int port)
@@ -48,20 +47,61 @@ namespace DTCClient
         /// To Disconnect simply Dispose() of this class.
         /// </summary>
         /// <param name="cancellationToken">optional token to stop receiving messages</param>
-        /// <returns></returns>
-        public async Task Connect(CancellationToken cancellationToken = default(CancellationToken))
+        /// <returns><c>true</c> if successful. <c>false</c> means protocol buffers are not supported by server</returns>
+        public async Task<bool> Connect(CancellationToken cancellationToken = default(CancellationToken))
         {
             _cancellationToken = cancellationToken;
             _tcpClient = new TcpClient();
             await _tcpClient.ConnectAsync(_server, _port); // connect to the server
-
             NetworkStream networkStream = _tcpClient.GetStream();
-            _streamWriter = new StreamWriter(networkStream) {AutoFlush = true};
-            _streamReader = new StreamReader(networkStream);
             _binaryReader = new BinaryReader(networkStream);
             _binaryWriter = new BinaryWriter(networkStream);
+            if (!IsProtobufSupported())
+            {
+                return false;
+            }
             _heartbeatTimer.Start();
             await Task.Run(() => MessageReader(), _cancellationToken);
+            return true;
+        }
+
+        /// <summary>
+        /// Do the up-front binary-encoded request/response per 
+        /// </summary>
+        /// <returns><c>true</c> if the server can support protobuf encoding</returns>
+        private bool IsProtobufSupported()
+        {
+            var size = 2 + 2 + 4 + 4 + 3 + 1;
+            _binaryWriter.Write((short)size);
+            _binaryWriter.Write((short)DTCMessageType.EncodingRequest); // enum size is 4
+            _binaryWriter.Write((int)DTCVersion.CurrentVersion);
+            _binaryWriter.Write((int)EncodingEnum.ProtocolBuffers);
+            _binaryWriter.Write("DTC"); // 3 chars plus null terminator
+
+            var sizeReceived = _binaryReader.ReadInt16();
+            if (sizeReceived != size)
+            {
+                throw new ArgumentException("Unexpected size mismatch");
+            }
+            var typeReceived = (DTCMessageType)_binaryReader.ReadInt16();
+            if (typeReceived != DTCMessageType.EncodingResponse)
+            {
+                throw new InvalidDataException("Unexpected message type");
+            }
+            var protocolVersion = _binaryReader.ReadInt32();
+            var encoding = (EncodingEnum)_binaryReader.ReadInt32();
+            if (encoding != EncodingEnum.ProtocolBuffers)
+            {
+                // server can't support it
+                return false;
+            }
+            var protocolType = _binaryReader.ReadChars(3);
+            return true;
+        }
+
+        public async Task Logon()
+        {
+            
         }
 
         public void Dispose()
@@ -74,8 +114,8 @@ namespace DTCClient
         {
             if (disposing && !_isDisposed)
             {
-                _streamWriter.Dispose();
-                _streamReader.Dispose();
+                _binaryReader.Dispose();
+                _binaryWriter.Dispose();
                 _tcpClient.Dispose();
                 _heartbeatTimer.Dispose();
                 _isDisposed = true;
@@ -114,15 +154,23 @@ namespace DTCClient
                     case DTCMessageType.LogonRequest:
                         throw new NotImplementedException("Not expected client-side");
                     case DTCMessageType.LogonResponse:
+                        var logonResponse = LogonResponse.Parser.ParseFrom(bytes);
+                        var tempLogonReponseEvent = LogonReponseEvent; // for thread safety
+                        tempLogonReponseEvent?.Invoke(this, new EventArgs<LogonResponse>(logonResponse));
                         break;
                     case DTCMessageType.Heartbeat:
                         break;
                     case DTCMessageType.Logoff:
                         throw new NotImplementedException("Not expected client-side");
                     case DTCMessageType.EncodingRequest:
-                        break;
+                        throw new NotImplementedException("Not expected client-side");
                     case DTCMessageType.EncodingResponse:
-                        break;
+                        // Note that we must use binary encoding here, per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
+                        throw new NotImplementedException("We only do at Connect, using binary encoding");
+                        //var encodingReponse = EncodingResponse.Parser.ParseFrom(bytes);
+                        //var tempEncodingReponseEvent = EncodingReponseEvent; // for thread safety
+                        //tempEncodingReponseEvent?.Invoke(this, new EventArgs<EncodingResponse>(encodingReponse));
+                        //break;
                     case DTCMessageType.MarketDataRequest:
                         break;
                     case DTCMessageType.MarketDataReject:
@@ -276,5 +324,9 @@ namespace DTCClient
 
             }
         }
+
+        //public event EventHandler<EventArgs<EncodingResponse>> EncodingReponseEvent;
+        public event EventHandler<EventArgs<LogonResponse>> LogonReponseEvent;
+
     }
 }

@@ -79,6 +79,16 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DTCClient\DTCClient.csproj">
+      <Project>{5eac8139-46c7-4573-bf60-4010633d2628}</Project>
+      <Name>DTCClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\DTCCommon\DTCCommon.csproj">
+      <Project>{aaed8291-2b78-4048-89dd-e866f4a23ae3}</Project>
+      <Name>DTCCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
