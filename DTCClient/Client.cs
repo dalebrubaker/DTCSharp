@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,11 +11,12 @@ using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
 using DTCPB;
+using Google.Protobuf;
 using Timer = System.Timers.Timer;
 
 namespace DTCClient
 {
-    public class Client : IDisposable
+    public sealed partial class Client : IDisposable
     {
         private readonly string _server;
         private readonly int _port;
@@ -24,7 +26,8 @@ namespace DTCClient
         private BinaryReader _binaryReader;
         private BinaryWriter _binaryWriter;
         private TcpClient _tcpClient;
-        private const int HeartbeatInterval = 60 * 1000; // 1 minute in milliseconds
+        private const int HeartbeatInterval = 10 * 1000; // 1 minute in milliseconds
+        private DateTime _lastHeartbeatReceivedTime;
 
         public Client(string server, int port)
         {
@@ -37,7 +40,8 @@ namespace DTCClient
         private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
             // Send a heartbeat to the server
-            throw new NotImplementedException();
+            var heartBeat = new Heartbeat();
+            SendMessage(DTCMessageType.Heartbeat, heartBeat.ToByteArray());
         }
 
         /// <summary>
@@ -48,7 +52,7 @@ namespace DTCClient
         /// </summary>
         /// <param name="cancellationToken">optional token to stop receiving messages</param>
         /// <returns><c>true</c> if successful. <c>false</c> means protocol buffers are not supported by server</returns>
-        public async Task<bool> Connect(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             _cancellationToken = cancellationToken;
             _tcpClient = new TcpClient();
@@ -60,8 +64,12 @@ namespace DTCClient
             {
                 return false;
             }
+            _lastHeartbeatReceivedTime = DateTime.Now;
             _heartbeatTimer.Start();
-            await Task.Run(() => MessageReader(), _cancellationToken);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            // Fire and forget
+            Task.Run(() => MessageReader(), _cancellationToken);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             return true;
         }
 
@@ -99,9 +107,39 @@ namespace DTCClient
             return true;
         }
 
-        public async Task Logon()
+        /// <summary>
+        /// Logon
+        /// </summary>
+        /// <param name="heartbeatIntervalInSeconds">The interval in seconds that each side, the Client and the Server, needs to use to send HEARTBEAT messages to the other side. This should be a value from anywhere from 5 to 60 seconds.</param>
+        /// <param name="userName">Optional username for the server to authenticate the Client</param>
+        /// <param name="password">Optional password for the server to authenticate the Client</param>
+        /// <param name="generalTextData">Optional general-purpose text string. For example, this could be used to pass a license key that the Server may require</param>
+        /// <param name="integer1">Optional. General-purpose integer</param>
+        /// <param name="integer2">Optional. General-purpose integer</param>
+        /// <param name="tradeMode">optional to indicate to the Server that the requested trading mode to be one of the following: Demo, Simulated, Live.</param>
+        /// <param name="tradeAccount">optional identifier if that is required to login</param>
+        /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
+        /// <param name="clientName">optional</param>
+        /// <returns></returns>
+        public async Task LogonAsync(int heartbeatIntervalInSeconds, string clientName = "", string userName = "", string password = "", string generalTextData = "",
+            int integer1 = 0, int integer2 = 0,
+            TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", string hardwareIdentifier = "")
         {
-            
+            _heartbeatTimer.Interval = heartbeatIntervalInSeconds * 1000;
+            var logonRequest = new LogonRequest
+            {
+                ClientName = clientName,
+                GeneralTextData = generalTextData,
+                HardwareIdentifier = hardwareIdentifier,
+                HeartbeatIntervalInSeconds = heartbeatIntervalInSeconds,
+                Integer1 = integer1,
+                Integer2 = integer2,
+                Password = password,
+                ProtocolVersion = (int)DTCVersion.CurrentVersion,
+                TradeAccount = tradeAccount,
+                TradeMode = tradeMode
+            };
+            SendMessage(DTCMessageType.LogonRequest, logonRequest.ToByteArray());
         }
 
         public void Dispose()
@@ -130,10 +168,12 @@ namespace DTCClient
         private void SendMessage(DTCMessageType type, byte[] bytes)
         {
             // Write header
-            _binaryWriter.Write(bytes.Length);
+            _binaryWriter.Write((short)bytes.Length);
             _binaryWriter.Write((short)type);
-
-            _binaryWriter.Write(bytes);
+            if (bytes.Length > 0)
+            {
+                _binaryWriter.Write(bytes);
+            }
         }
 
         /// <summary>
@@ -144,7 +184,16 @@ namespace DTCClient
             while (!_cancellationToken.IsCancellationRequested)
             {
                 // Read the header
-                var size = _binaryReader.ReadInt16();
+                int size;
+                try
+                {
+                    size = _binaryReader.ReadInt16();
+                }
+                catch (Exception ex)
+                {
+                    
+                    throw;
+                }
                 var type = (DTCMessageType)_binaryReader.ReadInt16();
                 var bytes = _binaryReader.ReadBytes(size);
                 switch (type)
@@ -159,6 +208,7 @@ namespace DTCClient
                         tempLogonReponseEvent?.Invoke(this, new EventArgs<LogonResponse>(logonResponse));
                         break;
                     case DTCMessageType.Heartbeat:
+                        _lastHeartbeatReceivedTime = DateTime.Now;
                         break;
                     case DTCMessageType.Logoff:
                         throw new NotImplementedException("Not expected client-side");
@@ -318,15 +368,101 @@ namespace DTCClient
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
-
-                // Now read the message
-                //string request = _streamReader.ReadBlock();
-
             }
         }
 
         //public event EventHandler<EventArgs<EncodingResponse>> EncodingReponseEvent;
         public event EventHandler<EventArgs<LogonResponse>> LogonReponseEvent;
 
+    }
+
+    // from http://stackoverflow.com/questions/20694062/can-a-tcp-c-sharp-client-receive-and-send-continuously-consecutively-without-sle
+
+    class Receiver
+    {
+        internal event EventHandler<DataReceivedEventArgs> DataReceived;
+
+        internal Receiver(NetworkStream stream)
+        {
+            _stream = stream;
+            _thread = new Thread(Run);
+            _thread.Start();
+        }
+
+        private void Run()
+        {
+            try
+            {
+                // ShutdownEvent is a ManualResetEvent signaled by
+                // Client when its time to close the socket.
+                while (!ShutdownEvent.WaitOne(0))
+                {
+                    try
+                    {
+                        // We could use the ReadTimeout property and let Read()
+                        // block.  However, if no data is received prior to the
+                        // timeout period expiring, an IOException occurs.
+                        // While this can be handled, it leads to problems when
+                        // debugging if we are wanting to break when exceptions
+                        // are thrown (unless we explicitly ignore IOException,
+                        // which I always forget to do).
+                        if (!_stream.DataAvailable)
+                        {
+                            // Give up the remaining time slice.
+                            Thread.Sleep(1);
+                        }
+                        else if (_stream.Read(_data, 0, _data.Length) > 0)
+                        {
+                            // Raise the DataReceived event w/ data...
+                        }
+                        else
+                        {
+                            // The connection has closed gracefully, so stop the
+                            // thread.
+                            ShutdownEvent.Set();
+                        }
+                    }
+                    catch (IOException ex)
+                    {
+                        // Handle the exception...
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle the exception...
+            }
+            finally
+            {
+                _stream.Close();
+            }
+        }
+
+        private NetworkStream _stream;
+        private Thread _thread;
+    }
+
+
+    class Sender
+    {
+        internal void SendData(byte[] data)
+        {
+            // transition the data to the thread and send it...
+        }
+
+        internal Sender(NetworkStream stream)
+        {
+            _stream = stream;
+            _thread = new Thread(Run);
+            _thread.Start();
+        }
+
+        private void Run()
+        {
+            // main thread loop for sending data...
+        }
+
+        private NetworkStream _stream;
+        private Thread _thread;
     }
 }
