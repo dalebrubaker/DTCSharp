@@ -13,9 +13,13 @@ namespace DTCPB
 
         public DTCMessageType MessageType => DTCMessageType.EncodingRequest;
 
-        public void Write(BinaryWriter binaryWriter, EncodingEnum encodingEnum)
+        public void WriteBinary(BinaryWriter binaryWriter)
         {
-            
+            binaryWriter.Write(Size);
+            binaryWriter.Write((short)MessageType);
+            binaryWriter.Write(ProtocolVersion);
+            binaryWriter.Write((int)Encoding);
+            binaryWriter.Write(ProtocolType);
         }
     }
 }
