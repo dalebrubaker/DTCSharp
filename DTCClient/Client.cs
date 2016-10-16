@@ -16,7 +16,7 @@ using Timer = System.Timers.Timer;
 
 namespace DTCClient
 {
-    public sealed partial class Client : IDisposable
+    public partial class Client : IDisposable
     {
         private readonly string _server;
         private readonly int _port;
@@ -26,8 +26,10 @@ namespace DTCClient
         private BinaryReader _binaryReader;
         private BinaryWriter _binaryWriter;
         private TcpClient _tcpClient;
-        private const int HeartbeatInterval = 10 * 1000; // 1 minute in milliseconds
+        private const int HeartbeatInterval = 60 * 1000; // 1 minute in milliseconds
         private DateTime _lastHeartbeatReceivedTime;
+        private NetworkStream _networkStream;
+        private EncodingEnum _currentEncoding;
 
         public Client(string server, int port)
         {
@@ -35,6 +37,7 @@ namespace DTCClient
             _port = port;
             _heartbeatTimer = new Timer(HeartbeatInterval);
             _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
+            _currentEncoding = EncodingEnum.BinaryEncoding; // until we've set it to ProtocolBuffers
         }
 
         private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
@@ -56,20 +59,32 @@ namespace DTCClient
         {
             _cancellationToken = cancellationToken;
             _tcpClient = new TcpClient();
+            _tcpClient.NoDelay = true;
             await _tcpClient.ConnectAsync(_server, _port); // connect to the server
-            NetworkStream networkStream = _tcpClient.GetStream();
-            _binaryReader = new BinaryReader(networkStream);
-            _binaryWriter = new BinaryWriter(networkStream);
-            if (!IsProtobufSupported())
-            {
-                return false;
-            }
-            _lastHeartbeatReceivedTime = DateTime.Now;
-            _heartbeatTimer.Start();
+            _networkStream = _tcpClient.GetStream();
+
+
+            _binaryReader = new BinaryReader(_networkStream);
+            _binaryWriter = new BinaryWriter(_networkStream);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             // Fire and forget
-            Task.Run(() => MessageReader(), _cancellationToken);
+            Task.Run(MessageReader, _cancellationToken);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+
+            // Write encoding request with binary encoding
+            var size = 2 + 2 + 4 + 4 + 3 + 1; // 12
+            _binaryWriter.Write((short)size);
+            _binaryWriter.Write((short)DTCMessageType.EncodingRequest); // enum size is 4
+            _binaryWriter.Write((int)DTCVersion.CurrentVersion);
+            _binaryWriter.Write((int)EncodingEnum.ProtocolBuffers);
+            _binaryWriter.Write("DTC"); // 3 chars plus null terminator
+
+            //if (!await IsProtobufSupported())
+            //{
+            //    return false;
+            //}
+            _lastHeartbeatReceivedTime = DateTime.Now;
+            //_heartbeatTimer.Start();
             return true;
         }
 
@@ -77,14 +92,17 @@ namespace DTCClient
         /// Do the up-front binary-encoded request/response per 
         /// </summary>
         /// <returns><c>true</c> if the server can support protobuf encoding</returns>
-        private bool IsProtobufSupported()
+        private async Task<bool> IsProtobufSupported()
         {
-            var size = 2 + 2 + 4 + 4 + 3 + 1;
+            var size = 2 + 2 + 4 + 4 + 3 + 1; // 12
             _binaryWriter.Write((short)size);
             _binaryWriter.Write((short)DTCMessageType.EncodingRequest); // enum size is 4
             _binaryWriter.Write((int)DTCVersion.CurrentVersion);
             _binaryWriter.Write((int)EncodingEnum.ProtocolBuffers);
             _binaryWriter.Write("DTC"); // 3 chars plus null terminator
+
+            await Task.Delay(60000, _cancellationToken);
+
 
             var sizeReceived = _binaryReader.ReadInt16();
             if (sizeReceived != size)
@@ -96,14 +114,15 @@ namespace DTCClient
             {
                 throw new InvalidDataException("Unexpected message type");
             }
-            var protocolVersion = _binaryReader.ReadInt32();
-            var encoding = (EncodingEnum)_binaryReader.ReadInt32();
+            var bytes = _binaryReader.ReadBytes(size);
+            var protocolVersion = BitConverter.ToInt32(bytes, 0); //_binaryReader.ReadInt32();
+            var encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4); //_binaryReader.ReadInt32();
             if (encoding != EncodingEnum.ProtocolBuffers)
             {
                 // server can't support it
                 return false;
             }
-            var protocolType = _binaryReader.ReadChars(3);
+            var protocolType = System.Text.Encoding.Default.GetString(bytes, 8, 3); // BitConverter.ToString(bytes, 8); // _binaryReader.ReadChars(3);
             return true;
         }
 
@@ -139,7 +158,18 @@ namespace DTCClient
                 TradeAccount = tradeAccount,
                 TradeMode = tradeMode
             };
+
             SendMessage(DTCMessageType.LogonRequest, logonRequest.ToByteArray());
+
+            //// Read the logon response
+            //var size = _binaryReader.ReadInt16();
+            //var typeReceived = (DTCMessageType)_binaryReader.ReadInt16();
+            //if (typeReceived != DTCMessageType.LogonResponse)
+            //{
+            //    throw new InvalidDataException("Unexpected message type");
+            //}
+            //var bytes = _binaryReader.ReadBytes(size);
+            //var loginResponse = LogonResponse.Parser.ParseFrom(bytes);
         }
 
         public void Dispose()
@@ -179,10 +209,16 @@ namespace DTCClient
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
         /// </summary>
-        private void MessageReader()
+        private async Task MessageReader()
         {
             while (!_cancellationToken.IsCancellationRequested)
             {
+                if (!_networkStream.DataAvailable)
+                {
+                    await Task.Delay(1, _cancellationToken);
+                    continue;
+                }
+
                 // Read the header
                 int size;
                 try
@@ -195,7 +231,7 @@ namespace DTCClient
                     throw;
                 }
                 var type = (DTCMessageType)_binaryReader.ReadInt16();
-                var bytes = _binaryReader.ReadBytes(size);
+                var bytes = _binaryReader.ReadBytes(size - 4); // size included the header size+type
                 switch (type)
                 {
                     case DTCMessageType.MessageTypeUnset:
@@ -216,7 +252,19 @@ namespace DTCClient
                         throw new NotImplementedException("Not expected client-side");
                     case DTCMessageType.EncodingResponse:
                         // Note that we must use binary encoding here, per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
-                        throw new NotImplementedException("We only do at Connect, using binary encoding");
+                        if (_currentEncoding == EncodingEnum.BinaryEncoding)
+                        {
+                            var protocolVersion = BitConverter.ToInt32(bytes, 0); //_binaryReader.ReadInt32();
+                            _currentEncoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4); //_binaryReader.ReadInt32();
+                            if (_currentEncoding != EncodingEnum.ProtocolBuffers)
+                            {
+                                // server can't support it
+                                throw new NotImplementedException();
+                            }
+                            var protocolType = System.Text.Encoding.Default.GetString(bytes, 8, 3); // BitConverter.ToString(bytes, 8); // _binaryReader.ReadChars(3);
+
+                        }
+                        throw new NotImplementedException("Currently we only do at Connect, using binary encoding");
                         //var encodingReponse = EncodingResponse.Parser.ParseFrom(bytes);
                         //var tempEncodingReponseEvent = EncodingReponseEvent; // for thread safety
                         //tempEncodingReponseEvent?.Invoke(this, new EventArgs<EncodingResponse>(encodingReponse));
@@ -378,91 +426,91 @@ namespace DTCClient
 
     // from http://stackoverflow.com/questions/20694062/can-a-tcp-c-sharp-client-receive-and-send-continuously-consecutively-without-sle
 
-    class Receiver
-    {
-        internal event EventHandler<DataReceivedEventArgs> DataReceived;
+//    class Receiver
+//    {
+//        internal event EventHandler<DataReceivedEventArgs> DataReceived;
 
-        internal Receiver(NetworkStream stream)
-        {
-            _stream = stream;
-            _thread = new Thread(Run);
-            _thread.Start();
-        }
+//        internal Receiver(NetworkStream stream)
+//        {
+//            _stream = stream;
+//            _thread = new Thread(Run);
+//            _thread.Start();
+//        }
 
-        private void Run()
-        {
-            try
-            {
-                // ShutdownEvent is a ManualResetEvent signaled by
-                // Client when its time to close the socket.
-                while (!ShutdownEvent.WaitOne(0))
-                {
-                    try
-                    {
-                        // We could use the ReadTimeout property and let Read()
-                        // block.  However, if no data is received prior to the
-                        // timeout period expiring, an IOException occurs.
-                        // While this can be handled, it leads to problems when
-                        // debugging if we are wanting to break when exceptions
-                        // are thrown (unless we explicitly ignore IOException,
-                        // which I always forget to do).
-                        if (!_stream.DataAvailable)
-                        {
-                            // Give up the remaining time slice.
-                            Thread.Sleep(1);
-                        }
-                        else if (_stream.Read(_data, 0, _data.Length) > 0)
-                        {
-                            // Raise the DataReceived event w/ data...
-                        }
-                        else
-                        {
-                            // The connection has closed gracefully, so stop the
-                            // thread.
-                            ShutdownEvent.Set();
-                        }
-                    }
-                    catch (IOException ex)
-                    {
-                        // Handle the exception...
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // Handle the exception...
-            }
-            finally
-            {
-                _stream.Close();
-            }
-        }
+//        private void Run()
+//        {
+//            try
+//            {
+//                // ShutdownEvent is a ManualResetEvent signaled by
+//                // Client when its time to close the socket.
+//                while (!ShutdownEvent.WaitOne(0))
+//                {
+//                    try
+//                    {
+//                        // We could use the ReadTimeout property and let Read()
+//                        // block.  However, if no data is received prior to the
+//                        // timeout period expiring, an IOException occurs.
+//                        // While this can be handled, it leads to problems when
+//                        // debugging if we are wanting to break when exceptions
+//                        // are thrown (unless we explicitly ignore IOException,
+//                        // which I always forget to do).
+//                        if (!_stream.DataAvailable)
+//                        {
+//                            // Give up the remaining time slice.
+//                            Thread.Sleep(1);
+//                        }
+//                        else if (_stream.Read(_data, 0, _data.Length) > 0)
+//                        {
+//                            // Raise the DataReceived event w/ data...
+//                        }
+//                        else
+//                        {
+//                            // The connection has closed gracefully, so stop the
+//                            // thread.
+//                            ShutdownEvent.Set();
+//                        }
+//                    }
+//                    catch (IOException ex)
+//                    {
+//                        // Handle the exception...
+//                    }
+//                }
+//            }
+//            catch (Exception ex)
+//            {
+//                // Handle the exception...
+//            }
+//            finally
+//            {
+//                _stream.Close();
+//            }
+//        }
 
-        private NetworkStream _stream;
-        private Thread _thread;
-    }
+//        private NetworkStream _stream;
+//        private Thread _thread;
+//    }
 
 
-    class Sender
-    {
-        internal void SendData(byte[] data)
-        {
-            // transition the data to the thread and send it...
-        }
+//    class Sender
+//    {
+//        internal void SendData(byte[] data)
+//        {
+//            // transition the data to the thread and send it...
+//        }
 
-        internal Sender(NetworkStream stream)
-        {
-            _stream = stream;
-            _thread = new Thread(Run);
-            _thread.Start();
-        }
+//        internal Sender(NetworkStream stream)
+//        {
+//            _stream = stream;
+//            _thread = new Thread(Run);
+//            _thread.Start();
+//        }
 
-        private void Run()
-        {
-            // main thread loop for sending data...
-        }
+//        private void Run()
+//        {
+//            // main thread loop for sending data...
+//        }
 
-        private NetworkStream _stream;
-        private Thread _thread;
-    }
+//        private NetworkStream _stream;
+//        private Thread _thread;
+//    }
 }

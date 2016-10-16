@@ -50,8 +50,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Codecs\CodecProtobuf.cs" />
     <Compile Include="EventArgs.cs" />
     <Compile Include="Generated\DTCProtocol3.cs" />
+    <Compile Include="Partials\EncodingRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

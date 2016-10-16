@@ -37,7 +37,7 @@ namespace TestClient
             toolStripStatusLabel1.Text = connected ? "Connected" : "Disconnected";
             if (connected)
             {
-                await _client.LogonAsync(5, "TestClient");
+                await _client.LogonAsync(60, "TestClient");
             }
         }
 
