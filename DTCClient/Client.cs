@@ -72,6 +72,13 @@ namespace DTCClient
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             // Write encoding request with binary encoding
+            var encodingRequest = new EncodingRequest
+            {
+                Encoding = EncodingEnum.ProtocolBuffers,
+                ProtocolType = "DTC",
+                ProtocolVersion = (int)DTCVersion.CurrentVersion
+            };
+            encodingRequest.Write(_binaryWriter, _currentEncoding);
             var size = 2 + 2 + 4 + 4 + 3 + 1; // 12
             _binaryWriter.Write((short)size);
             _binaryWriter.Write((short)DTCMessageType.EncodingRequest); // enum size is 4

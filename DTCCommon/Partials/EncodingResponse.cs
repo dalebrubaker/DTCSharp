@@ -4,11 +4,11 @@ using Google.Protobuf;
 
 namespace DTCPB
 {
-    public partial class EncodingRequest
+    public partial class EncodingResponse
     {
         public static short Size => 12;
 
-        public DTCMessageType MessageType => DTCMessageType.EncodingRequest;
+        public DTCMessageType MessageType => DTCMessageType.EncodingResponse;
 
         public void Write(BinaryWriter binaryWriter, EncodingEnum currentEncoding)
         {
@@ -34,13 +34,13 @@ namespace DTCPB
             }
         }
 
-        public static EncodingRequest Read(BinaryReader binaryReader, EncodingEnum currentEncoding)
+        public static EncodingResponse Read(BinaryReader binaryReader, EncodingEnum currentEncoding)
         {
             var bytes = binaryReader.ReadBytes(Size);
             switch (currentEncoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    var result = new EncodingRequest
+                    var result = new EncodingResponse
                     {
                         ProtocolVersion = binaryReader.ReadInt32(),
                         Encoding = (EncodingEnum)binaryReader.ReadInt32()
