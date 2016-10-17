@@ -33,6 +33,7 @@ namespace TestClient
         {
             _client?.Dispose();
             _client = null;
+            toolStripStatusLabel1.Text = "Disconnected";
         }
 
         private async void btnConnect_Click(object sender, EventArgs e)
@@ -68,7 +69,7 @@ namespace TestClient
             }
         }
 
-        private void btnDisconnect_Click(object sender, EventArgs e)
+        private async void btnDisconnect_Click(object sender, EventArgs e)
         {
             var logoffRequest = new Logoff
             {
@@ -76,7 +77,8 @@ namespace TestClient
                 Reason = "User disconnected"
             };
             _client.SendRequest(DTCMessageType.Logoff, logoffRequest.ToByteArray());
-            _client.Dispose();
+            await Task.Delay(100);
+            DisposeClient();
         }
     }
 }
