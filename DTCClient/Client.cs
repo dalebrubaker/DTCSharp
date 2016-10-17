@@ -46,6 +46,14 @@ namespace DTCClient
 
         private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            var maxWaitForHeartbeatTime = TimeSpan.FromMilliseconds(Math.Max(_heartbeatTimer.Interval * 2, 5000));
+            var timeSinceHeartbeat = (DateTime.Now - _lastHeartbeatReceivedTime);
+            if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
+            {
+                Dispose(true);
+                throw new ApplicationException("Too long since Server sent us a heartbeat. Closing client.");
+            }
+
             // Send a heartbeat to the server
             var heartBeat = new Heartbeat();
             heartBeat.Write(_binaryWriter, _currentEncoding);
