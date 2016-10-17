@@ -64,7 +64,7 @@
             this.txtPortListening.Name = "txtPortListening";
             this.txtPortListening.Size = new System.Drawing.Size(100, 20);
             this.txtPortListening.TabIndex = 3;
-            this.txtPortListening.Text = "11099";
+            this.txtPortListening.Text = "50000";
             // 
             // label2
             // 
@@ -110,6 +110,7 @@
             this.btnDisconnect.TabIndex = 7;
             this.btnDisconnect.Text = "Disconnect";
             this.btnDisconnect.UseVisualStyleBackColor = true;
+            this.btnDisconnect.Click += new System.EventHandler(this.btnDisconnect_Click);
             // 
             // statusStrip1
             // 

@@ -8,6 +8,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DTCClient;
+using DTCPB;
+using Google.Protobuf;
 
 namespace TestClient
 {
@@ -24,26 +26,57 @@ namespace TestClient
 
         private void Form1_Disposed(object sender, EventArgs e)
         {
+            DisposeClient();
+        }
+
+        private void DisposeClient()
+        {
             _client?.Dispose();
+            _client = null;
         }
 
         private async void btnConnect_Click(object sender, EventArgs e)
         {
             int port;
             int.TryParse(txtPortListening.Text, out port);
+            DisposeClient(); // remove the old client just in case it was missed elsewhere
             _client = new Client(txtServer.Text, port);
-            _client.LogonReponseEvent += Client_LogonReponseEvent;
-            var connected = await _client.ConnectAsync();
-            toolStripStatusLabel1.Text = connected ? "Connected" : "Disconnected";
-            if (connected)
+            _client.LogonReponseEvent += Client_LogonResponseEvent;
+            _client.EncodingResponseEvent += Client_EncodingResponseEvent;
+
+            await _client.LogonAsync(10, "TestClient");
+        }
+
+        private void Client_EncodingResponseEvent(object sender, DTCCommon.EventArgs<DTCPB.EncodingResponse> e)
+        {
+            var response = e.Data;
+            if (response.Encoding != EncodingEnum.ProtocolBuffers)
             {
-                await _client.LogonAsync(60, "TestClient");
+                MessageBox.Show("Server cannot support Protocol Buffers.");
+                DisposeClient();
             }
         }
 
-        private void Client_LogonReponseEvent(object sender, DTCCommon.EventArgs<DTCPB.LogonResponse> e)
+        private void Client_LogonResponseEvent(object sender, DTCCommon.EventArgs<DTCPB.LogonResponse> e)
         {
             var response = e.Data;
+            toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
+            if (response.Result != LogonStatusEnum.LogonSuccess)
+            {
+                MessageBox.Show("Login failed: " + response.Result);
+                DisposeClient();
+            }
+        }
+
+        private void btnDisconnect_Click(object sender, EventArgs e)
+        {
+            var logoffRequest = new Logoff
+            {
+                DoNotReconnect = 1,
+                Reason = "User disconnected"
+            };
+            _client.SendRequest(DTCMessageType.Logoff, logoffRequest.ToByteArray());
+            _client.Dispose();
         }
     }
 }

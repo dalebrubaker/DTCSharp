@@ -15,7 +15,7 @@ namespace DTCPB
             switch (currentEncoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    binaryWriter.Write(Size);
+                    binaryWriter.Write((short)(Size + 4));
                     binaryWriter.Write((short)MessageType);
                     binaryWriter.Write(ProtocolVersion);  
                     binaryWriter.Write((int)Encoding); // enum size is 4
@@ -27,7 +27,10 @@ namespace DTCPB
                 case EncodingEnum.JsonCompactEncoding:
                     throw new NotImplementedException();
                 case EncodingEnum.ProtocolBuffers:
-                    binaryWriter.Write(this.ToByteArray());
+                    var bytes = this.ToByteArray();
+                    binaryWriter.Write((short)(bytes.Length + 4));
+                    binaryWriter.Write((short)MessageType);
+                    binaryWriter.Write(bytes);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(currentEncoding), currentEncoding, null);
@@ -41,7 +44,7 @@ namespace DTCPB
                 case EncodingEnum.BinaryEncoding:
                     ProtocolVersion = BitConverter.ToInt32(bytes, 0);
                     Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4);
-                    ProtocolType = BitConverter.ToString(bytes, 8);
+                    ProtocolType = System.Text.Encoding.Default.GetString(bytes, 8, 3);
                     break;
                 case EncodingEnum.BinaryWithVariableLengthStrings:
                 case EncodingEnum.JsonEncoding:

@@ -18,7 +18,7 @@ namespace DTCPB
             switch (currentEncoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    binaryWriter.Write(Size);
+                    binaryWriter.Write((short)(Size + 4));
                     binaryWriter.Write((short)MessageType);
                     binaryWriter.Write(NumDroppedMessages);
                     binaryWriter.Write(CurrentDateTime); 
@@ -28,7 +28,10 @@ namespace DTCPB
                 case EncodingEnum.JsonCompactEncoding:
                     throw new NotImplementedException();
                 case EncodingEnum.ProtocolBuffers:
-                    binaryWriter.Write(this.ToByteArray());
+                    var bytes = this.ToByteArray();
+                    binaryWriter.Write((short)(bytes.Length + 4));
+                    binaryWriter.Write((short)MessageType);
+                    binaryWriter.Write(bytes);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(currentEncoding), currentEncoding, null);

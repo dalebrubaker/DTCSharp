@@ -1,9 +1,13 @@
 using System.IO;
+using Google.Protobuf;
 
 namespace DTCPB
 {
-    public interface IMessageDTC
+    public interface IMessageDTC : IMessage
     {
+        /// <summary>
+        /// The message size EXCLUDING the 4-byte header (size + type)
+        /// </summary>
         short Size { get; }
 
         DTCMessageType MessageType { get; }
