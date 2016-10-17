@@ -163,6 +163,12 @@ namespace DTCClient
             _binaryWriter.Write(bytes);
         }
 
+        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T:IMessage
+        {
+            var temp = eventForMessage; // for thread safety
+            temp?.Invoke(this, new EventArgs<T>(message));
+        }
+
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
         /// </summary>
@@ -197,41 +203,32 @@ namespace DTCClient
                             throw new NotImplementedException("Not expected client-side");
                         case DTCMessageType.LogonRequest:
                             Debug.Assert(_currentEncoding == EncodingEnum.ProtocolBuffers);
-                            var logonRequest = LogonRequest.Parser.ParseFrom(bytes);
-                            var tempLogonRequestEvent = LogonRequestEvent; // for thread safety
-                            tempLogonRequestEvent?.Invoke(this, new EventArgs<LogonRequest>(logonRequest));
+                            ThrowEvent(LogonRequest.Parser.ParseFrom(bytes), LogonRequestEvent);
                             break;
                         case DTCMessageType.LogonResponse:
                             Debug.Assert(_currentEncoding == EncodingEnum.ProtocolBuffers);
-                            var logonResponse = LogonResponse.Parser.ParseFrom(bytes);
-                            var tempLogonReponseEvent = LogonReponseEvent; // for thread safety
-                            tempLogonReponseEvent?.Invoke(this, new EventArgs<LogonResponse>(logonResponse));
+                            ThrowEvent(LogonResponse.Parser.ParseFrom(bytes), LogonReponseEvent);
                             break;
                         case DTCMessageType.Heartbeat:
                             var heartbeat = new Heartbeat();
                             heartbeat.Load(bytes, _currentEncoding);
-                            var tempHeartbeatEvent = HeartbeatEvent; // for thread safety
-                            tempHeartbeatEvent?.Invoke(this, new EventArgs<Heartbeat>(heartbeat));
+                            ThrowEvent(heartbeat, HeartbeatEvent);
                             break;
                         case DTCMessageType.Logoff:
                             Debug.Assert(_currentEncoding == EncodingEnum.ProtocolBuffers);
-                            var logoff = Logoff.Parser.ParseFrom(bytes);
-                            var tempLogoffEvent = LogoffEvent; // for thread safety
-                            tempLogoffEvent?.Invoke(this, new EventArgs<Logoff>(logoff));
+                            ThrowEvent(Logoff.Parser.ParseFrom(bytes), LogoffEvent);
                             break;
                         case DTCMessageType.EncodingRequest:
                             var encodingRequest = new EncodingRequest();
                             encodingRequest.Load(bytes, _currentEncoding);
-                            var tempEncodingRequestEvent = EncodingRequestEvent; // for thread safety
-                            tempEncodingRequestEvent?.Invoke(this, new EventArgs<EncodingRequest>(encodingRequest));
+                            ThrowEvent(encodingRequest, EncodingRequestEvent);
                             break;
                         case DTCMessageType.EncodingResponse:
                             // Note that we must use binary encoding here, per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
                             var encodingResponse = new EncodingResponse();
                             encodingResponse.Load(bytes, _currentEncoding);
                             _currentEncoding = encodingResponse.Encoding;
-                            var tempEncodingResponseEvent = EncodingResponseEvent; // for thread safety
-                            tempEncodingResponseEvent?.Invoke(this, new EventArgs<EncodingResponse>(encodingResponse));
+                            ThrowEvent(encodingResponse, EncodingResponseEvent);
                             break;
                         case DTCMessageType.MarketDataRequest:
                             break;
