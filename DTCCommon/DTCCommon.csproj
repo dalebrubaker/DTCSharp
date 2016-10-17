@@ -62,6 +62,7 @@
     <None Include="protos\DTCProtocol.3.proto" />
     <None Include="GenerateProto.bat" />
     <None Include="packages.config" />
+    <None Include="protos\DTCProtocol.proto" />
     <None Include="_ReadMe.md" />
   </ItemGroup>
   <ItemGroup />
