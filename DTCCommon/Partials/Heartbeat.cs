@@ -1,14 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Google.Protobuf;
 
 namespace DTCPB
 {
-    public partial class EncodingResponse : IMessageDTC
+    public partial class Heartbeat : IMessageDTC
     {
         public short Size => 12;
-
-        public DTCMessageType MessageType => DTCMessageType.EncodingResponse;
+        public DTCMessageType MessageType => DTCMessageType.Heartbeat;
 
         public void Write(BinaryWriter binaryWriter, EncodingEnum currentEncoding)
         {
@@ -17,10 +20,8 @@ namespace DTCPB
                 case EncodingEnum.BinaryEncoding:
                     binaryWriter.Write(Size);
                     binaryWriter.Write((short)MessageType);
-                    binaryWriter.Write(ProtocolVersion);  
-                    binaryWriter.Write((int)Encoding); // enum size is 4
-                    var protocolType = ProtocolType.ToCharArray();
-                    binaryWriter.Write(protocolType); // 3 chars DTC plus null terminator 
+                    binaryWriter.Write(NumDroppedMessages);
+                    binaryWriter.Write(CurrentDateTime); 
                     break;
                 case EncodingEnum.BinaryWithVariableLengthStrings:
                 case EncodingEnum.JsonEncoding:
@@ -39,9 +40,8 @@ namespace DTCPB
             switch (currentEncoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    ProtocolVersion = BitConverter.ToInt32(bytes, 0);
-                    Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4);
-                    ProtocolType = BitConverter.ToString(bytes, 8);
+                    NumDroppedMessages = BitConverter.ToUInt32(bytes, 0);
+                    CurrentDateTime = BitConverter.ToInt64(bytes, 4);
                     break;
                 case EncodingEnum.BinaryWithVariableLengthStrings:
                 case EncodingEnum.JsonEncoding:

@@ -4,9 +4,9 @@ using Google.Protobuf;
 
 namespace DTCPB
 {
-    public partial class EncodingRequest
+    public partial class EncodingRequest : IMessageDTC
     {
-        public static short Size => 12;
+        public short Size => 12;
 
         public DTCMessageType MessageType => DTCMessageType.EncodingRequest;
 
@@ -34,26 +34,22 @@ namespace DTCPB
             }
         }
 
-        public static EncodingRequest Read(BinaryReader binaryReader, EncodingEnum currentEncoding)
+        public void Load(byte[] bytes, EncodingEnum currentEncoding)
         {
-            var bytes = binaryReader.ReadBytes(Size);
             switch (currentEncoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    var result = new EncodingRequest
-                    {
-                        ProtocolVersion = binaryReader.ReadInt32(),
-                        Encoding = (EncodingEnum)binaryReader.ReadInt32()
-                    };
-                    var protocolType = binaryReader.ReadChars(4);
-                    result.ProtocolType = new string(protocolType);
-                    return result;
+                    ProtocolVersion = BitConverter.ToInt32(bytes, 0);
+                    Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4);
+                    ProtocolType = BitConverter.ToString(bytes, 8);
+                    break;
                 case EncodingEnum.BinaryWithVariableLengthStrings:
                 case EncodingEnum.JsonEncoding:
                 case EncodingEnum.JsonCompactEncoding:
                     throw new NotImplementedException();
                 case EncodingEnum.ProtocolBuffers:
-                    return Parser.ParseFrom(bytes);
+                    Parser.ParseFrom(bytes);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(currentEncoding), currentEncoding, null);
             }

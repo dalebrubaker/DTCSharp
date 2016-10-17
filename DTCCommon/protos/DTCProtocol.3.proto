@@ -14,7 +14,7 @@ enum DTCVersion
 
 
 //============================================================================
-// All messages are preceeded by the following 4-byte little-endian binary
+// All messages are preceded by the following 4-byte little-endian binary
 // header on the wire:
 //
 //	uint16 Size;  // size of the entire message including this 4-byte header

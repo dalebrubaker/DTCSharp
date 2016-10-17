@@ -53,8 +53,10 @@
     <Compile Include="Codecs\CodecProtobuf.cs" />
     <Compile Include="EventArgs.cs" />
     <Compile Include="Generated\DTCProtocol3.cs" />
+    <Compile Include="Generated\IMessageDTC.cs" />
     <Compile Include="Partials\EncodingResponse.cs" />
     <Compile Include="Partials\EncodingRequest.cs" />
+    <Compile Include="Partials\Heartbeat.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
