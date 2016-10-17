@@ -45,7 +45,7 @@ namespace TestClient
             _client.LogonReponseEvent += Client_LogonResponseEvent;
             _client.EncodingResponseEvent += Client_EncodingResponseEvent;
 
-            await _client.LogonAsync(10, "TestClient");
+            await _client.LogonAsync(5, "TestClient");
         }
 
         private void Client_EncodingResponseEvent(object sender, DTCCommon.EventArgs<DTCPB.EncodingResponse> e)

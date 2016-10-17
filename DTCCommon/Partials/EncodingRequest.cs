@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using DTCCommon;
 using Google.Protobuf;
 
 namespace DTCPB
@@ -15,8 +16,7 @@ namespace DTCPB
             switch (currentEncoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    binaryWriter.Write((short)(Size + 4));
-                    binaryWriter.Write((short)MessageType);
+                    Utility.WriteHeader(binaryWriter, Size, MessageType);
                     binaryWriter.Write(ProtocolVersion);  
                     binaryWriter.Write((int)Encoding); // enum size is 4
                     char[] protocolType = new char[4];
@@ -32,8 +32,7 @@ namespace DTCPB
                     throw new NotImplementedException();
                 case EncodingEnum.ProtocolBuffers:
                     var bytes = this.ToByteArray();
-                    binaryWriter.Write((short)(bytes.Length + 4));
-                    binaryWriter.Write((short)MessageType);
+                    Utility.WriteHeader(binaryWriter, bytes.Length, MessageType);
                     binaryWriter.Write(bytes);
                     break;
                 default:

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DTCCommon;
 using Google.Protobuf;
 
 namespace DTCPB
@@ -18,8 +19,7 @@ namespace DTCPB
             switch (currentEncoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    binaryWriter.Write((short)(Size + 4));
-                    binaryWriter.Write((short)MessageType);
+                    Utility.WriteHeader(binaryWriter, Size, MessageType);
                     binaryWriter.Write(NumDroppedMessages);
                     binaryWriter.Write(CurrentDateTime); 
                     break;
@@ -29,8 +29,7 @@ namespace DTCPB
                     throw new NotImplementedException();
                 case EncodingEnum.ProtocolBuffers:
                     var bytes = this.ToByteArray();
-                    binaryWriter.Write((short)(bytes.Length + 4));
-                    binaryWriter.Write((short)MessageType);
+                    Utility.WriteHeader(binaryWriter, bytes.Length, MessageType);
                     binaryWriter.Write(bytes);
                     break;
                 default:

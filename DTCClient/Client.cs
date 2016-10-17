@@ -154,13 +154,12 @@ namespace DTCClient
         /// <summary>
         /// Send the message represented by bytes
         /// </summary>
-        /// <param name="type"></param>
+        /// <param name="messageType"></param>
         /// <param name="bytes"></param>
-        public void SendRequest(DTCMessageType type, byte[] bytes)
+        public void SendRequest(DTCMessageType messageType, byte[] bytes)
         {
             // Write header 
-            _binaryWriter.Write((short)(bytes.Length + 4)); // size includes the size of the header size+type
-            _binaryWriter.Write((short)type);
+            Utility.WriteHeader(_binaryWriter, bytes.Length, messageType);
             _binaryWriter.Write(bytes);
         }
 
