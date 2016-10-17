@@ -62,10 +62,28 @@ namespace TestClient
         {
             var response = e.Data;
             toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
+            switch (response.Result)
+            {
+                case LogonStatusEnum.LogonStatusUnset:
+                    throw new ArgumentException("Unexpected logon result");
+                case LogonStatusEnum.LogonSuccess:
+                    break;
+                case LogonStatusEnum.LogonErrorNoReconnect:
+                    MessageBox.Show("Login failed: " + response.Result + " " + response.ResultText + "Reconnect not allowed.");
+                    break;
+                case LogonStatusEnum.LogonError:
+                    MessageBox.Show("Login failed: " + response.Result + " " + response.ResultText);
+                    DisposeClient();
+                    break;
+                case LogonStatusEnum.LogonReconnectNewAddress:
+                    MessageBox.Show("Login failed: " + response.Result + " " + response.ResultText + "\nReconnect to:" + response.ReconnectAddress);
+                    DisposeClient();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
             if (response.Result != LogonStatusEnum.LogonSuccess)
             {
-                MessageBox.Show("Login failed: " + response.Result);
-                DisposeClient();
             }
         }
 
