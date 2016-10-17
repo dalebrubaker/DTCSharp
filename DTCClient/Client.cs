@@ -29,6 +29,12 @@ namespace DTCClient
         private EncodingEnum _currentEncoding;
         private CancellationTokenSource _cts;
 
+        /// <summary>
+        /// The most recent _logonResponse.
+        /// Use this to check Server flags before doing SendRequest()
+        /// </summary>
+        public LogonResponse LogonResponse { get; private set; }
+
         public Client(string server, int port)
         {
             _server = server;
@@ -76,11 +82,11 @@ namespace DTCClient
         /// <returns><c>true</c> if successful. <c>false</c> means protocol buffers are not supported by server</returns>
         private async Task ConnectAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            _tcpClient = new TcpClient();
-            _tcpClient.NoDelay = true;
+            _tcpClient = new TcpClient {NoDelay = true};
             await _tcpClient.ConnectAsync(_server, _port); // connect to the server
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
+            _currentEncoding = EncodingEnum.BinaryEncoding;
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             // Fire and forget
             Task.Run(MessageReader, _cts.Token);
@@ -215,7 +221,8 @@ namespace DTCClient
                             break;
                         case DTCMessageType.LogonResponse:
                             Debug.Assert(_currentEncoding == EncodingEnum.ProtocolBuffers);
-                            ThrowEvent(LogonResponse.Parser.ParseFrom(bytes), LogonReponseEvent);
+                            LogonResponse = LogonResponse.Parser.ParseFrom(bytes);
+                            ThrowEvent(LogonResponse, LogonReponseEvent);
                             break;
                         case DTCMessageType.Heartbeat:
                             var heartbeat = new Heartbeat();
