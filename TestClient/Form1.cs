@@ -53,7 +53,7 @@ namespace TestClient
             var response = e.Data;
             if (response.Encoding != EncodingEnum.ProtocolBuffers)
             {
-                MessageBox.Show("Server cannot support Protocol Buffers.");
+                logControl1.LogMessage("Server cannot support Protocol Buffers.");
                 DisposeClient();
             }
         }
@@ -67,24 +67,51 @@ namespace TestClient
                 case LogonStatusEnum.LogonStatusUnset:
                     throw new ArgumentException("Unexpected logon result");
                 case LogonStatusEnum.LogonSuccess:
+                    DisplayLogonResponse(response);
                     break;
                 case LogonStatusEnum.LogonErrorNoReconnect:
-                    MessageBox.Show("Login failed: " + response.Result + " " + response.ResultText + "Reconnect not allowed.");
+                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "Reconnect not allowed.");
                     break;
                 case LogonStatusEnum.LogonError:
-                    MessageBox.Show("Login failed: " + response.Result + " " + response.ResultText);
+                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText);
                     DisposeClient();
                     break;
                 case LogonStatusEnum.LogonReconnectNewAddress:
-                    MessageBox.Show("Login failed: " + response.Result + " " + response.ResultText + "\nReconnect to:" + response.ReconnectAddress);
+                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "\nReconnect to:" + response.ReconnectAddress);
                     DisposeClient();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-            if (response.Result != LogonStatusEnum.LogonSuccess)
+        }
+
+        private void DisplayLogonResponse(LogonResponse response)
+        {
+            logControl1.LogMessage("Login succeeded: " + response.Result + " " + response.ResultText);
+            var lines = new List<string>
             {
-            }
+                "Logon Response info:",
+                $"Result: {response.Result}",
+                $"ResultText: {response.ResultText}",
+                $"ServerName: {response.ServerName}",
+                $"MarketDepthUpdatesBestBidAndAsk: {response.MarketDepthUpdatesBestBidAndAsk}",
+                $"TradingIsSupported: {response.TradingIsSupported}",
+                $"OCOOrdersSupported: {response.OCOOrdersSupported}",
+                $"OrderCancelReplaceSupported: {response.OrderCancelReplaceSupported}",
+                $"SymbolExchangeDelimiter: {response.SymbolExchangeDelimiter}",
+                $"SecurityDefinitionsSupported: {response.SecurityDefinitionsSupported}",
+                $"ResubscribeWhenMarketDataFeedAvailable: {response.ResubscribeWhenMarketDataFeedAvailable}",
+                $"MarketDepthIsSupported: {response.MarketDepthIsSupported}",
+                $"OneHistoricalPriceDataRequestPerConnection: {response.OneHistoricalPriceDataRequestPerConnection}",
+                $"BracketOrdersSupported: {response.BracketOrdersSupported}",
+                $"UseIntegerPriceOrderMessages: {response.UseIntegerPriceOrderMessages}",
+                $"UsesMultiplePositionsPerSymbolAndTradeAccount: {response.UsesMultiplePositionsPerSymbolAndTradeAccount}",
+                $"MarketDataSupported: {response.MarketDataSupported}",
+                $"ProtocolVersion: {response.ProtocolVersion}",
+                $"ReconnectAddress: {response.ReconnectAddress}",
+                $"Integer_1: {response.Integer1}"
+            };
+            logControl1.LogMessagesReversed(lines);
         }
 
         private async void btnDisconnect_Click(object sender, EventArgs e)

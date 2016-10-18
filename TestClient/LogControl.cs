@@ -74,6 +74,27 @@ namespace TestClient
             }
         }
 
+        /// <summary>
+        /// Put newLines at the TOP of the panel, along with a timestamp, first lines to the top
+        /// </summary>
+        /// <param name="newLines">the lines to display</param>
+        public void LogMessagesReversed(IEnumerable<string> newLines)
+        {
+            if (rtbMessages.InvokeRequired)
+            {
+                BeginInvoke(new MethodInvoker(() => LogMessagesReversed(newLines)));
+            }
+            else
+            {
+                var list = newLines.ToList();
+                list.Reverse();
+                foreach (var line in list)
+                {
+                    LogMessage(line);
+                }
+            }
+        }
+
         public void Clear()
         {
             if (rtbMessages.InvokeRequired)
