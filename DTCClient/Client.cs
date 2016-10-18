@@ -65,12 +65,25 @@ namespace DTCClient
             heartBeat.Write(_binaryWriter, _currentEncoding);
         }
 
-        public event EventHandler<EventArgs<EncodingRequest>> EncodingRequestEvent;
+        #region events
+
         public event EventHandler<EventArgs<EncodingResponse>> EncodingResponseEvent;
         public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent;
         public event EventHandler<EventArgs<Logoff>> LogoffEvent;
-        public event EventHandler<EventArgs<LogonRequest>> LogonRequestEvent;
         public event EventHandler<EventArgs<LogonResponse>> LogonReponseEvent;
+        public event EventHandler<EventArgs<MarketDataReject>> MarketDataRejectEvent;
+        public event EventHandler<EventArgs<MarketDataSnapshot>> MarketDataSnapshotEvent;
+        public event EventHandler<EventArgs<MarketDataSnapshot_Int>> MarketDataSnapshotIntEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateTrade>> MarketDataUpdateTradeEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateTradeCompact>> MarketDataUpdateTradeCompactEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateTrade_Int>> MarketDataUpdateTradeIntEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateLastTradeSnapshot>> MarketDataUpdateLastTradeSnapshotEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateBidAsk>> MarketDataUpdateBidAskEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> MarketDataUpdateBidAskCompactEvent;
+
+
+        #endregion events
+
 
         /// <summary>
         /// Make the connection to server at port. 
@@ -209,18 +222,11 @@ namespace DTCClient
 
                         throw;
                     }
-                    var type = (DTCMessageType)binaryReader.ReadInt16();
+                    var messageType = (DTCMessageType)binaryReader.ReadInt16();
                     var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
-                    switch (type)
+                    switch (messageType)
                     {
-                        case DTCMessageType.MessageTypeUnset:
-                            throw new NotImplementedException("Not expected client-side");
-                        case DTCMessageType.LogonRequest:
-                            Debug.Assert(_currentEncoding == EncodingEnum.ProtocolBuffers);
-                            ThrowEvent(LogonRequest.Parser.ParseFrom(bytes), LogonRequestEvent);
-                            break;
                         case DTCMessageType.LogonResponse:
-                            Debug.Assert(_currentEncoding == EncodingEnum.ProtocolBuffers);
                             LogonResponse = LogonResponse.Parser.ParseFrom(bytes);
                             ThrowEvent(LogonResponse, LogonReponseEvent);
                             break;
@@ -230,40 +236,42 @@ namespace DTCClient
                             ThrowEvent(heartbeat, HeartbeatEvent);
                             break;
                         case DTCMessageType.Logoff:
-                            Debug.Assert(_currentEncoding == EncodingEnum.ProtocolBuffers);
                             ThrowEvent(Logoff.Parser.ParseFrom(bytes), LogoffEvent);
                             break;
-                        case DTCMessageType.EncodingRequest:
-                            var encodingRequest = new EncodingRequest();
-                            encodingRequest.Load(bytes, _currentEncoding);
-                            ThrowEvent(encodingRequest, EncodingRequestEvent);
-                            break;
                         case DTCMessageType.EncodingResponse:
-                            // Note that we must use binary encoding here, per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
+                            // Note that we must use binary encoding here on the first usage after connect, 
+                            //    per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
                             var encodingResponse = new EncodingResponse();
                             encodingResponse.Load(bytes, _currentEncoding);
                             _currentEncoding = encodingResponse.Encoding;
                             ThrowEvent(encodingResponse, EncodingResponseEvent);
                             break;
-                        case DTCMessageType.MarketDataRequest:
-                            break;
                         case DTCMessageType.MarketDataReject:
+                            ThrowEvent(MarketDataReject.Parser.ParseFrom(bytes), MarketDataRejectEvent);
                             break;
                         case DTCMessageType.MarketDataSnapshot:
+                            ThrowEvent(MarketDataSnapshot.Parser.ParseFrom(bytes), MarketDataSnapshotEvent);
                             break;
                         case DTCMessageType.MarketDataSnapshotInt:
+                            ThrowEvent(MarketDataSnapshot_Int.Parser.ParseFrom(bytes), MarketDataSnapshotIntEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateTrade:
+                            ThrowEvent(MarketDataUpdateTrade.Parser.ParseFrom(bytes), MarketDataUpdateTradeEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateTradeCompact:
+                            ThrowEvent(MarketDataUpdateTradeCompact.Parser.ParseFrom(bytes), MarketDataUpdateTradeCompactEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateTradeInt:
+                            ThrowEvent(MarketDataUpdateTrade_Int.Parser.ParseFrom(bytes), MarketDataUpdateTradeIntEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
+                            ThrowEvent(MarketDataUpdateLastTradeSnapshot.Parser.ParseFrom(bytes), MarketDataUpdateLastTradeSnapshotEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateBidAsk:
+                            ThrowEvent(MarketDataUpdateBidAsk.Parser.ParseFrom(bytes), MarketDataUpdateBidAskEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateBidAskCompact:
+                            ThrowEvent(MarketDataUpdateBidAskCompact.Parser.ParseFrom(bytes), MarketDataUpdateBidAskCompactEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateBidAskInt:
                             break;
@@ -290,8 +298,6 @@ namespace DTCClient
                         case DTCMessageType.MarketDataUpdateSessionNumTrades:
                             break;
                         case DTCMessageType.MarketDataUpdateTradingSessionDate:
-                            break;
-                        case DTCMessageType.MarketDepthRequest:
                             break;
                         case DTCMessageType.MarketDepthReject:
                             break;
@@ -327,45 +333,23 @@ namespace DTCClient
                             break;
                         case DTCMessageType.CancelReplaceOrderInt:
                             break;
-                        case DTCMessageType.OpenOrdersRequest:
-                            break;
                         case DTCMessageType.OpenOrdersReject:
                             break;
                         case DTCMessageType.OrderUpdate:
                             break;
-                        case DTCMessageType.HistoricalOrderFillsRequest:
-                            break;
                         case DTCMessageType.HistoricalOrderFillResponse:
-                            break;
-                        case DTCMessageType.CurrentPositionsRequest:
                             break;
                         case DTCMessageType.CurrentPositionsReject:
                             break;
                         case DTCMessageType.PositionUpdate:
                             break;
-                        case DTCMessageType.TradeAccountsRequest:
-                            break;
                         case DTCMessageType.TradeAccountResponse:
-                            break;
-                        case DTCMessageType.ExchangeListRequest:
                             break;
                         case DTCMessageType.ExchangeListResponse:
                             break;
-                        case DTCMessageType.SymbolsForExchangeRequest:
-                            break;
-                        case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
-                            break;
-                        case DTCMessageType.SymbolsForUnderlyingRequest:
-                            break;
-                        case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                            break;
                         case DTCMessageType.SecurityDefinitionResponse:
                             break;
-                        case DTCMessageType.SymbolSearchRequest:
-                            break;
                         case DTCMessageType.SecurityDefinitionReject:
-                            break;
-                        case DTCMessageType.AccountBalanceRequest:
                             break;
                         case DTCMessageType.AccountBalanceReject:
                             break;
@@ -374,8 +358,6 @@ namespace DTCClient
                         case DTCMessageType.UserMessage:
                             break;
                         case DTCMessageType.GeneralLogMessage:
-                            break;
-                        case DTCMessageType.HistoricalPriceDataRequest:
                             break;
                         case DTCMessageType.HistoricalPriceDataResponseHeader:
                             break;
@@ -389,8 +371,25 @@ namespace DTCClient
                             break;
                         case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
                             break;
+                        case DTCMessageType.MessageTypeUnset:
+                        case DTCMessageType.LogonRequest:
+                        case DTCMessageType.EncodingRequest:
+                        case DTCMessageType.MarketDataRequest:
+                        case DTCMessageType.MarketDepthRequest:
+                        case DTCMessageType.OpenOrdersRequest:
+                        case DTCMessageType.HistoricalOrderFillsRequest:
+                        case DTCMessageType.CurrentPositionsRequest:
+                        case DTCMessageType.TradeAccountsRequest:
+                        case DTCMessageType.ExchangeListRequest:
+                        case DTCMessageType.SymbolsForExchangeRequest:
+                        case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
+                        case DTCMessageType.SymbolsForUnderlyingRequest:
+                        case DTCMessageType.SecurityDefinitionForSymbolRequest:
+                        case DTCMessageType.SymbolSearchRequest:
+                        case DTCMessageType.AccountBalanceRequest:
+                        case DTCMessageType.HistoricalPriceDataRequest:
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by client.");
                     }
                 }
             }
