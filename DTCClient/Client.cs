@@ -80,6 +80,48 @@ namespace DTCClient
         public event EventHandler<EventArgs<MarketDataUpdateLastTradeSnapshot>> MarketDataUpdateLastTradeSnapshotEvent;
         public event EventHandler<EventArgs<MarketDataUpdateBidAsk>> MarketDataUpdateBidAskEvent;
         public event EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> MarketDataUpdateBidAskCompactEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateBidAsk_Int>> MarketDataUpdateBidAskIntEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionOpen>> MarketDataUpdateSessionOpenEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionOpen_Int>> MarketDataUpdateSessionOpenIntEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionHigh>> MarketDataUpdateSessionHighEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionHigh_Int>> MarketDataUpdateSessionHighIntEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionLow>> MarketDataUpdateSessionLowEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionLow_Int>> MarketDataUpdateSessionLowIntEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionVolume>> MarketDataUpdateSessionVolumeEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateOpenInterest>> MarketDataUpdateOpenInterestEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionSettlement>> MarketDataUpdateSessionSettlementEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionSettlement_Int>> MarketDataUpdateSessionSettlementIntEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateSessionNumTrades>> MarketDataUpdateSessionNumTradesEvent;
+        public event EventHandler<EventArgs<MarketDataUpdateTradingSessionDate>> MarketDataUpdateTradingSessionDateEvent;
+        public event EventHandler<EventArgs<MarketDepthReject>> MarketDepthRejectEvent;
+        public event EventHandler<EventArgs<MarketDepthSnapshotLevel>> MarketDepthSnapshotLevelEvent;
+        public event EventHandler<EventArgs<MarketDepthSnapshotLevel_Int>> MarketDepthSnapshotLevelIntEvent;
+        public event EventHandler<EventArgs<MarketDepthUpdateLevel>> MarketDepthUpdateLevelEvent;
+        public event EventHandler<EventArgs<MarketDepthUpdateLevelCompact>> MarketDepthUpdateLevelCompactEvent;
+        public event EventHandler<EventArgs<MarketDepthUpdateLevel_Int>> MarketDepthUpdateLevelIntEvent;
+        public event EventHandler<EventArgs<MarketDepthFullUpdate10>> MarketDepthFullUpdate10Event;
+        public event EventHandler<EventArgs<MarketDepthFullUpdate20>> MarketDepthFullUpdate20Event;
+        public event EventHandler<EventArgs<MarketDataFeedStatus>> MarketDataFeedStatusEvent;
+        public event EventHandler<EventArgs<MarketDataFeedSymbolStatus>> MarketDataFeedSymbolStatusEvent;
+        public event EventHandler<EventArgs<OpenOrdersReject>> OpenOrdersRejectEvent;
+        public event EventHandler<EventArgs<OrderUpdate>> OrderUpdateEvent;
+        public event EventHandler<EventArgs<HistoricalOrderFillResponse>> HistoricalOrderFillResponseEvent;
+        public event EventHandler<EventArgs<CurrentPositionsReject>> CurrentPositionsRejectEvent;
+        public event EventHandler<EventArgs<PositionUpdate>> PositionUpdateEvent;
+        public event EventHandler<EventArgs<TradeAccountResponse>> TradeAccountResponseEvent;
+        public event EventHandler<EventArgs<ExchangeListResponse>> ExchangeListResponseEvent;
+        public event EventHandler<EventArgs<SecurityDefinitionResponse>> SecurityDefinitionResponseEvent;
+        public event EventHandler<EventArgs<SecurityDefinitionReject>> SecurityDefinitionRejectEvent;
+        public event EventHandler<EventArgs<AccountBalanceReject>> AccountBalanceRejectEvent;
+        public event EventHandler<EventArgs<AccountBalanceUpdate>> AccountBalanceUpdateEvent;
+        public event EventHandler<EventArgs<UserMessage>> UserMessageEvent;
+        public event EventHandler<EventArgs<GeneralLogMessage>> GeneralLogMessageEvent;
+        public event EventHandler<EventArgs<HistoricalPriceDataResponseHeader>> HistoricalPriceDataResponseHeaderEvent;
+        public event EventHandler<EventArgs<HistoricalPriceDataReject>> HistoricalPriceDataRejectEvent;
+        public event EventHandler<EventArgs<HistoricalPriceDataRecordResponse>> HistoricalPriceDataRecordResponseEvent;
+        public event EventHandler<EventArgs<HistoricalPriceDataTickRecordResponse>> HistoricalPriceDataTickRecordResponseEvent;
+        public event EventHandler<EventArgs<HistoricalPriceDataRecordResponse_Int>> HistoricalPriceDataRecordResponseIntEvent;
+        public event EventHandler<EventArgs<HistoricalPriceDataTickRecordResponse_Int>> HistoricalPriceDataTickRecordResponseIntEvent;
 
 
         #endregion events
@@ -274,108 +316,143 @@ namespace DTCClient
                             ThrowEvent(MarketDataUpdateBidAskCompact.Parser.ParseFrom(bytes), MarketDataUpdateBidAskCompactEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateBidAskInt:
+                            ThrowEvent(MarketDataUpdateBidAsk_Int.Parser.ParseFrom(bytes), MarketDataUpdateBidAskIntEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionOpen:
+                            ThrowEvent(MarketDataUpdateSessionOpen.Parser.ParseFrom(bytes), MarketDataUpdateSessionOpenEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionOpenInt:
+                            ThrowEvent(MarketDataUpdateSessionOpen_Int.Parser.ParseFrom(bytes), MarketDataUpdateSessionOpenIntEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionHigh:
+                            ThrowEvent(MarketDataUpdateSessionHigh.Parser.ParseFrom(bytes), MarketDataUpdateSessionHighEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionHighInt:
+                            ThrowEvent(MarketDataUpdateSessionHigh_Int.Parser.ParseFrom(bytes), MarketDataUpdateSessionHighIntEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionLow:
+                            ThrowEvent(MarketDataUpdateSessionLow.Parser.ParseFrom(bytes), MarketDataUpdateSessionLowEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionLowInt:
+                            ThrowEvent(MarketDataUpdateSessionLow_Int.Parser.ParseFrom(bytes), MarketDataUpdateSessionLowIntEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionVolume:
+                            ThrowEvent(MarketDataUpdateSessionVolume.Parser.ParseFrom(bytes), MarketDataUpdateSessionVolumeEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateOpenInterest:
+                            ThrowEvent(MarketDataUpdateOpenInterest.Parser.ParseFrom(bytes), MarketDataUpdateOpenInterestEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionSettlement:
+                            ThrowEvent(MarketDataUpdateSessionSettlement.Parser.ParseFrom(bytes), MarketDataUpdateSessionSettlementEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionSettlementInt:
+                            ThrowEvent(MarketDataUpdateSessionSettlement_Int.Parser.ParseFrom(bytes), MarketDataUpdateSessionSettlementIntEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateSessionNumTrades:
+                            ThrowEvent(MarketDataUpdateSessionNumTrades.Parser.ParseFrom(bytes), MarketDataUpdateSessionNumTradesEvent);
                             break;
                         case DTCMessageType.MarketDataUpdateTradingSessionDate:
+                            ThrowEvent(MarketDataUpdateTradingSessionDate.Parser.ParseFrom(bytes), MarketDataUpdateTradingSessionDateEvent);
                             break;
                         case DTCMessageType.MarketDepthReject:
+                            ThrowEvent(MarketDepthReject.Parser.ParseFrom(bytes), MarketDepthRejectEvent);
                             break;
                         case DTCMessageType.MarketDepthSnapshotLevel:
+                            ThrowEvent(MarketDepthSnapshotLevel.Parser.ParseFrom(bytes), MarketDepthSnapshotLevelEvent);
                             break;
                         case DTCMessageType.MarketDepthSnapshotLevelInt:
+                            ThrowEvent(MarketDepthSnapshotLevel_Int.Parser.ParseFrom(bytes), MarketDepthSnapshotLevelIntEvent);
                             break;
                         case DTCMessageType.MarketDepthUpdateLevel:
+                            ThrowEvent(MarketDepthUpdateLevel.Parser.ParseFrom(bytes), MarketDepthUpdateLevelEvent);
                             break;
                         case DTCMessageType.MarketDepthUpdateLevelCompact:
+                            ThrowEvent(MarketDepthUpdateLevelCompact.Parser.ParseFrom(bytes), MarketDepthUpdateLevelCompactEvent);
                             break;
                         case DTCMessageType.MarketDepthUpdateLevelInt:
+                            ThrowEvent(MarketDepthUpdateLevel_Int.Parser.ParseFrom(bytes), MarketDepthUpdateLevelIntEvent);
                             break;
                         case DTCMessageType.MarketDepthFullUpdate10:
+                            ThrowEvent(MarketDepthFullUpdate10.Parser.ParseFrom(bytes), MarketDepthFullUpdate10Event);
                             break;
                         case DTCMessageType.MarketDepthFullUpdate20:
+                            ThrowEvent(MarketDepthFullUpdate20.Parser.ParseFrom(bytes), MarketDepthFullUpdate20Event);
                             break;
                         case DTCMessageType.MarketDataFeedStatus:
+                            ThrowEvent(MarketDataFeedStatus.Parser.ParseFrom(bytes), MarketDataFeedStatusEvent);
                             break;
                         case DTCMessageType.MarketDataFeedSymbolStatus:
-                            break;
-                        case DTCMessageType.SubmitNewSingleOrder:
-                            break;
-                        case DTCMessageType.SubmitNewSingleOrderInt:
-                            break;
-                        case DTCMessageType.SubmitNewOcoOrder:
-                            break;
-                        case DTCMessageType.SubmitNewOcoOrderInt:
-                            break;
-                        case DTCMessageType.CancelOrder:
-                            break;
-                        case DTCMessageType.CancelReplaceOrder:
-                            break;
-                        case DTCMessageType.CancelReplaceOrderInt:
+                            ThrowEvent(MarketDataFeedSymbolStatus.Parser.ParseFrom(bytes), MarketDataFeedSymbolStatusEvent);
                             break;
                         case DTCMessageType.OpenOrdersReject:
+                            ThrowEvent(OpenOrdersReject.Parser.ParseFrom(bytes), OpenOrdersRejectEvent);
                             break;
                         case DTCMessageType.OrderUpdate:
+                            ThrowEvent(OrderUpdate.Parser.ParseFrom(bytes), OrderUpdateEvent);
                             break;
                         case DTCMessageType.HistoricalOrderFillResponse:
+                            ThrowEvent(HistoricalOrderFillResponse.Parser.ParseFrom(bytes), HistoricalOrderFillResponseEvent);
                             break;
                         case DTCMessageType.CurrentPositionsReject:
+                            ThrowEvent(CurrentPositionsReject.Parser.ParseFrom(bytes), CurrentPositionsRejectEvent);
                             break;
                         case DTCMessageType.PositionUpdate:
+                            ThrowEvent(PositionUpdate.Parser.ParseFrom(bytes), PositionUpdateEvent);
                             break;
                         case DTCMessageType.TradeAccountResponse:
+                            ThrowEvent(TradeAccountResponse.Parser.ParseFrom(bytes), TradeAccountResponseEvent);
                             break;
                         case DTCMessageType.ExchangeListResponse:
+                            ThrowEvent(ExchangeListResponse.Parser.ParseFrom(bytes), ExchangeListResponseEvent);
                             break;
                         case DTCMessageType.SecurityDefinitionResponse:
+                            ThrowEvent(SecurityDefinitionResponse.Parser.ParseFrom(bytes), SecurityDefinitionResponseEvent);
                             break;
                         case DTCMessageType.SecurityDefinitionReject:
+                            ThrowEvent(SecurityDefinitionReject.Parser.ParseFrom(bytes), SecurityDefinitionRejectEvent);
                             break;
                         case DTCMessageType.AccountBalanceReject:
+                            ThrowEvent(AccountBalanceReject.Parser.ParseFrom(bytes), AccountBalanceRejectEvent);
                             break;
                         case DTCMessageType.AccountBalanceUpdate:
+                            ThrowEvent(AccountBalanceUpdate.Parser.ParseFrom(bytes), AccountBalanceUpdateEvent);
                             break;
                         case DTCMessageType.UserMessage:
+                            ThrowEvent(UserMessage.Parser.ParseFrom(bytes), UserMessageEvent);
                             break;
                         case DTCMessageType.GeneralLogMessage:
+                            ThrowEvent(GeneralLogMessage.Parser.ParseFrom(bytes), GeneralLogMessageEvent);
                             break;
                         case DTCMessageType.HistoricalPriceDataResponseHeader:
+                            ThrowEvent(HistoricalPriceDataResponseHeader.Parser.ParseFrom(bytes), HistoricalPriceDataResponseHeaderEvent);
                             break;
                         case DTCMessageType.HistoricalPriceDataReject:
+                            ThrowEvent(HistoricalPriceDataReject.Parser.ParseFrom(bytes), HistoricalPriceDataRejectEvent);
                             break;
                         case DTCMessageType.HistoricalPriceDataRecordResponse:
+                            ThrowEvent(HistoricalPriceDataRecordResponse.Parser.ParseFrom(bytes), HistoricalPriceDataRecordResponseEvent);
                             break;
                         case DTCMessageType.HistoricalPriceDataTickRecordResponse:
+                            ThrowEvent(HistoricalPriceDataTickRecordResponse.Parser.ParseFrom(bytes), HistoricalPriceDataTickRecordResponseEvent);
                             break;
                         case DTCMessageType.HistoricalPriceDataRecordResponseInt:
+                            ThrowEvent(HistoricalPriceDataRecordResponse_Int.Parser.ParseFrom(bytes), HistoricalPriceDataRecordResponseIntEvent);
                             break;
                         case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
+                            ThrowEvent(HistoricalPriceDataTickRecordResponse_Int.Parser.ParseFrom(bytes), HistoricalPriceDataTickRecordResponseIntEvent);
                             break;
                         case DTCMessageType.MessageTypeUnset:
                         case DTCMessageType.LogonRequest:
                         case DTCMessageType.EncodingRequest:
                         case DTCMessageType.MarketDataRequest:
                         case DTCMessageType.MarketDepthRequest:
+                        case DTCMessageType.SubmitNewSingleOrder:
+                        case DTCMessageType.SubmitNewSingleOrderInt:
+                        case DTCMessageType.SubmitNewOcoOrder:
+                        case DTCMessageType.SubmitNewOcoOrderInt:
+                        case DTCMessageType.CancelOrder:
+                        case DTCMessageType.CancelReplaceOrder:
+                        case DTCMessageType.CancelReplaceOrderInt:
                         case DTCMessageType.OpenOrdersRequest:
                         case DTCMessageType.HistoricalOrderFillsRequest:
                         case DTCMessageType.CurrentPositionsRequest:
