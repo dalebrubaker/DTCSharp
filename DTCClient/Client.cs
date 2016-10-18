@@ -28,6 +28,8 @@ namespace DTCClient
         private NetworkStream _networkStream;
         private EncodingEnum _currentEncoding;
         private CancellationTokenSource _cts;
+        private int _nextRequestId;
+        private int _nextSymbolId;
 
         /// <summary>
         /// The most recent _logonResponse.
@@ -35,6 +37,16 @@ namespace DTCClient
         /// </summary>
         public LogonResponse LogonResponse { get; private set; }
 
+        /// <summary>
+        /// See http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#SymbolIDRequestIDRules
+        /// </summary>
+        public int NextRequestId => ++_nextRequestId;
+
+        /// <summary>
+        /// See http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#SymbolIDRequestIDRules
+        /// </summary>
+        public int NextSymbolId => ++_nextSymbolId;
+        
         public Client(string server, int port)
         {
             _server = server;
@@ -199,7 +211,7 @@ namespace DTCClient
                 TradeAccount = tradeAccount,
                 TradeMode = tradeMode
             };
-            SendRequest(DTCMessageType.LogonRequest, logonRequest.ToByteArray());
+            SendRequest(DTCMessageType.LogonRequest, logonRequest);
         }
 
         public void Dispose()
@@ -220,17 +232,31 @@ namespace DTCClient
             }
         }
 
+        ///// <summary>
+        ///// Send the message represented by bytes
+        ///// </summary>
+        ///// <param name="messageType"></param>
+        ///// <param name="bytes"></param>
+        //public void SendRequest(DTCMessageType messageType, byte[] bytes)
+        //{
+        //    // Write header 
+        //    Utility.WriteHeader(_binaryWriter, bytes.Length, messageType);
+        //    _binaryWriter.Write(bytes);
+        //}
+
         /// <summary>
         /// Send the message represented by bytes
         /// </summary>
         /// <param name="messageType"></param>
-        /// <param name="bytes"></param>
-        public void SendRequest(DTCMessageType messageType, byte[] bytes)
+        /// <param name="message"></param>
+        public void SendRequest<T>(DTCMessageType messageType, T message) where T:IMessage
         {
             // Write header 
+            var bytes = message.ToByteArray();
             Utility.WriteHeader(_binaryWriter, bytes.Length, messageType);
             _binaryWriter.Write(bytes);
         }
+
 
         private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T:IMessage
         {

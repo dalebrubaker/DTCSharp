@@ -44,8 +44,68 @@ namespace TestClient
             _client = new Client(txtServer.Text, port);
             _client.LogonReponseEvent += Client_LogonResponseEvent;
             _client.EncodingResponseEvent += Client_EncodingResponseEvent;
+            _client.UserMessageEvent += Client_UserMessageEvent;
+            _client.GeneralLogMessageEvent += Client_GeneralLogMessageEvent;
+            _client.ExchangeListResponseEvent += Client_ExchangeListResponseEvent;
+            _client.SecurityDefinitionResponseEvent += Client_SecurityDefinitionResponseEvent;
+            await _client.LogonAsync(30, "TestClient");
+        }
 
-            await _client.LogonAsync(5, "TestClient");
+        private void Client_SecurityDefinitionResponseEvent(object sender, DTCCommon.EventArgs<SecurityDefinitionResponse> e)
+        {
+            var response = e.Data;
+            var lines = new List<string>
+            {
+                "Security Definition Response:",
+                $"RequestID: {response.RequestID}",
+                $"Symbol: {response.Symbol}",
+                $"UnderlyingSymbol: {response.UnderlyingSymbol}",
+                $"Exchange: {response.Exchange}",
+                $"SecurityType: {response.SecurityType}",
+                $"Description: {response.Description}",
+                $"MinPriceIncrement: {response.MinPriceIncrement}",
+                $"PriceDisplayFormat: {response.PriceDisplayFormat}",
+                $"DisplayPriceMultiplier: {response.DisplayPriceMultiplier}",
+                $"CurrencyValuePerIncrement: {response.CurrencyValuePerIncrement}",
+                $"IsFinalMessage: {response.IsFinalMessage}",
+                $"FloatToIntPriceMultiplier: {response.FloatToIntPriceMultiplier}",
+                $"IntegerToFloatPriceDivisor: {response.IntToFloatPriceDivisor}",
+                $"UpdatesBidAskOnly: {response.UpdatesBidAskOnly}",
+                $"StrikePrice: {response.StrikePrice}",
+                $"PutOrCall: {response.PutOrCall}",
+                $"ShortInterest: {response.ShortInterest}",
+                $"SecurityExpirationDate: {response.SecurityExpirationDate}",
+                $"BuyRolloverInterest: {response.BuyRolloverInterest}",
+                $"SellRolloverInterest: {response.SellRolloverInterest}",
+                $"EarningsPerShare: {response.EarningsPerShare}",
+                $"SharesOutstanding: {response.SharesOutstanding}",
+                $"IntToFloatQuantityDivisor: {response.IntToFloatQuantityDivisor}",
+                $"HasMarketDepthData: {response.HasMarketDepthData}",
+            };
+            logControl2.LogMessagesReversed(lines);
+        }
+
+        private void Client_ExchangeListResponseEvent(object sender, DTCCommon.EventArgs<ExchangeListResponse> e)
+        {
+            var response = e.Data;
+            var lines = new List<string>
+            {
+                "Exchanges List:",
+                $"RequestID: {response.RequestID}",
+                $"Exchange: {response.Exchange}",
+                $"Description: {response.Description}",
+            };
+            logControl2.LogMessagesReversed(lines);
+        }
+
+        private void Client_GeneralLogMessageEvent(object sender, DTCCommon.EventArgs<GeneralLogMessage> e)
+        {
+            logControl1.LogMessage($"GeneralLogMessage: {e.Data.MessageText}");
+        }
+
+        private void Client_UserMessageEvent(object sender, DTCCommon.EventArgs<UserMessage> e)
+        {
+            logControl1.LogMessage($"UserMessage: {e.Data.UserMessage_}");
         }
 
         private void Client_EncodingResponseEvent(object sender, DTCCommon.EventArgs<DTCPB.EncodingResponse> e)
@@ -121,9 +181,34 @@ namespace TestClient
                 DoNotReconnect = 1,
                 Reason = "User disconnected"
             };
-            _client.SendRequest(DTCMessageType.Logoff, logoffRequest.ToByteArray());
+            _client.SendRequest(DTCMessageType.Logoff, logoffRequest);
             await Task.Delay(100);
             DisposeClient();
+        }
+
+        private void btnExchanges_Click(object sender, EventArgs e)
+        {
+            var exchangeListRequest = new ExchangeListRequest
+            {
+                RequestID = _client.NextRequestId
+            };
+            logControl2.LogMessage($"Sent exchangeListRequest, RequestID={exchangeListRequest.RequestID}");
+            _client.SendRequest(DTCMessageType.ExchangeListRequest, exchangeListRequest);
+            if (string.IsNullOrEmpty(_client.LogonResponse.SymbolExchangeDelimiter))
+            {
+                logControl2.LogMessage("The LogonResponse.SymbolExchangeDelimiter is empty, so Exchanges probably aren't supported.");
+            }
+        }
+
+        private void btnSymbolDefinition_Click(object sender, EventArgs e)
+        {
+            var securityDefinitionForSymbolRequest = new SecurityDefinitionForSymbolRequest
+            {
+                RequestID = _client.NextRequestId,
+                Symbol = txtSymbol.Text
+            };
+            logControl2.LogMessage($"Sent securityDefinitionForSymbolRequest, RequestID={securityDefinitionForSymbolRequest.RequestID}");
+            _client.SendRequest(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
         }
     }
 }
