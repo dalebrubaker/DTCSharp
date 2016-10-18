@@ -42,15 +42,22 @@
             this.tabPageConnect = new System.Windows.Forms.TabPage();
             this.tabPageSymbols = new System.Windows.Forms.TabPage();
             this.label4 = new System.Windows.Forms.Label();
-            this.txtSymbol = new System.Windows.Forms.TextBox();
+            this.txtSymbolDef = new System.Windows.Forms.TextBox();
             this.btnExchanges = new System.Windows.Forms.Button();
+            this.btnSecurityDefinition = new System.Windows.Forms.Button();
+            this.tabPageLevel1 = new System.Windows.Forms.TabPage();
+            this.btnSubscribe = new System.Windows.Forms.Button();
+            this.label5 = new System.Windows.Forms.Label();
+            this.txtSymbolLevel1 = new System.Windows.Forms.TextBox();
             this.logControl1 = new TestClient.LogControl();
             this.logControl2 = new TestClient.LogControl();
-            this.btnSecurityDefinition = new System.Windows.Forms.Button();
+            this.logControl3 = new TestClient.LogControl();
+            this.btnUnsubscribe = new System.Windows.Forms.Button();
             this.statusStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPageConnect.SuspendLayout();
             this.tabPageSymbols.SuspendLayout();
+            this.tabPageLevel1.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -144,6 +151,7 @@
             // 
             this.tabControl1.Controls.Add(this.tabPageConnect);
             this.tabControl1.Controls.Add(this.tabPageSymbols);
+            this.tabControl1.Controls.Add(this.tabPageLevel1);
             this.tabControl1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
             this.tabControl1.Name = "tabControl1";
@@ -177,7 +185,7 @@
             this.tabPageSymbols.Controls.Add(this.btnExchanges);
             this.tabPageSymbols.Controls.Add(this.logControl2);
             this.tabPageSymbols.Controls.Add(this.label4);
-            this.tabPageSymbols.Controls.Add(this.txtSymbol);
+            this.tabPageSymbols.Controls.Add(this.txtSymbolDef);
             this.tabPageSymbols.Location = new System.Drawing.Point(4, 22);
             this.tabPageSymbols.Name = "tabPageSymbols";
             this.tabPageSymbols.Padding = new System.Windows.Forms.Padding(3);
@@ -195,13 +203,13 @@
             this.label4.TabIndex = 2;
             this.label4.Text = "Symbol:";
             // 
-            // txtSymbol
+            // txtSymbolDef
             // 
-            this.txtSymbol.Location = new System.Drawing.Point(62, 45);
-            this.txtSymbol.Name = "txtSymbol";
-            this.txtSymbol.Size = new System.Drawing.Size(67, 20);
-            this.txtSymbol.TabIndex = 3;
-            this.txtSymbol.Text = "ESZ16";
+            this.txtSymbolDef.Location = new System.Drawing.Point(62, 45);
+            this.txtSymbolDef.Name = "txtSymbolDef";
+            this.txtSymbolDef.Size = new System.Drawing.Size(67, 20);
+            this.txtSymbolDef.TabIndex = 3;
+            this.txtSymbolDef.Text = "ESZ16";
             // 
             // btnExchanges
             // 
@@ -212,6 +220,57 @@
             this.btnExchanges.Text = "Exchanges";
             this.btnExchanges.UseVisualStyleBackColor = true;
             this.btnExchanges.Click += new System.EventHandler(this.btnExchanges_Click);
+            // 
+            // btnSecurityDefinition
+            // 
+            this.btnSecurityDefinition.Location = new System.Drawing.Point(135, 43);
+            this.btnSecurityDefinition.Name = "btnSecurityDefinition";
+            this.btnSecurityDefinition.Size = new System.Drawing.Size(91, 23);
+            this.btnSecurityDefinition.TabIndex = 6;
+            this.btnSecurityDefinition.Text = "Get Definition";
+            this.btnSecurityDefinition.UseVisualStyleBackColor = true;
+            this.btnSecurityDefinition.Click += new System.EventHandler(this.btnSymbolDefinition_Click);
+            // 
+            // tabPageLevel1
+            // 
+            this.tabPageLevel1.Controls.Add(this.btnUnsubscribe);
+            this.tabPageLevel1.Controls.Add(this.logControl3);
+            this.tabPageLevel1.Controls.Add(this.btnSubscribe);
+            this.tabPageLevel1.Controls.Add(this.label5);
+            this.tabPageLevel1.Controls.Add(this.txtSymbolLevel1);
+            this.tabPageLevel1.Location = new System.Drawing.Point(4, 22);
+            this.tabPageLevel1.Name = "tabPageLevel1";
+            this.tabPageLevel1.Size = new System.Drawing.Size(426, 454);
+            this.tabPageLevel1.TabIndex = 2;
+            this.tabPageLevel1.Text = "Level 1";
+            this.tabPageLevel1.UseVisualStyleBackColor = true;
+            // 
+            // btnSubscribe
+            // 
+            this.btnSubscribe.Location = new System.Drawing.Point(131, 8);
+            this.btnSubscribe.Name = "btnSubscribe";
+            this.btnSubscribe.Size = new System.Drawing.Size(91, 23);
+            this.btnSubscribe.TabIndex = 9;
+            this.btnSubscribe.Text = "Subscribe";
+            this.btnSubscribe.UseVisualStyleBackColor = true;
+            this.btnSubscribe.Click += new System.EventHandler(this.btnSubscribe_Click);
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(8, 13);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(44, 13);
+            this.label5.TabIndex = 7;
+            this.label5.Text = "Symbol:";
+            // 
+            // txtSymbolLevel1
+            // 
+            this.txtSymbolLevel1.Location = new System.Drawing.Point(58, 9);
+            this.txtSymbolLevel1.Name = "txtSymbolLevel1";
+            this.txtSymbolLevel1.Size = new System.Drawing.Size(67, 20);
+            this.txtSymbolLevel1.TabIndex = 8;
+            this.txtSymbolLevel1.Text = "ESZ16";
             // 
             // logControl1
             // 
@@ -228,21 +287,31 @@
             // 
             this.logControl2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControl2.Location = new System.Drawing.Point(3, 116);
+            this.logControl2.Location = new System.Drawing.Point(3, 72);
             this.logControl2.Name = "logControl2";
-            this.logControl2.Size = new System.Drawing.Size(415, 335);
+            this.logControl2.Size = new System.Drawing.Size(415, 379);
             this.logControl2.TabIndex = 4;
             this.logControl2.Title = "Log";
             // 
-            // btnSecurityDefinition
+            // logControl3
             // 
-            this.btnSecurityDefinition.Location = new System.Drawing.Point(135, 43);
-            this.btnSecurityDefinition.Name = "btnSecurityDefinition";
-            this.btnSecurityDefinition.Size = new System.Drawing.Size(91, 23);
-            this.btnSecurityDefinition.TabIndex = 6;
-            this.btnSecurityDefinition.Text = "Get Definition";
-            this.btnSecurityDefinition.UseVisualStyleBackColor = true;
-            this.btnSecurityDefinition.Click += new System.EventHandler(this.btnSymbolDefinition_Click);
+            this.logControl3.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControl3.Location = new System.Drawing.Point(3, 37);
+            this.logControl3.Name = "logControl3";
+            this.logControl3.Size = new System.Drawing.Size(415, 414);
+            this.logControl3.TabIndex = 10;
+            this.logControl3.Title = "Log";
+            // 
+            // btnUnsubscribe
+            // 
+            this.btnUnsubscribe.Location = new System.Drawing.Point(228, 8);
+            this.btnUnsubscribe.Name = "btnUnsubscribe";
+            this.btnUnsubscribe.Size = new System.Drawing.Size(91, 23);
+            this.btnUnsubscribe.TabIndex = 11;
+            this.btnUnsubscribe.Text = "Unsubscribe";
+            this.btnUnsubscribe.UseVisualStyleBackColor = true;
+            this.btnUnsubscribe.Click += new System.EventHandler(this.btnUnsubscribe_Click);
             // 
             // Form1
             // 
@@ -259,6 +328,8 @@
             this.tabPageConnect.PerformLayout();
             this.tabPageSymbols.ResumeLayout(false);
             this.tabPageSymbols.PerformLayout();
+            this.tabPageLevel1.ResumeLayout(false);
+            this.tabPageLevel1.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -282,8 +353,14 @@
         private System.Windows.Forms.Button btnExchanges;
         private LogControl logControl2;
         private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.TextBox txtSymbol;
+        private System.Windows.Forms.TextBox txtSymbolDef;
         private System.Windows.Forms.Button btnSecurityDefinition;
+        private System.Windows.Forms.TabPage tabPageLevel1;
+        private LogControl logControl3;
+        private System.Windows.Forms.Button btnSubscribe;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.TextBox txtSymbolLevel1;
+        private System.Windows.Forms.Button btnUnsubscribe;
     }
 }
 

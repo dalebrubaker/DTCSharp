@@ -205,10 +205,20 @@ namespace TestClient
             var securityDefinitionForSymbolRequest = new SecurityDefinitionForSymbolRequest
             {
                 RequestID = _client.NextRequestId,
-                Symbol = txtSymbol.Text
+                Symbol = txtSymbolDef.Text
             };
             logControl2.LogMessage($"Sent securityDefinitionForSymbolRequest, RequestID={securityDefinitionForSymbolRequest.RequestID}");
             _client.SendRequest(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
+        }
+
+        private void btnSubscribe_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnUnsubscribe_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
