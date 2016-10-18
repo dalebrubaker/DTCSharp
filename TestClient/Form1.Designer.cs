@@ -38,6 +38,7 @@
             this.btnDisconnect = new System.Windows.Forms.Button();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
+            this.logControl1 = new TestClient.LogControl();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -116,9 +117,9 @@
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatusLabel1});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 239);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 459);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(284, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(553, 22);
             this.statusStrip1.TabIndex = 8;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -128,11 +129,21 @@
             this.toolStripStatusLabel1.Size = new System.Drawing.Size(118, 17);
             this.toolStripStatusLabel1.Text = "toolStripStatusLabel1";
             // 
+            // logControl1
+            // 
+            this.logControl1.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.logControl1.Location = new System.Drawing.Point(0, 142);
+            this.logControl1.Name = "logControl1";
+            this.logControl1.Size = new System.Drawing.Size(553, 317);
+            this.logControl1.TabIndex = 9;
+            this.logControl1.Title = "Log";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(284, 261);
+            this.ClientSize = new System.Drawing.Size(553, 481);
+            this.Controls.Add(this.logControl1);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.btnDisconnect);
             this.Controls.Add(this.btnConnect);
@@ -163,6 +174,7 @@
         private System.Windows.Forms.Button btnDisconnect;
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
+        private LogControl logControl1;
     }
 }
 
