@@ -46,7 +46,11 @@ namespace TestClient
             _client.UserMessageEvent += Client_UserMessageEvent;
             _client.GeneralLogMessageEvent += Client_GeneralLogMessageEvent;
             _client.ExchangeListResponseEvent += Client_ExchangeListResponseEvent;
-            _client.SecurityDefinitionResponseEvent += Client_SecurityDefinitionResponseEvent;
+            await LogonAsync();
+        }
+
+        private async Task LogonAsync()
+        {
             var response = await _client.LogonAsync(30, 5000, "TestClient");
             toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
             switch (response.Result)
@@ -70,40 +74,6 @@ namespace TestClient
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-        }
-
-        private void Client_SecurityDefinitionResponseEvent(object sender, DTCCommon.EventArgs<SecurityDefinitionResponse> e)
-        {
-            var response = e.Data;
-            var lines = new List<string>
-            {
-                "Security Definition Response:",
-                $"RequestID: {response.RequestID}",
-                $"Symbol: {response.Symbol}",
-                $"UnderlyingSymbol: {response.UnderlyingSymbol}",
-                $"Exchange: {response.Exchange}",
-                $"SecurityType: {response.SecurityType}",
-                $"Description: {response.Description}",
-                $"MinPriceIncrement: {response.MinPriceIncrement}",
-                $"PriceDisplayFormat: {response.PriceDisplayFormat}",
-                $"DisplayPriceMultiplier: {response.DisplayPriceMultiplier}",
-                $"CurrencyValuePerIncrement: {response.CurrencyValuePerIncrement}",
-                $"IsFinalMessage: {response.IsFinalMessage}",
-                $"FloatToIntPriceMultiplier: {response.FloatToIntPriceMultiplier}",
-                $"IntegerToFloatPriceDivisor: {response.IntToFloatPriceDivisor}",
-                $"UpdatesBidAskOnly: {response.UpdatesBidAskOnly}",
-                $"StrikePrice: {response.StrikePrice}",
-                $"PutOrCall: {response.PutOrCall}",
-                $"ShortInterest: {response.ShortInterest}",
-                $"SecurityExpirationDate: {response.SecurityExpirationDate}",
-                $"BuyRolloverInterest: {response.BuyRolloverInterest}",
-                $"SellRolloverInterest: {response.SellRolloverInterest}",
-                $"EarningsPerShare: {response.EarningsPerShare}",
-                $"SharesOutstanding: {response.SharesOutstanding}",
-                $"IntToFloatQuantityDivisor: {response.IntToFloatQuantityDivisor}",
-                $"HasMarketDepthData: {response.HasMarketDepthData}",
-            };
-            logControl2.LogMessagesReversed(lines);
         }
 
         private void Client_ExchangeListResponseEvent(object sender, DTCCommon.EventArgs<ExchangeListResponse> e)
@@ -182,6 +152,7 @@ namespace TestClient
 
         private void btnExchanges_Click(object sender, EventArgs e)
         {
+            // TODO: Change this later to a Client async method that returns the list of ExchangeListResponse objects
             var exchangeListRequest = new ExchangeListRequest
             {
                 RequestID = _client.NextRequestId
@@ -194,15 +165,38 @@ namespace TestClient
             }
         }
 
-        private void btnSymbolDefinition_Click(object sender, EventArgs e)
+        private async void btnSymbolDefinition_Click(object sender, EventArgs e)
         {
-            var securityDefinitionForSymbolRequest = new SecurityDefinitionForSymbolRequest
+            var response = await _client.GetSecurityDefinitionAsync(txtSymbolDef.Text);
+            var lines = new List<string>
             {
-                RequestID = _client.NextRequestId,
-                Symbol = txtSymbolDef.Text
+                "Security Definition Response:",
+                $"RequestID: {response.RequestID}",
+                $"Symbol: {response.Symbol}",
+                $"UnderlyingSymbol: {response.UnderlyingSymbol}",
+                $"Exchange: {response.Exchange}",
+                $"SecurityType: {response.SecurityType}",
+                $"Description: {response.Description}",
+                $"MinPriceIncrement: {response.MinPriceIncrement}",
+                $"PriceDisplayFormat: {response.PriceDisplayFormat}",
+                $"DisplayPriceMultiplier: {response.DisplayPriceMultiplier}",
+                $"CurrencyValuePerIncrement: {response.CurrencyValuePerIncrement}",
+                $"IsFinalMessage: {response.IsFinalMessage}",
+                $"FloatToIntPriceMultiplier: {response.FloatToIntPriceMultiplier}",
+                $"IntegerToFloatPriceDivisor: {response.IntToFloatPriceDivisor}",
+                $"UpdatesBidAskOnly: {response.UpdatesBidAskOnly}",
+                $"StrikePrice: {response.StrikePrice}",
+                $"PutOrCall: {response.PutOrCall}",
+                $"ShortInterest: {response.ShortInterest}",
+                $"SecurityExpirationDate: {response.SecurityExpirationDate}",
+                $"BuyRolloverInterest: {response.BuyRolloverInterest}",
+                $"SellRolloverInterest: {response.SellRolloverInterest}",
+                $"EarningsPerShare: {response.EarningsPerShare}",
+                $"SharesOutstanding: {response.SharesOutstanding}",
+                $"IntToFloatQuantityDivisor: {response.IntToFloatQuantityDivisor}",
+                $"HasMarketDepthData: {response.HasMarketDepthData}",
             };
-            logControl2.LogMessage($"Sent securityDefinitionForSymbolRequest, RequestID={securityDefinitionForSymbolRequest.RequestID}");
-            _client.SendRequest(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
+            logControl2.LogMessagesReversed(lines);
         }
 
         private void btnSubscribe_Click(object sender, EventArgs e)

@@ -199,7 +199,7 @@ namespace DTCClient
         /// <param name="tradeMode">optional to indicate to the Server that the requested trading mode to be one of the following: Demo, Simulated, Live.</param>
         /// <param name="tradeAccount">optional identifier if that is required to login</param>
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
-        /// <returns>The LogonResponse, or null if not received before timeoutMsecs</returns>
+        /// <returns>The LogonResponse, or null if not received before timeout</returns>
         public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, int timeout = 1000,  string clientName = "", string userName = "", string password = "", string generalTextData = "",
           int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", 
           string hardwareIdentifier = "")
@@ -236,7 +236,7 @@ namespace DTCClient
             };
             SendRequest(DTCMessageType.LogonRequest, logonRequest);
 
-            // Wait until the LogonResponse is received or until timeout
+            // Wait until the response is received or until timeout
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
             {
                 await Task.Delay(1);
@@ -262,18 +262,6 @@ namespace DTCClient
             }
         }
 
-        ///// <summary>
-        ///// Send the message represented by bytes
-        ///// </summary>
-        ///// <param name="messageType"></param>
-        ///// <param name="bytes"></param>
-        //public void SendRequest(DTCMessageType messageType, byte[] bytes)
-        //{
-        //    // Write header 
-        //    Utility.WriteHeader(_binaryWriter, bytes.Length, messageType);
-        //    _binaryWriter.Write(bytes);
-        //}
-
         /// <summary>
         /// Send the message represented by bytes
         /// </summary>
@@ -286,7 +274,6 @@ namespace DTCClient
             Utility.WriteHeader(_binaryWriter, bytes.Length, messageType);
             _binaryWriter.Write(bytes);
         }
-
 
         private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T:IMessage
         {
@@ -528,7 +515,39 @@ namespace DTCClient
             }
         }
 
-       
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
+        /// <returns>the SecurityDefinitionResponse, or null if not received before timeout</returns>
+        public async Task<SecurityDefinitionResponse> GetSecurityDefinitionAsync(string symbol, int timeout = 1000)
+        {
+            // Set up the handler to capture the event
+            var startTime = DateTime.Now;
+            SecurityDefinitionResponse result = null;
+            EventHandler<EventArgs<SecurityDefinitionResponse>> handler = null;
+            handler = (s, e) =>
+            {
+                SecurityDefinitionResponseEvent -= handler; // unregister to avoid a potential memory leak
+                result = e.Data;
+            };
+            SecurityDefinitionResponseEvent += handler;
 
+            // Send the request
+            var securityDefinitionForSymbolRequest = new SecurityDefinitionForSymbolRequest
+            {
+                RequestID = NextRequestId,
+                Symbol = symbol
+            };
+            SendRequest(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
+
+            // Wait until the response is received or until timeout
+            while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
+            {
+                await Task.Delay(1);
+            }
+            return result;
+        }
     }
 }
