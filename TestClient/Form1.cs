@@ -42,13 +42,34 @@ namespace TestClient
             int.TryParse(txtPortListening.Text, out port);
             DisposeClient(); // remove the old client just in case it was missed elsewhere
             _client = new Client(txtServer.Text, port);
-            _client.LogonReponseEvent += Client_LogonResponseEvent;
             _client.EncodingResponseEvent += Client_EncodingResponseEvent;
             _client.UserMessageEvent += Client_UserMessageEvent;
             _client.GeneralLogMessageEvent += Client_GeneralLogMessageEvent;
             _client.ExchangeListResponseEvent += Client_ExchangeListResponseEvent;
             _client.SecurityDefinitionResponseEvent += Client_SecurityDefinitionResponseEvent;
-            await _client.LogonAsync(30, "TestClient");
+            var response = await _client.LogonAsync(30, 5000, "TestClient");
+            toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
+            switch (response.Result)
+            {
+                case LogonStatusEnum.LogonStatusUnset:
+                    throw new ArgumentException("Unexpected logon result");
+                case LogonStatusEnum.LogonSuccess:
+                    DisplayLogonResponse(response);
+                    break;
+                case LogonStatusEnum.LogonErrorNoReconnect:
+                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "Reconnect not allowed.");
+                    break;
+                case LogonStatusEnum.LogonError:
+                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText);
+                    DisposeClient();
+                    break;
+                case LogonStatusEnum.LogonReconnectNewAddress:
+                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "\nReconnect to:" + response.ReconnectAddress);
+                    DisposeClient();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         private void Client_SecurityDefinitionResponseEvent(object sender, DTCCommon.EventArgs<SecurityDefinitionResponse> e)
@@ -115,33 +136,6 @@ namespace TestClient
             {
                 logControl1.LogMessage("Server cannot support Protocol Buffers.");
                 DisposeClient();
-            }
-        }
-
-        private void Client_LogonResponseEvent(object sender, DTCCommon.EventArgs<DTCPB.LogonResponse> e)
-        {
-            var response = e.Data;
-            toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
-            switch (response.Result)
-            {
-                case LogonStatusEnum.LogonStatusUnset:
-                    throw new ArgumentException("Unexpected logon result");
-                case LogonStatusEnum.LogonSuccess:
-                    DisplayLogonResponse(response);
-                    break;
-                case LogonStatusEnum.LogonErrorNoReconnect:
-                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "Reconnect not allowed.");
-                    break;
-                case LogonStatusEnum.LogonError:
-                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText);
-                    DisposeClient();
-                    break;
-                case LogonStatusEnum.LogonReconnectNewAddress:
-                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "\nReconnect to:" + response.ReconnectAddress);
-                    DisposeClient();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
             }
         }
 

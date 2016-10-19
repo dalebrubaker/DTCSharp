@@ -177,10 +177,20 @@ namespace DTCClient
         }
 
         /// <summary>
-        /// Send a Logon request to the server. 
         /// The response will come back via the LogonResponseEvent
         /// </summary>
+        public async Task LogonAsync(int heartbeatIntervalInSeconds, string clientName = "", string userName = "", string password = "", string generalTextData = "",
+            int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", 
+            string hardwareIdentifier = "")
+        {
+        }
+
+        /// <summary>
+        /// Start a TCP connection and send a Logon request to the server. 
+        /// </summary>
         /// <param name="heartbeatIntervalInSeconds">The interval in seconds that each side, the Client and the Server, needs to use to send HEARTBEAT messages to the other side. This should be a value from anywhere from 5 to 60 seconds.</param>
+        /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
+        /// <param name="clientName">optional name for this client</param>
         /// <param name="userName">Optional user name for the server to authenticate the Client</param>
         /// <param name="password">Optional password for the server to authenticate the Client</param>
         /// <param name="generalTextData">Optional general-purpose text string. For example, this could be used to pass a license key that the Server may require</param>
@@ -189,15 +199,28 @@ namespace DTCClient
         /// <param name="tradeMode">optional to indicate to the Server that the requested trading mode to be one of the following: Demo, Simulated, Live.</param>
         /// <param name="tradeAccount">optional identifier if that is required to login</param>
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
-        /// <param name="clientName">optional</param>
-        public async Task LogonAsync(int heartbeatIntervalInSeconds, string clientName = "", string userName = "", string password = "", string generalTextData = "",
-            int integer1 = 0, int integer2 = 0,
-            TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", string hardwareIdentifier = "")
+        /// <returns>The LogonResponse, or null if not received before timeoutMsecs</returns>
+        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, int timeout = 1000,  string clientName = "", string userName = "", string password = "", string generalTextData = "",
+          int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", 
+          string hardwareIdentifier = "")
         {
+            // Make a connection
             _heartbeatTimer.Interval = heartbeatIntervalInSeconds * 1000;
             _cts = new CancellationTokenSource();
             await ConnectAsync(_cts.Token);
 
+            // Set up the handler to capture the event
+            var startTime = DateTime.Now;
+            LogonResponse result = null;
+            EventHandler<EventArgs<LogonResponse>> handler = null;
+            handler = (s, e) =>
+            {
+                LogonReponseEvent -= handler; // unregister to avoid a potential memory leak
+                result = e.Data;
+            };
+            LogonReponseEvent += handler;
+
+            // Send the request
             var logonRequest = new LogonRequest
             {
                 ClientName = clientName,
@@ -212,6 +235,13 @@ namespace DTCClient
                 TradeMode = tradeMode
             };
             SendRequest(DTCMessageType.LogonRequest, logonRequest);
+
+            // Wait until the LogonResponse is received or until timeout
+            while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
+            {
+                await Task.Delay(1);
+            }
+            return result;
         }
 
         public void Dispose()
