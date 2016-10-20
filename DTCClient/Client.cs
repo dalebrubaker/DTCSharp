@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -29,7 +30,7 @@ namespace DTCClient
         private EncodingEnum _currentEncoding;
         private CancellationTokenSource _cts;
         private int _nextRequestId;
-        private int _nextSymbolId;
+        private uint _nextSymbolId;
 
         /// <summary>
         /// The most recent _logonResponse.
@@ -45,12 +46,21 @@ namespace DTCClient
         /// <summary>
         /// See http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#SymbolIDRequestIDRules
         /// </summary>
-        public int NextSymbolId => ++_nextSymbolId;
-        
+        public uint NextSymbolId => ++_nextSymbolId;
+
+        /// <summary>
+        /// Key is "Symbol|Exchange built by Get
+        /// </summary>
+        public ConcurrentDictionary<string, uint> SymbolIdBySymbolExchangeCombo { get; set; }
+
+        public ConcurrentDictionary<uint, string> SymbolExchangeComboBySymbolId { get; set; }
+
         public Client(string server, int port)
         {
             _server = server;
             _port = port;
+            SymbolIdBySymbolExchangeCombo = new ConcurrentDictionary<string, uint>();
+            SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
             _heartbeatTimer = new Timer(10000);
             _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
             _currentEncoding = EncodingEnum.BinaryEncoding; // until we've set it to ProtocolBuffers
@@ -180,7 +190,7 @@ namespace DTCClient
         /// The response will come back via the LogonResponseEvent
         /// </summary>
         public async Task LogonAsync(int heartbeatIntervalInSeconds, string clientName = "", string userName = "", string password = "", string generalTextData = "",
-            int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", 
+            int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "",
             string hardwareIdentifier = "")
         {
         }
@@ -200,9 +210,10 @@ namespace DTCClient
         /// <param name="tradeAccount">optional identifier if that is required to login</param>
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
         /// <returns>The LogonResponse, or null if not received before timeout</returns>
-        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, int timeout = 1000,  string clientName = "", string userName = "", string password = "", string generalTextData = "",
-          int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", 
-          string hardwareIdentifier = "")
+        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, int timeout = 1000, string clientName = "", string userName = "", string password = "",
+            string generalTextData = "",
+            int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "",
+            string hardwareIdentifier = "")
         {
             // Make a connection
             _heartbeatTimer.Interval = heartbeatIntervalInSeconds * 1000;
@@ -267,7 +278,7 @@ namespace DTCClient
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        public void SendRequest<T>(DTCMessageType messageType, T message) where T:IMessage
+        public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
             // Write header 
             var bytes = message.ToByteArray();
@@ -275,7 +286,7 @@ namespace DTCClient
             _binaryWriter.Write(bytes);
         }
 
-        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T:IMessage
+        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
         {
             var temp = eventForMessage; // for thread safety
             temp?.Invoke(this, new EventArgs<T>(message));
@@ -516,7 +527,7 @@ namespace DTCClient
         }
 
         /// <summary>
-        /// 
+        /// Get the SecurityDefinitionResponse for symbol, or null if not received before timeout
         /// </summary>
         /// <param name="symbol"></param>
         /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
@@ -548,6 +559,109 @@ namespace DTCClient
                 await Task.Delay(1);
             }
             return result;
+        }
+
+        /// <summary>
+        /// Return symbol|exchange
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        /// <returns></returns>
+        public string CombineSymbolExchange(string symbol, string exchange)
+        {
+            return $"{symbol}|{exchange}";
+        }
+
+        /// <summary>
+        /// Split symbol|exchange.
+        /// </summary>
+        /// <param name="combo"></param>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        public void SplitSymbolExchange(string combo, out string symbol, out string exchange)
+        {
+            if (string.IsNullOrEmpty(combo))
+            {
+                symbol = null;
+                exchange = null;
+                return;
+            }
+            var splits = combo.Split('|');
+            symbol = splits[0];
+            exchange = splits[1];
+        }
+
+        /// <summary>
+        /// Get the symbol and exchange for symbolId, or null if not found
+        /// </summary>
+        /// <param name="symbolId"></param>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        public void GetSymbolExchangeForSymbolId(uint symbolId, out string symbol, out string exchange)
+        {
+            string combo;
+            SymbolExchangeComboBySymbolId.TryGetValue(symbolId, out combo);
+            SplitSymbolExchange(combo, out symbol, out exchange);
+        }
+
+        /// <summary>
+        /// Get the symbolId for symbol and exchange, or 0 if not found
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        /// <returns></returns>
+        public uint GetSymbolId(string symbol, string exchange)
+        {
+            var combo = CombineSymbolExchange(symbol, exchange);
+            uint symbolId;
+            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out symbolId))
+            {
+                return 0;
+            }
+            SplitSymbolExchange(combo, out symbol, out exchange);
+            return symbolId;
+        }
+
+        /// <summary>
+        /// Request market data for symbol|exchange
+        /// Add a symbolId if not already assigned 
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        /// <returns>the symbol ID for symbol|exchange, or 0 if not logged on or market data is not supported</returns>
+        public uint SubscribeMarketData(string symbol, string exchange)
+        {
+            if (LogonResponse == null || LogonResponse.MarketDataSupported == 0)
+            {
+                return 0;
+            }
+            var combo = CombineSymbolExchange(symbol, exchange);
+            uint symbolId;
+            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out symbolId))
+            {
+                symbolId = NextSymbolId;
+                SymbolIdBySymbolExchangeCombo[combo] = symbolId;
+                SymbolExchangeComboBySymbolId[symbolId] = combo;
+            }
+            var request = new MarketDataRequest
+            {
+                RequestAction = RequestActionEnum.Subscribe,
+                SymbolID = symbolId,
+                Symbol = symbol,
+                Exchange = exchange
+            };
+            SendRequest(DTCMessageType.MarketDataRequest, request);
+            return symbolId;
+        }
+
+        public void UnsubscribeMarketData(uint symbolId)
+        {
+            var request = new MarketDataRequest
+            {
+                RequestAction = RequestActionEnum.Unsubscribe,
+                SymbolID = symbolId,
+            };
+            SendRequest(DTCMessageType.MarketDataRequest, request);
         }
     }
 }

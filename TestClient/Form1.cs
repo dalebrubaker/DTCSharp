@@ -31,9 +31,13 @@ namespace TestClient
 
         private void DisposeClient()
         {
-            _client?.Dispose();
-            _client = null;
-            toolStripStatusLabel1.Text = "Disconnected";
+            if (_client != null)
+            {
+                UnregisterClientEvents();
+                _client.Dispose();
+                _client = null;
+                toolStripStatusLabel1.Text = "Disconnected";
+            }
         }
 
         private async void btnConnect_Click(object sender, EventArgs e)
@@ -42,12 +46,82 @@ namespace TestClient
             int.TryParse(txtPortListening.Text, out port);
             DisposeClient(); // remove the old client just in case it was missed elsewhere
             _client = new Client(txtServer.Text, port);
+            RegisterClientEvents();
+            await LogonAsync();
+        }
+
+        private void UnregisterClientEvents()
+        {
+            _client.EncodingResponseEvent -= Client_EncodingResponseEvent;
+            _client.UserMessageEvent -= Client_UserMessageEvent;
+            _client.GeneralLogMessageEvent -= Client_GeneralLogMessageEvent;
+            _client.ExchangeListResponseEvent -= Client_ExchangeListResponseEvent;
+            _client.MarketDataRejectEvent -= Client_MarketDataRejectEvent;
+            _client.MarketDataFeedStatusEvent -= Client_MarketDataFeedStatusEvent;
+            _client.MarketDataFeedSymbolStatusEvent -= Client_MarketDataFeedSymbolStatusEvent;
+            _client.MarketDataSnapshotEvent -= Client_MarketDataSnapshotEvent;
+        }
+
+        private void RegisterClientEvents()
+        {
             _client.EncodingResponseEvent += Client_EncodingResponseEvent;
             _client.UserMessageEvent += Client_UserMessageEvent;
             _client.GeneralLogMessageEvent += Client_GeneralLogMessageEvent;
             _client.ExchangeListResponseEvent += Client_ExchangeListResponseEvent;
-            await LogonAsync();
+            _client.MarketDataRejectEvent += Client_MarketDataRejectEvent;
+            _client.MarketDataFeedStatusEvent += Client_MarketDataFeedStatusEvent;
+            _client.MarketDataFeedSymbolStatusEvent += Client_MarketDataFeedSymbolStatusEvent;
+            _client.MarketDataSnapshotEvent += Client_MarketDataSnapshotEvent;
         }
+
+        private void Client_MarketDataFeedSymbolStatusEvent(object sender, DTCCommon.EventArgs<MarketDataFeedSymbolStatus> e)
+        {
+            var response = e.Data;
+            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            logControl3.LogMessage($"Market Data Feed status for {combo}: {response.Status}");
+        }
+
+        private void Client_MarketDataFeedStatusEvent(object sender, DTCCommon.EventArgs<MarketDataFeedStatus> e)
+        {
+            var response = e.Data;
+            logControl3.LogMessage($"Market Data Feed status: {response.Status}");
+        }
+
+        private void Client_MarketDataSnapshotEvent(object sender, DTCCommon.EventArgs<MarketDataSnapshot> e)
+        {
+            var response = e.Data;
+            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var lines = new List<string>
+            {
+                $"Market Data Snapshot for {combo}:",
+                $"SessionSettlementPrice: {response.SessionSettlementPrice}",
+                $"SessionOpenPrice: {response.SessionOpenPrice}",
+                $"SessionHighPrice: {response.SessionHighPrice}",
+                $"SessionLowPrice: {response.SessionLowPrice}",
+                $"SessionVolume: {response.SessionVolume}",
+                $"SessionNumTrades: {response.SessionNumTrades}",
+                $"OpenInterest: {response.OpenInterest}",
+                $"BidPrice: {response.BidPrice}",
+                $"AskPrice: {response.AskPrice}",
+                $"AskQuantity: {response.AskQuantity}",
+                $"BidQuantity: {response.BidQuantity}",
+                $"LastTradePrice: {response.LastTradePrice}",
+                $"LastTradeVolume: {response.LastTradeVolume}",
+                $"LastTradeDateTime: {response.LastTradeDateTime}",
+                $"BidAskDateTime: {response.BidAskDateTime}",
+                $"SessionSettlementDateTime: {response.SessionSettlementDateTime}",
+                $"TradingSessionDate: {response.TradingSessionDate}",
+            };
+            logControl3.LogMessagesReversed(lines);
+        }
+
+        private void Client_MarketDataRejectEvent(object sender, DTCCommon.EventArgs<MarketDataReject> e)
+        {
+            var response = e.Data;
+            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            logControl3.LogMessage($"Market data request rejected for {combo} because {response.RejectText}");
+        }
+
 
         private async Task LogonAsync()
         {
