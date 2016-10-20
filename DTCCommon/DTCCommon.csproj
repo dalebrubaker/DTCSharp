@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EventArgs.cs" />
+    <Compile Include="Extensions\DateTimeExtensions.cs" />
     <Compile Include="Generated\DTCProtocol3.cs" />
     <Compile Include="Generated\IMessageDTC.cs" />
     <Compile Include="Partials\EncodingResponse.cs" />
