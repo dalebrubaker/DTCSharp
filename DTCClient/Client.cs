@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
+using DTCCommon.Exceptions;
 using DTCPB;
 using Google.Protobuf;
 using Timer = System.Timers.Timer;
@@ -34,6 +35,8 @@ namespace DTCClient
         private int _nextRequestId;
         private uint _nextSymbolId;
         private bool _isEncodingResponseReceived;
+        private bool _isHistoricalClient;
+        private string _clientName;
 
         /// <summary>
         /// The most recent _logonResponse.
@@ -81,12 +84,16 @@ namespace DTCClient
 
         private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            if (_isHistoricalClient)
+            {
+                return;
+            }
             var maxWaitForHeartbeatTime = TimeSpan.FromMilliseconds(Math.Max(_heartbeatTimer.Interval * 2, 5000));
             var timeSinceHeartbeat = (DateTime.Now - _lastHeartbeatReceivedTime);
             if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
             {
                 Dispose(true);
-                throw new ApplicationException("Too long since Server sent us a heartbeat. Closing client.");
+                throw new DTCSharpException("Too long since Server sent us a heartbeat. Closing client: " + _clientName);
             }
 
             // Send a heartbeat to the server
@@ -176,28 +183,35 @@ namespace DTCClient
             Task.Run(MessageReader, _cts.Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-            // Write encoding request with binary encoding
-            var encodingRequest = new EncodingRequest
+            if (!_isHistoricalClient)
             {
-                Encoding = EncodingEnum.ProtocolBuffers,
-                ProtocolType = "DTC",
-                ProtocolVersion = (int)DTCVersion.CurrentVersion
-            };
-            _isEncodingResponseReceived = false;
-            _currentCodec.Write(encodingRequest, _binaryWriter);
-            var sw = Stopwatch.StartNew();
-            while (!_isEncodingResponseReceived && sw.ElapsedMilliseconds < 10000)
-            {
-                await Task.Delay(1, cancellationToken);
+                // Request protocol buffers encoding
+                var encodingRequest = new EncodingRequest
+                {
+                    Encoding = EncodingEnum.ProtocolBuffers,
+                    ProtocolType = "DTC",
+                    ProtocolVersion = (int)DTCVersion.CurrentVersion
+                };
+                _isEncodingResponseReceived = false;
+                _currentCodec.Write(encodingRequest, _binaryWriter);
+                var sw = Stopwatch.StartNew();
+                while (!_isEncodingResponseReceived && sw.ElapsedMilliseconds < 10000)
+                {
+                    await Task.Delay(1, cancellationToken);
+                }
+
+                // start the heartbeat
+                _lastHeartbeatReceivedTime = DateTime.Now;
+                _heartbeatTimer.Start();
             }
-            _lastHeartbeatReceivedTime = DateTime.Now;
-            _heartbeatTimer.Start();
         }
 
         /// <summary>
         /// Start a TCP connection and send a Logon request to the server. 
+        /// If isHistoricalClient, will only use BinaryEncoding and won't do a heartbeat. See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
         /// </summary>
         /// <param name="heartbeatIntervalInSeconds">The interval in seconds that each side, the Client and the Server, needs to use to send HEARTBEAT messages to the other side. This should be a value from anywhere from 5 to 60 seconds.</param>
+        /// <param name="isHistoricalClient"><c>true</c> means binary encoding only, and no heartbeat</param>
         /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
         /// <param name="clientName">optional name for this client</param>
         /// <param name="userName">Optional user name for the server to authenticate the Client</param>
@@ -209,13 +223,20 @@ namespace DTCClient
         /// <param name="tradeAccount">optional identifier if that is required to login</param>
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
         /// <returns>The LogonResponse, or null if not received before timeout</returns>
-        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, int timeout = 1000, string clientName = "", string userName = "", string password = "",
+        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, bool isHistoricalClient = false, int timeout = 1000, string clientName = "",
+            string userName = "", string password = "",
             string generalTextData = "",
             int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "",
             string hardwareIdentifier = "")
         {
+            _isHistoricalClient = isHistoricalClient;
+            _clientName = clientName;
+
             // Make a connection
-            _heartbeatTimer.Interval = heartbeatIntervalInSeconds * 1000;
+            if (_isHistoricalClient)
+            {
+                _heartbeatTimer.Interval = heartbeatIntervalInSeconds * 1000;
+            }
             _cts = new CancellationTokenSource();
             await ConnectAsync(_cts.Token);
 
@@ -279,7 +300,14 @@ namespace DTCClient
         /// <param name="message"></param>
         public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
-            _currentCodec.Write(messageType, message, _binaryWriter);
+            try
+            {
+                _currentCodec.Write(messageType, message, _binaryWriter);
+            }
+            catch (Exception ex)
+            {
+                throw new DTCSharpException(ex.Message, ex);
+            }
         }
 
         private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage

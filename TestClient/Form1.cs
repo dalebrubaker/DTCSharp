@@ -70,15 +70,15 @@ namespace TestClient
         private async void btnConnect_Click(object sender, EventArgs e)
         {
             DisposeClient(); // remove the old client just in case it was missed elsewhere
-            _client = new Client(txtServer.Text, PortListener);
-            RegisterClientEvents(_client);
-            await LogonAsync(_client, "TestClient");
+            //_client = new Client(txtServer.Text, PortListener);
+            //RegisterClientEvents(_client);
+            //await LogonAsync(_client, "TestClient", false);
 
             _clientHistorical = new Client(txtServer.Text, PortHistorical);
             RegisterClientEvents(_clientHistorical);
             try
             {
-                await LogonAsync(_clientHistorical, "TestClientHistorical");
+                await LogonAsync(_clientHistorical, "TestClientHistorical", true);
             }
             catch (TaskCanceledException)
             {
@@ -297,12 +297,17 @@ namespace TestClient
         }
 
 
-        private async Task LogonAsync(Client client, string clientName)
+        private async Task LogonAsync(Client client, string clientName, bool isHistoricalClient)
         {
-
             try
             {
-                var response = await client.LogonAsync(30, 5000, clientName);
+                var response = await client.LogonAsync(30, isHistoricalClient, 5000, clientName);
+                if (response == null)
+                {
+                    toolStripStatusLabel1.Text = "Disconnected";
+                    logControl1.LogMessage("Null logon response from logon attempt to " + clientName);
+                    return;
+                }
                 toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
                 switch (response.Result)
                 {
