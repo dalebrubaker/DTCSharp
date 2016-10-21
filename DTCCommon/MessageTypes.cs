@@ -6,7 +6,7 @@ namespace DTCCommon
 {
     public class MessageTypes
     {
-        public static Dictionary<Type, DTCMessageType> MessageTypeByMessage = new Dictionary<Type, DTCMessageType>()
+        public static Dictionary<Type, DTCMessageType> MessageTypeByMessage = new Dictionary<Type, DTCMessageType>
         {
             {typeof(LogonRequest), DTCMessageType.LogonRequest},
             {typeof(LogonResponse), DTCMessageType.LogonResponse},
@@ -45,7 +45,6 @@ namespace DTCCommon
             {typeof(MarketDepthUpdateLevelCompact), DTCMessageType.MarketDepthUpdateLevelCompact},
             {typeof(MarketDepthUpdateLevel_Int), DTCMessageType.MarketDepthUpdateLevelInt},
             {typeof(MarketDepthFullUpdate10), DTCMessageType.MarketDepthFullUpdate10},
-            {typeof(MarketDepthFullUpdate20), DTCMessageType.MarketDepthFullUpdate20},
             {typeof(MarketDepthFullUpdate20), DTCMessageType.MarketDepthFullUpdate20},
             {typeof(MarketDataFeedStatus), DTCMessageType.MarketDataFeedStatus},
             {typeof(MarketDataFeedSymbolStatus), DTCMessageType.MarketDataFeedSymbolStatus},

@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DTCClient;
+using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
@@ -332,8 +333,7 @@ namespace TestClient
             }
             catch (Exception ex)
             {
-
-                throw;
+                throw new DTCSharpException(ex.Message, ex);
             }
         }
 

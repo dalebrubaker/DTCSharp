@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
+using DTCCommon.Codecs;
 using DTCPB;
 using Google.Protobuf;
 using Timer = System.Timers.Timer;
@@ -28,10 +29,11 @@ namespace DTCClient
         private TcpClient _tcpClient;
         private DateTime _lastHeartbeatReceivedTime;
         private NetworkStream _networkStream;
-        private EncodingEnum _currentEncoding;
+        private ICodecDTC _currentCodec;
         private CancellationTokenSource _cts;
         private int _nextRequestId;
         private uint _nextSymbolId;
+        private bool _isEncodingResponseReceived;
 
         /// <summary>
         /// The most recent _logonResponse.
@@ -68,7 +70,7 @@ namespace DTCClient
             SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
             _heartbeatTimer = new Timer(10000);
             _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
-            _currentEncoding = EncodingEnum.BinaryEncoding; // until we've set it to ProtocolBuffers
+            _currentCodec = new CodecBinary();
             HeartbeatEvent += Client_HeartbeatEvent;
         }
 
@@ -88,8 +90,8 @@ namespace DTCClient
             }
 
             // Send a heartbeat to the server
-            var heartBeat = new Heartbeat();
-            heartBeat.Write(_binaryWriter, _currentEncoding);
+            var heartbeat = new Heartbeat();
+            _currentCodec.Write(DTCMessageType.Heartbeat, heartbeat, _binaryWriter);
         }
 
         #region events
@@ -168,7 +170,7 @@ namespace DTCClient
             await _tcpClient.ConnectAsync(_server, _port); // connect to the server
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
-            _currentEncoding = EncodingEnum.BinaryEncoding;
+            _currentCodec = new CodecBinary();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             // Fire and forget
             Task.Run(MessageReader, _cts.Token);
@@ -181,23 +183,15 @@ namespace DTCClient
                 ProtocolType = "DTC",
                 ProtocolVersion = (int)DTCVersion.CurrentVersion
             };
-            encodingRequest.Write(_binaryWriter, _currentEncoding);
+            _isEncodingResponseReceived = false;
+            _currentCodec.Write(encodingRequest, _binaryWriter);
             var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 10000 && _currentEncoding != EncodingEnum.ProtocolBuffers)
+            while (!_isEncodingResponseReceived && sw.ElapsedMilliseconds < 10000)
             {
                 await Task.Delay(1, cancellationToken);
             }
             _lastHeartbeatReceivedTime = DateTime.Now;
             _heartbeatTimer.Start();
-        }
-
-        /// <summary>
-        /// The response will come back via the LogonResponseEvent
-        /// </summary>
-        public async Task LogonAsync(int heartbeatIntervalInSeconds, string clientName = "", string userName = "", string password = "", string generalTextData = "",
-            int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "",
-            string hardwareIdentifier = "")
-        {
         }
 
         /// <summary>
@@ -285,9 +279,7 @@ namespace DTCClient
         /// <param name="message"></param>
         public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
-            var bytes = message.ToByteArray();
-            Utility.WriteHeader(_binaryWriter, bytes.Length, messageType);
-            _binaryWriter.Write(bytes);
+            _currentCodec.Write(messageType, message, _binaryWriter);
         }
 
         private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
@@ -327,23 +319,39 @@ namespace DTCClient
                     switch (messageType)
                     {
                         case DTCMessageType.LogonResponse:
-                            LogonResponse = LogonResponse.Parser.ParseFrom(bytes);
+                            LogonResponse = _currentCodec.Load<LogonResponse>(messageType, bytes);
                             ThrowEvent(LogonResponse, LogonReponseEvent);
                             break;
                         case DTCMessageType.Heartbeat:
-                            var heartbeat = new Heartbeat();
-                            heartbeat.Load(bytes, _currentEncoding);
+                            var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
                             ThrowEvent(heartbeat, HeartbeatEvent);
                             break;
                         case DTCMessageType.Logoff:
                             ThrowEvent(Logoff.Parser.ParseFrom(bytes), LogoffEvent);
                             break;
                         case DTCMessageType.EncodingResponse:
+
                             // Note that we must use binary encoding here on the first usage after connect, 
                             //    per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
-                            var encodingResponse = new EncodingResponse();
-                            encodingResponse.Load(bytes, _currentEncoding);
-                            _currentEncoding = encodingResponse.Encoding;
+                            var encodingResponse = _currentCodec.Load<EncodingResponse>(messageType, bytes);
+                            switch (encodingResponse.Encoding)
+                            {
+                                case EncodingEnum.BinaryEncoding:
+                                    _currentCodec = new CodecBinary();
+                                    break;
+                                case EncodingEnum.BinaryWithVariableLengthStrings:
+                                    throw new NotImplementedException(nameof(encodingResponse.Encoding)); ;
+                                case EncodingEnum.JsonEncoding:
+                                    throw new NotImplementedException(nameof(encodingResponse.Encoding)); ;
+                                case EncodingEnum.JsonCompactEncoding:
+                                    throw new NotImplementedException(nameof(encodingResponse.Encoding)); ;
+                                case EncodingEnum.ProtocolBuffers:
+                                    _currentCodec = new CodecProtobuf();
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
+                            _isEncodingResponseReceived = true;
                             ThrowEvent(encodingResponse, EncodingResponseEvent);
                             break;
                         case DTCMessageType.MarketDataReject:

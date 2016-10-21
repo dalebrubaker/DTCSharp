@@ -22,13 +22,37 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.LogonResponse:
                     throw new NotImplementedException(nameof(messageType));;
                 case DTCMessageType.Heartbeat:
-                    throw new NotImplementedException(nameof(messageType));;
+                    var heartbeat = message as Heartbeat;
+                    Utility.WriteHeader(binaryWriter, 12, messageType);
+                    binaryWriter.Write(heartbeat.NumDroppedMessages);
+                    binaryWriter.Write(heartbeat.CurrentDateTime); 
+                    return;
                 case DTCMessageType.Logoff:
                     throw new NotImplementedException(nameof(messageType));;
                 case DTCMessageType.EncodingRequest:
-                    throw new NotImplementedException(nameof(messageType));;
+                    var encodingRequest = message as EncodingRequest;
+                    Utility.WriteHeader(binaryWriter, 12, messageType);
+                    binaryWriter.Write(encodingRequest.ProtocolVersion);
+                    binaryWriter.Write((int)encodingRequest.Encoding); // enum size is 4
+                    char[] protocolType = new char[4];
+                    for (int i = 0; i < 3 && i < encodingRequest.ProtocolType.Length; i++)
+                    {
+                        protocolType[i] = encodingRequest.ProtocolType[i];
+                    }
+                    binaryWriter.Write(protocolType); // 3 chars DTC plus null terminator 
+                    return;
                 case DTCMessageType.EncodingResponse:
-                    throw new NotImplementedException(nameof(messageType));;
+                    var encodingResponse = message as EncodingResponse;
+                    Utility.WriteHeader(binaryWriter, 12, messageType);
+                    binaryWriter.Write(encodingResponse.ProtocolVersion);
+                    binaryWriter.Write((int)encodingResponse.Encoding); // enum size is 4
+                    char[] protocolType2 = new char[4];
+                    for (int i = 0; i < 3 && i < encodingResponse.ProtocolType.Length; i++)
+                    {
+                        protocolType2[i] = encodingResponse.ProtocolType[i];
+                    }
+                    binaryWriter.Write(protocolType2); // 3 chars DTC plus null terminator 
+                    return;
                 case DTCMessageType.MarketDataRequest:
                     throw new NotImplementedException(nameof(messageType));;
                 case DTCMessageType.MarketDataReject:
@@ -191,6 +215,7 @@ namespace DTCCommon.Codecs
 
         public T Load<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new()
         {
+            var result = new T();
             switch (messageType)
             {
                 case DTCMessageType.MessageTypeUnset:
@@ -200,13 +225,24 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.LogonResponse:
                     throw new NotImplementedException(nameof(messageType));;
                 case DTCMessageType.Heartbeat:
-                    throw new NotImplementedException(nameof(messageType));;
+                    var heartbeat = result as Heartbeat;
+                    heartbeat.NumDroppedMessages = BitConverter.ToUInt32(bytes, 0);
+                    heartbeat.CurrentDateTime = BitConverter.ToInt64(bytes, 4);
+                    return result;
                 case DTCMessageType.Logoff:
                     throw new NotImplementedException(nameof(messageType));;
                 case DTCMessageType.EncodingRequest:
-                    throw new NotImplementedException(nameof(messageType));;
+                    var encodingRequest = result as EncodingRequest;
+                    encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, 0);
+                    encodingRequest.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4);
+                    encodingRequest.ProtocolType = BitConverter.ToString(bytes, 8);
+                    return result;
                 case DTCMessageType.EncodingResponse:
-                    throw new NotImplementedException(nameof(messageType));;
+                    var encodingResponse = result as EncodingResponse;
+                    encodingResponse.ProtocolVersion = BitConverter.ToInt32(bytes, 0);
+                    encodingResponse.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4);
+                    encodingResponse.ProtocolType = BitConverter.ToString(bytes, 8);
+                    return result;
                 case DTCMessageType.MarketDataRequest:
                     throw new NotImplementedException(nameof(messageType));;
                 case DTCMessageType.MarketDataReject:
