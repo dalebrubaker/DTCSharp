@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,6 +55,10 @@ namespace DTCClient
         public ConcurrentDictionary<string, uint> SymbolIdBySymbolExchangeCombo { get; set; }
 
         public ConcurrentDictionary<uint, string> SymbolExchangeComboBySymbolId { get; set; }
+
+        public string Server => _server;
+
+        public int Port => _port;
 
         public Client(string server, int port)
         {
@@ -265,22 +270,21 @@ namespace DTCClient
         {
             if (disposing && !_isDisposed)
             {
-                _cts.Cancel();
-                _binaryWriter.Dispose();
-                _tcpClient.Dispose();
-                _heartbeatTimer.Dispose();
+                _cts?.Cancel();
+                _binaryWriter?.Dispose();
+                _tcpClient?.Dispose();
+                _heartbeatTimer?.Dispose();
                 _isDisposed = true;
             }
         }
 
         /// <summary>
-        /// Send the message represented by bytes
+        /// Send the message
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
         public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
-            // Write header 
             var bytes = message.ToByteArray();
             Utility.WriteHeader(_binaryWriter, bytes.Length, messageType);
             _binaryWriter.Write(bytes);

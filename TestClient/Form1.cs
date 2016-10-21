@@ -18,6 +18,7 @@ namespace TestClient
     {
         private Client _client;
         private uint _symbolId;
+        private Client _clientHistorical;
 
         public Form1()
         {
@@ -35,69 +36,102 @@ namespace TestClient
         {
             if (_client != null)
             {
-                UnregisterClientEvents();
+                UnregisterClientEvents(_client);
                 _client.Dispose();
                 _client = null;
+                UnregisterClientEvents(_clientHistorical);
+                _clientHistorical.Dispose();
+                _clientHistorical = null;
                 toolStripStatusLabel1.Text = "Disconnected";
+            }
+        }
+
+        private int PortListener
+        {
+            get
+            {
+                int port;
+                int.TryParse(txtPortListening.Text, out port);
+                return port;
+            }
+        }
+
+        private int PortHistorical
+        {
+            get
+            {
+                int port;
+                int.TryParse(txtPortHistorical.Text, out port);
+                return port;
             }
         }
 
         private async void btnConnect_Click(object sender, EventArgs e)
         {
-            int port;
-            int.TryParse(txtPortListening.Text, out port);
             DisposeClient(); // remove the old client just in case it was missed elsewhere
-            _client = new Client(txtServer.Text, port);
-            RegisterClientEvents();
-            await LogonAsync();
+            _client = new Client(txtServer.Text, PortListener);
+            RegisterClientEvents(_client);
+            await LogonAsync(_client, "TestClient");
+
+            _clientHistorical = new Client(txtServer.Text, PortHistorical);
+            RegisterClientEvents(_clientHistorical);
+            try
+            {
+                await LogonAsync(_clientHistorical, "TestClientHistorical");
+            }
+            catch (TaskCanceledException)
+            {
+                
+                throw;
+            }
         }
 
-        private void UnregisterClientEvents()
+        private void UnregisterClientEvents(Client client)
         {
-            _client.EncodingResponseEvent -= Client_EncodingResponseEvent;
-            _client.UserMessageEvent -= Client_UserMessageEvent;
-            _client.GeneralLogMessageEvent -= Client_GeneralLogMessageEvent;
-            _client.ExchangeListResponseEvent -= Client_ExchangeListResponseEvent;
-            _client.MarketDataRejectEvent -= Client_MarketDataRejectEvent;
-            _client.MarketDataFeedStatusEvent -= Client_MarketDataFeedStatusEvent;
-            _client.MarketDataFeedSymbolStatusEvent -= Client_MarketDataFeedSymbolStatusEvent;
-            _client.MarketDataSnapshotEvent -= Client_MarketDataSnapshotEvent;
-            _client.MarketDataSnapshotIntEvent -= Client_MarketDataSnapshotIntEvent;
+            client.EncodingResponseEvent -= Client_EncodingResponseEvent;
+            client.UserMessageEvent -= Client_UserMessageEvent;
+            client.GeneralLogMessageEvent -= Client_GeneralLogMessageEvent;
+            client.ExchangeListResponseEvent -= Client_ExchangeListResponseEvent;
+            client.MarketDataRejectEvent -= Client_MarketDataRejectEvent;
+            client.MarketDataFeedStatusEvent -= Client_MarketDataFeedStatusEvent;
+            client.MarketDataFeedSymbolStatusEvent -= Client_MarketDataFeedSymbolStatusEvent;
+            client.MarketDataSnapshotEvent -= Client_MarketDataSnapshotEvent;
+            client.MarketDataSnapshotIntEvent -= Client_MarketDataSnapshotIntEvent;
 
-            _client.MarketDataUpdateTradeCompactEvent -= Client_MarketDataUpdateTradeCompactEvent;
-            _client.MarketDataUpdateTradeEvent -= Client_MarketDataUpdateTradeEvent;
-            _client.MarketDataUpdateTradeIntEvent -= Client_MarketDataUpdateTradeIntEvent;
-            _client.MarketDataUpdateBidAskCompactEvent -= Client_MarketDataUpdateBidAskCompactEvent;
-            _client.MarketDataUpdateBidAskEvent -= Client_MarketDataUpdateBidAskEvent;
-            _client.MarketDataUpdateBidAskIntEvent -= Client_MarketDataUpdateBidAskIntEvent;
+            client.MarketDataUpdateTradeCompactEvent -= Client_MarketDataUpdateTradeCompactEvent;
+            client.MarketDataUpdateTradeEvent -= Client_MarketDataUpdateTradeEvent;
+            client.MarketDataUpdateTradeIntEvent -= Client_MarketDataUpdateTradeIntEvent;
+            client.MarketDataUpdateBidAskCompactEvent -= Client_MarketDataUpdateBidAskCompactEvent;
+            client.MarketDataUpdateBidAskEvent -= Client_MarketDataUpdateBidAskEvent;
+            client.MarketDataUpdateBidAskIntEvent -= Client_MarketDataUpdateBidAskIntEvent;
 
-            _client.MarketDataUpdateSessionVolumeEvent -= Client_MarketDataUpdateSessionVolumeEvent;
-            _client.MarketDataUpdateSessionHighEvent -= Client_MarketDataUpdateSessionHighEvent;
-            _client.MarketDataUpdateSessionLowEvent -= Client_MarketDataUpdateSessionLowEvent;
+            client.MarketDataUpdateSessionVolumeEvent -= Client_MarketDataUpdateSessionVolumeEvent;
+            client.MarketDataUpdateSessionHighEvent -= Client_MarketDataUpdateSessionHighEvent;
+            client.MarketDataUpdateSessionLowEvent -= Client_MarketDataUpdateSessionLowEvent;
         }
 
-        private void RegisterClientEvents()
+        private void RegisterClientEvents(Client client)
         {
-            _client.EncodingResponseEvent += Client_EncodingResponseEvent;
-            _client.UserMessageEvent += Client_UserMessageEvent;
-            _client.GeneralLogMessageEvent += Client_GeneralLogMessageEvent;
-            _client.ExchangeListResponseEvent += Client_ExchangeListResponseEvent;
-            _client.MarketDataRejectEvent += Client_MarketDataRejectEvent;
-            _client.MarketDataFeedStatusEvent += Client_MarketDataFeedStatusEvent;
-            _client.MarketDataFeedSymbolStatusEvent += Client_MarketDataFeedSymbolStatusEvent;
-            _client.MarketDataSnapshotEvent += Client_MarketDataSnapshotEvent;
-            _client.MarketDataSnapshotIntEvent += Client_MarketDataSnapshotIntEvent;
+            client.EncodingResponseEvent += Client_EncodingResponseEvent;
+            client.UserMessageEvent += Client_UserMessageEvent;
+            client.GeneralLogMessageEvent += Client_GeneralLogMessageEvent;
+            client.ExchangeListResponseEvent += Client_ExchangeListResponseEvent;
+            client.MarketDataRejectEvent += Client_MarketDataRejectEvent;
+            client.MarketDataFeedStatusEvent += Client_MarketDataFeedStatusEvent;
+            client.MarketDataFeedSymbolStatusEvent += Client_MarketDataFeedSymbolStatusEvent;
+            client.MarketDataSnapshotEvent += Client_MarketDataSnapshotEvent;
+            client.MarketDataSnapshotIntEvent += Client_MarketDataSnapshotIntEvent;
 
-            _client.MarketDataUpdateTradeCompactEvent += Client_MarketDataUpdateTradeCompactEvent;
-            _client.MarketDataUpdateTradeEvent += Client_MarketDataUpdateTradeEvent;
-            _client.MarketDataUpdateTradeIntEvent += Client_MarketDataUpdateTradeIntEvent;
-            _client.MarketDataUpdateBidAskCompactEvent += Client_MarketDataUpdateBidAskCompactEvent;
-            _client.MarketDataUpdateBidAskEvent += Client_MarketDataUpdateBidAskEvent;
-            _client.MarketDataUpdateBidAskIntEvent += Client_MarketDataUpdateBidAskIntEvent;
+            client.MarketDataUpdateTradeCompactEvent += Client_MarketDataUpdateTradeCompactEvent;
+            client.MarketDataUpdateTradeEvent += Client_MarketDataUpdateTradeEvent;
+            client.MarketDataUpdateTradeIntEvent += Client_MarketDataUpdateTradeIntEvent;
+            client.MarketDataUpdateBidAskCompactEvent += Client_MarketDataUpdateBidAskCompactEvent;
+            client.MarketDataUpdateBidAskEvent += Client_MarketDataUpdateBidAskEvent;
+            client.MarketDataUpdateBidAskIntEvent += Client_MarketDataUpdateBidAskIntEvent;
 
-            _client.MarketDataUpdateSessionVolumeEvent += Client_MarketDataUpdateSessionVolumeEvent;
-            _client.MarketDataUpdateSessionHighEvent += Client_MarketDataUpdateSessionHighEvent;
-            _client.MarketDataUpdateSessionLowEvent += Client_MarketDataUpdateSessionLowEvent;
+            client.MarketDataUpdateSessionVolumeEvent += Client_MarketDataUpdateSessionVolumeEvent;
+            client.MarketDataUpdateSessionHighEvent += Client_MarketDataUpdateSessionHighEvent;
+            client.MarketDataUpdateSessionLowEvent += Client_MarketDataUpdateSessionLowEvent;
         }
 
         private void Client_MarketDataUpdateSessionLowEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateSessionLow> e)
@@ -130,7 +164,8 @@ namespace TestClient
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DateTime4ByteToUtc().ToLocalTime();
-            logControl3.LogMessage($"Market Data Update Bid/Ask Int for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime}");
+            logControl3.LogMessage(
+                $"Market Data Update Bid/Ask Int for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime}");
         }
 
         private void Client_MarketDataUpdateBidAskEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateBidAsk> e)
@@ -142,7 +177,8 @@ namespace TestClient
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DateTime4ByteToUtc().ToLocalTime();
-            logControl3.LogMessage($"Market Data Update Bid/Ask for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime}");
+            logControl3.LogMessage(
+                $"Market Data Update Bid/Ask for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime}");
         }
 
         private void Client_MarketDataUpdateBidAskCompactEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateBidAskCompact> e)
@@ -154,7 +190,8 @@ namespace TestClient
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DateTime4ByteToUtc().ToLocalTime();
-            logControl3.LogMessage($"Market Data Update Bid/Ask Compact for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime}");
+            logControl3.LogMessage(
+                $"Market Data Update Bid/Ask Compact for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime}");
         }
 
         private void Client_MarketDataUpdateTradeIntEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateTrade_Int> e)
@@ -259,30 +296,44 @@ namespace TestClient
         }
 
 
-        private async Task LogonAsync()
+        private async Task LogonAsync(Client client, string clientName)
         {
-            var response = await _client.LogonAsync(30, 5000, "TestClient");
-            toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
-            switch (response.Result)
+
+            try
             {
-                case LogonStatusEnum.LogonStatusUnset:
-                    throw new ArgumentException("Unexpected logon result");
-                case LogonStatusEnum.LogonSuccess:
-                    DisplayLogonResponse(response);
-                    break;
-                case LogonStatusEnum.LogonErrorNoReconnect:
-                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "Reconnect not allowed.");
-                    break;
-                case LogonStatusEnum.LogonError:
-                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText);
-                    DisposeClient();
-                    break;
-                case LogonStatusEnum.LogonReconnectNewAddress:
-                    logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "\nReconnect to:" + response.ReconnectAddress);
-                    DisposeClient();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                var response = await client.LogonAsync(30, 5000, clientName);
+                toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
+                switch (response.Result)
+                {
+                    case LogonStatusEnum.LogonStatusUnset:
+                        throw new ArgumentException("Unexpected logon result");
+                    case LogonStatusEnum.LogonSuccess:
+                        DisplayLogonResponse(response);
+                        break;
+                    case LogonStatusEnum.LogonErrorNoReconnect:
+                        logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "Reconnect not allowed.");
+                        break;
+                    case LogonStatusEnum.LogonError:
+                        logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText);
+                        DisposeClient();
+                        break;
+                    case LogonStatusEnum.LogonReconnectNewAddress:
+                        logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "\nReconnect to:" + response.ReconnectAddress);
+                        DisposeClient();
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            catch (TaskCanceledException exc)
+            {
+
+                throw;
+            }
+            catch (Exception ex)
+            {
+
+                throw;
             }
         }
 
@@ -311,14 +362,19 @@ namespace TestClient
 
         private void Client_EncodingResponseEvent(object sender, DTCCommon.EventArgs<DTCPB.EncodingResponse> e)
         {
+            var client = (Client)sender;
             var response = e.Data;
-            if (response.Encoding != EncodingEnum.ProtocolBuffers)
+            if (client.Port == PortListener && response.Encoding != EncodingEnum.ProtocolBuffers)
             {
                 logControl1.LogMessage("Server cannot support Protocol Buffers.");
                 DisposeClient();
             }
         }
 
+        /// <summary>
+        /// https://dtcprotocol.org/index.php?page=doc/DTCMessages_AuthenticationConnectionMonitoringMessages.php#Messages-LOGON_RESPONSE
+        /// </summary>
+        /// <param name="response"></param>
         private void DisplayLogonResponse(LogonResponse response)
         {
             logControl1.LogMessage("Login succeeded: " + response.Result + " " + response.ResultText);
@@ -334,6 +390,7 @@ namespace TestClient
                 $"OrderCancelReplaceSupported: {response.OrderCancelReplaceSupported}",
                 $"SymbolExchangeDelimiter: {response.SymbolExchangeDelimiter}",
                 $"SecurityDefinitionsSupported: {response.SecurityDefinitionsSupported}",
+                $"HistoricalPriceDataSupported: {response.HistoricalPriceDataSupported}",
                 $"ResubscribeWhenMarketDataFeedAvailable: {response.ResubscribeWhenMarketDataFeedAvailable}",
                 $"MarketDepthIsSupported: {response.MarketDepthIsSupported}",
                 $"OneHistoricalPriceDataRequestPerConnection: {response.OneHistoricalPriceDataRequestPerConnection}",

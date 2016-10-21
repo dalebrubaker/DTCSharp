@@ -50,10 +50,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Codecs\CodecBinary.cs" />
+    <Compile Include="Codecs\CodecProtobuf.cs" />
+    <Compile Include="Codecs\ICodecDTC.cs" />
     <Compile Include="EventArgs.cs" />
     <Compile Include="Extensions\DateTimeExtensions.cs" />
     <Compile Include="Generated\DTCProtocol3.cs" />
     <Compile Include="Generated\IMessageDTC.cs" />
+    <Compile Include="MessageTypes.cs" />
     <Compile Include="Partials\EncodingResponse.cs" />
     <Compile Include="Partials\EncodingRequest.cs" />
     <Compile Include="Partials\Heartbeat.cs" />
