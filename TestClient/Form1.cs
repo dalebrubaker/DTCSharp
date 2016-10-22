@@ -301,7 +301,7 @@ namespace TestClient
         {
             try
             {
-                const int heartbeatIntervalInSeconds = 30;
+                const int heartbeatIntervalInSeconds = 10;
                 const int timeout = 5000;
                 var response = await client.LogonAsync(encoding, heartbeatIntervalInSeconds, isHistoricalClient, timeout, clientName);
                 if (response == null)

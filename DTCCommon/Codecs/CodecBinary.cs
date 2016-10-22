@@ -208,9 +208,20 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.TradeAccountResponse:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.ExchangeListRequest:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var exchangeListRequest = message as ExchangeListRequest;
+                    sizeExcludingHeader = 4;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(exchangeListRequest.RequestID);
+                    return;
                 case DTCMessageType.ExchangeListResponse:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var exchangeListResponse = message as ExchangeListResponse;
+                    sizeExcludingHeader = 4 + EXCHANGE_LENGTH + 1 + EXCHANGE_DESCRIPTION_LENGTH;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(exchangeListResponse.RequestID);
+                    binaryWriter.Write(exchangeListResponse.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+                    binaryWriter.Write((uint8_t)exchangeListResponse.IsFinalMessage);
+                    binaryWriter.Write(exchangeListResponse.Description.ToFixedBytes(EXCHANGE_DESCRIPTION_LENGTH));
+                    return;
                 case DTCMessageType.SymbolsForExchangeRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
@@ -452,9 +463,20 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.TradeAccountResponse:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.ExchangeListRequest:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var exchangeListRequest = result as ExchangeListRequest;
+                    exchangeListRequest.RequestID = BitConverter.ToInt32(bytes, 0);
+                    return result;
                 case DTCMessageType.ExchangeListResponse:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var exchangeListResponse = result as ExchangeListResponse;
+                    startIndex = 0;
+                    exchangeListResponse.RequestID = BitConverter.ToInt32(bytes, 0);
+                    startIndex += 4;
+                    exchangeListResponse.Exchange = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += EXCHANGE_LENGTH;
+                    exchangeListResponse.IsFinalMessage = bytes[startIndex++];
+                    exchangeListResponse.Description = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += EXCHANGE_DESCRIPTION_LENGTH;
+                    return result;
                 case DTCMessageType.SymbolsForExchangeRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
