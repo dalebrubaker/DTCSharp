@@ -1267,6 +1267,8 @@ message SecurityDefinitionResponse
 	uint32 HasMarketDepthData = 23;
 
 	float DisplayPriceMultiplier = 24;
+
+	string ExchangeSymbol = 25;
 }
 
 

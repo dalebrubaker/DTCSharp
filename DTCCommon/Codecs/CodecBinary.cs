@@ -88,7 +88,12 @@ namespace DTCCommon.Codecs
                     binaryWriter.Write(heartbeat.CurrentDateTime); 
                     return;
                 case DTCMessageType.Logoff:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;
+                    var logoff = message as Logoff;
+                    sizeExcludingHeader = TEXT_DESCRIPTION_LENGTH + 1;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(logoff.Reason.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+                    binaryWriter.Write((uint8_t)logoff.DoNotReconnect);
+                    return;
                 case DTCMessageType.EncodingRequest:
                     var encodingRequest = message as EncodingRequest;
                     Utility.WriteHeader(binaryWriter, 12, messageType);
@@ -229,13 +234,53 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.SymbolsForUnderlyingRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var securityDefinitionForSymbolRequest = message as SecurityDefinitionForSymbolRequest;
+                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(securityDefinitionForSymbolRequest.RequestID);
+                    binaryWriter.Write(securityDefinitionForSymbolRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
+                    binaryWriter.Write(securityDefinitionForSymbolRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+                    return;
                 case DTCMessageType.SecurityDefinitionResponse:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var securityDefinitionResponse = message as SecurityDefinitionResponse;
+                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + SYMBOL_DESCRIPTION_LENGTH + (3 * 4) + 1 + (2 * 4) + UNDERLYING_SYMBOL_LENGTH 
+                        + 1 + 4 + 1 + (9 * 4) + 1 + 4 + SYMBOL_LENGTH;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(securityDefinitionResponse.RequestID);
+                    binaryWriter.Write(securityDefinitionResponse.Symbol.ToFixedBytes(SYMBOL_LENGTH));
+                    binaryWriter.Write(securityDefinitionResponse.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+                    binaryWriter.Write((int)securityDefinitionResponse.SecurityType);
+                    binaryWriter.Write(securityDefinitionResponse.Description.ToFixedBytes(SYMBOL_DESCRIPTION_LENGTH));
+                    binaryWriter.Write(securityDefinitionResponse.MinPriceIncrement);
+                    binaryWriter.Write((int)securityDefinitionResponse.PriceDisplayFormat);
+                    binaryWriter.Write(securityDefinitionResponse.CurrencyValuePerIncrement);
+                    binaryWriter.Write((byte)securityDefinitionResponse.IsFinalMessage);
+                    binaryWriter.Write(securityDefinitionResponse.FloatToIntPriceMultiplier);
+                    binaryWriter.Write(securityDefinitionResponse.IntToFloatPriceDivisor);
+                    binaryWriter.Write(securityDefinitionResponse.UnderlyingSymbol.ToFixedBytes(UNDERLYING_SYMBOL_LENGTH));
+                    binaryWriter.Write((byte)securityDefinitionResponse.UpdatesBidAskOnly);
+                    binaryWriter.Write(securityDefinitionResponse.StrikePrice);
+                    binaryWriter.Write((uint8_t)securityDefinitionResponse.PutOrCall);
+                    binaryWriter.Write(securityDefinitionResponse.ShortInterest);
+                    binaryWriter.Write((uint)securityDefinitionResponse.SecurityExpirationDate);
+                    binaryWriter.Write(securityDefinitionResponse.BuyRolloverInterest);
+                    binaryWriter.Write(securityDefinitionResponse.SellRolloverInterest);
+                    binaryWriter.Write(securityDefinitionResponse.EarningsPerShare);
+                    binaryWriter.Write(securityDefinitionResponse.SharesOutstanding);
+                    binaryWriter.Write(securityDefinitionResponse.IntToFloatQuantityDivisor);
+                    binaryWriter.Write((uint8_t)securityDefinitionResponse.HasMarketDepthData);
+                    binaryWriter.Write(securityDefinitionResponse.DisplayPriceMultiplier);
+                    binaryWriter.Write(securityDefinitionResponse.ExchangeSymbol.ToFixedBytes(SYMBOL_LENGTH));
+                    return;
                 case DTCMessageType.SymbolSearchRequest:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ; ;
                 case DTCMessageType.SecurityDefinitionReject:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var securityDefinitionReject = message as SecurityDefinitionReject;
+                    sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(securityDefinitionReject.RequestID);
+                    binaryWriter.Write(securityDefinitionReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+                    return;
                 case DTCMessageType.AccountBalanceRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.AccountBalanceReject:
@@ -329,7 +374,7 @@ namespace DTCCommon.Codecs
                     logonResponse.TradingIsSupported = bytes[startIndex++];
                     logonResponse.OCOOrdersSupported = bytes[startIndex++];
                     logonResponse.OrderCancelReplaceSupported = bytes[startIndex++];
-                    logonResponse.SymbolExchangeDelimiter =bytes.StringFromNullTerminatedBytes(startIndex);
+                    logonResponse.SymbolExchangeDelimiter = bytes.StringFromNullTerminatedBytes(startIndex);
                     startIndex += SYMBOL_EXCHANGE_DELIMITER_LENGTH;
                     logonResponse.SecurityDefinitionsSupported = bytes[startIndex++];
                     logonResponse.HistoricalPriceDataSupported = bytes[startIndex++];
@@ -347,18 +392,23 @@ namespace DTCCommon.Codecs
                     heartbeat.CurrentDateTime = BitConverter.ToInt64(bytes, 4);
                     return result;
                 case DTCMessageType.Logoff:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var logoff = result as Logoff;
+                    startIndex = 0;
+                    logoff.Reason = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += TEXT_DESCRIPTION_LENGTH;
+                    logoff.DoNotReconnect = bytes[startIndex++];
+                    return result;
                 case DTCMessageType.EncodingRequest:
                     var encodingRequest = result as EncodingRequest;
                     encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, 0);
                     encodingRequest.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4);
-                    encodingRequest.ProtocolType = BitConverter.ToString(bytes, 8);
+                    encodingRequest.ProtocolType = bytes.StringFromNullTerminatedBytes(8);
                     return result;
                 case DTCMessageType.EncodingResponse:
                     var encodingResponse = result as EncodingResponse;
                     encodingResponse.ProtocolVersion = BitConverter.ToInt32(bytes, 0);
                     encodingResponse.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4);
-                    encodingResponse.ProtocolType = BitConverter.ToString(bytes, 8);
+                    encodingResponse.ProtocolType = bytes.StringFromNullTerminatedBytes(8);
                     return result;
                 case DTCMessageType.MarketDataRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
@@ -469,7 +519,7 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.ExchangeListResponse:
                     var exchangeListResponse = result as ExchangeListResponse;
                     startIndex = 0;
-                    exchangeListResponse.RequestID = BitConverter.ToInt32(bytes, 0);
+                    exchangeListResponse.RequestID = BitConverter.ToInt32(bytes, startIndex);
                     startIndex += 4;
                     exchangeListResponse.Exchange = bytes.StringFromNullTerminatedBytes(startIndex);
                     startIndex += EXCHANGE_LENGTH;
@@ -484,13 +534,76 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.SymbolsForUnderlyingRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var securityDefinitionForSymbolRequest = result as SecurityDefinitionForSymbolRequest;
+                    startIndex = 0;
+                    securityDefinitionForSymbolRequest.RequestID = BitConverter.ToInt32(bytes, 0);
+                    startIndex += 4;
+                    securityDefinitionForSymbolRequest.Symbol = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += SYMBOL_LENGTH;
+                    securityDefinitionForSymbolRequest.Exchange = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += EXCHANGE_LENGTH;
+                    return result;
                 case DTCMessageType.SecurityDefinitionResponse:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var securityDefinitionResponse = result as SecurityDefinitionResponse;
+                    startIndex = 0;
+                    securityDefinitionResponse.RequestID = BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.Symbol = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += SYMBOL_LENGTH;
+                    securityDefinitionResponse.Exchange = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += EXCHANGE_LENGTH;
+                    securityDefinitionResponse.SecurityType = (SecurityTypeEnum)BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.Description = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += SYMBOL_DESCRIPTION_LENGTH;
+                    securityDefinitionResponse.MinPriceIncrement = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.PriceDisplayFormat = (PriceDisplayFormatEnum)BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.CurrencyValuePerIncrement = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.IsFinalMessage = bytes[startIndex++];
+                    securityDefinitionResponse.FloatToIntPriceMultiplier = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.UnderlyingSymbol = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += UNDERLYING_SYMBOL_LENGTH;
+                    securityDefinitionResponse.UpdatesBidAskOnly = bytes[startIndex++];
+                    securityDefinitionResponse.StrikePrice = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.PutOrCall = (PutCallEnum)BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.ShortInterest = BitConverter.ToUInt32(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.SecurityExpirationDate = BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.BuyRolloverInterest = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.SellRolloverInterest = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.EarningsPerShare = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.SharesOutstanding = BitConverter.ToUInt32(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.IntToFloatQuantityDivisor = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.HasMarketDepthData = bytes[startIndex++];
+                    securityDefinitionResponse.DisplayPriceMultiplier = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionResponse.ExchangeSymbol = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += SYMBOL_LENGTH;
+                    return result;
                 case DTCMessageType.SymbolSearchRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionReject:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var securityDefinitionReject = result as SecurityDefinitionReject;
+                    startIndex = 0;
+                    securityDefinitionReject.RequestID = BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    securityDefinitionReject.RejectText = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += TEXT_DESCRIPTION_LENGTH;
+                    return result;
                 case DTCMessageType.AccountBalanceRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.AccountBalanceReject:

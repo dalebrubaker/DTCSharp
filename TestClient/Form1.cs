@@ -437,7 +437,8 @@ namespace TestClient
 
         private async void btnSymbolDefinition_Click(object sender, EventArgs e)
         {
-            var response = await _client.GetSecurityDefinitionAsync(txtSymbolDef.Text);
+            const int timeout = 5000;
+            var response = await _client.GetSecurityDefinitionAsync(txtSymbolDef.Text, timeout);
             var lines = new List<string>
             {
                 "Security Definition Response:",
