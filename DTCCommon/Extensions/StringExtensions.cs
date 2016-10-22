@@ -23,5 +23,23 @@ namespace DTCCommon.Extensions
             }
             return result;
         }
+
+        /// <summary>
+        /// Return the string starting at startIndex
+        /// </summary>
+        /// <param name="bytes"></param>
+        /// <param name="startIndex"></param>
+        /// <returns></returns>
+        public static string StringFromNullTerminatedBytes(this byte[] bytes, int startIndex)
+        {
+            var endIndex = Array.IndexOf(bytes, (byte)0, startIndex);
+            if (endIndex < 0)
+            {
+                return "";
+            }
+            var length = endIndex - startIndex;
+            var result = System.Text.Encoding.UTF8.GetString(bytes, startIndex, length);
+            return result;
+        }
     }
 }

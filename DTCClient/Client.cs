@@ -107,7 +107,7 @@ namespace DTCClient
         public event EventHandler<EventArgs<EncodingResponse>> EncodingResponseEvent;
         public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent;
         public event EventHandler<EventArgs<Logoff>> LogoffEvent;
-        public event EventHandler<EventArgs<LogonResponse>> LogonReponseEvent;
+        public event EventHandler<EventArgs<LogonResponse>> LogonResponseEvent;
         public event EventHandler<EventArgs<MarketDataReject>> MarketDataRejectEvent;
         public event EventHandler<EventArgs<MarketDataSnapshot>> MarketDataSnapshotEvent;
         public event EventHandler<EventArgs<MarketDataSnapshot_Int>> MarketDataSnapshotIntEvent;
@@ -259,10 +259,10 @@ namespace DTCClient
             EventHandler<EventArgs<LogonResponse>> handler = null;
             handler = (s, e) =>
             {
-                LogonReponseEvent -= handler; // unregister to avoid a potential memory leak
+                LogonResponseEvent -= handler; // unregister to avoid a potential memory leak
                 result = e.Data;
             };
-            LogonReponseEvent += handler;
+            LogonResponseEvent += handler;
 
             // Send the request
             var logonRequest = new LogonRequest
@@ -361,7 +361,7 @@ namespace DTCClient
                     {
                         case DTCMessageType.LogonResponse:
                             LogonResponse = _currentCodec.Load<LogonResponse>(messageType, bytes);
-                            ThrowEvent(LogonResponse, LogonReponseEvent);
+                            ThrowEvent(LogonResponse, LogonResponseEvent);
                             break;
                         case DTCMessageType.Heartbeat:
                             var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
