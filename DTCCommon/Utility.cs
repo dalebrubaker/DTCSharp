@@ -18,8 +18,8 @@ namespace DTCCommon
         /// <param name="messageType"></param>
         public static void WriteHeader(BinaryWriter binaryWriter, int sizeExcludingHeader, DTCMessageType messageType)
         {
-            binaryWriter.Write((short)(sizeExcludingHeader + 4));
-            binaryWriter.Write((short)messageType);
+            binaryWriter.Write((ushort)(sizeExcludingHeader + 4));
+            binaryWriter.Write((ushort)messageType);
         }
     }
 }

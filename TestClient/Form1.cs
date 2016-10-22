@@ -70,21 +70,21 @@ namespace TestClient
         private async void btnConnect_Click(object sender, EventArgs e)
         {
             DisposeClient(); // remove the old client just in case it was missed elsewhere
-            //_client = new Client(txtServer.Text, PortListener);
-            //RegisterClientEvents(_client);
-            //await LogonAsync(_client, "TestClient", false);
+            _client = new Client(txtServer.Text, PortListener);
+            RegisterClientEvents(_client);
+            await LogonAsync(_client, "TestClient", false, EncodingEnum.BinaryEncoding);
 
-            _clientHistorical = new Client(txtServer.Text, PortHistorical);
-            RegisterClientEvents(_clientHistorical);
-            try
-            {
-                await LogonAsync(_clientHistorical, "TestClientHistorical", true);
-            }
-            catch (TaskCanceledException)
-            {
+            //_clientHistorical = new Client(txtServer.Text, PortHistorical);
+            //RegisterClientEvents(_clientHistorical);
+            //try
+            //{
+            //    await LogonAsync(_clientHistorical, "TestClientHistorical", true);
+            //}
+            //catch (TaskCanceledException)
+            //{
                 
-                throw;
-            }
+            //    throw;
+            //}
         }
 
         private void UnregisterClientEvents(Client client)
@@ -297,11 +297,13 @@ namespace TestClient
         }
 
 
-        private async Task LogonAsync(Client client, string clientName, bool isHistoricalClient)
+        private async Task LogonAsync(Client client, string clientName, bool isHistoricalClient, EncodingEnum encoding)
         {
             try
             {
-                var response = await client.LogonAsync(30, isHistoricalClient, 5000, clientName);
+                const int heartbeatIntervalInSeconds = 30;
+                const int timeout = 5000;
+                var response = await client.LogonAsync(encoding, heartbeatIntervalInSeconds, isHistoricalClient, timeout, clientName);
                 if (response == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
@@ -369,11 +371,7 @@ namespace TestClient
         {
             var client = (Client)sender;
             var response = e.Data;
-            if (client.Port == PortListener && response.Encoding != EncodingEnum.ProtocolBuffers)
-            {
-                logControl1.LogMessage("Server cannot support Protocol Buffers.");
-                DisposeClient();
-            }
+            logControl1.LogMessage($"{_client.ClientName} encoding is {response.Encoding}");
         }
 
         /// <summary>
@@ -417,7 +415,7 @@ namespace TestClient
                 DoNotReconnect = 1,
                 Reason = "User disconnected"
             };
-            _client.SendRequest(DTCMessageType.Logoff, logoffRequest);
+            _client?.SendMessage(DTCMessageType.Logoff, logoffRequest);
             await Task.Delay(100);
             DisposeClient();
         }
@@ -430,7 +428,7 @@ namespace TestClient
                 RequestID = _client.NextRequestId
             };
             logControl2.LogMessage($"Sent exchangeListRequest, RequestID={exchangeListRequest.RequestID}");
-            _client.SendRequest(DTCMessageType.ExchangeListRequest, exchangeListRequest);
+            _client.SendMessage(DTCMessageType.ExchangeListRequest, exchangeListRequest);
             if (string.IsNullOrEmpty(_client.LogonResponse.SymbolExchangeDelimiter))
             {
                 logControl2.LogMessage("The LogonResponse.SymbolExchangeDelimiter is empty, so Exchanges probably aren't supported.");

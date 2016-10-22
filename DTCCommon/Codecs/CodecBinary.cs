@@ -8,7 +8,7 @@ using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
 using int32_t = System.Int32;
-using uint8_t = System.UInt64;
+using uint8_t = System.Byte;
 
 
 namespace DTCCommon.Codecs
@@ -34,16 +34,16 @@ namespace DTCCommon.Codecs
 
         public void Write<T>(DTCMessageType messageType, T message, BinaryWriter binaryWriter) where T : IMessage
         {
-            int size = 0;
+            int sizeExcludingHeader;
             switch (messageType)
             {
                 case DTCMessageType.MessageTypeUnset:
                     throw new ArgumentException(messageType.ToString());;
                 case DTCMessageType.LogonRequest:
                     var logonRequest = message as LogonRequest;
-                    size = 2 + 2 + 4 + USERNAME_PASSWORD_LENGTH + USERNAME_PASSWORD_LENGTH + GENERAL_IDENTIFIER_LENGTH 
+                    sizeExcludingHeader = 4 + USERNAME_PASSWORD_LENGTH + USERNAME_PASSWORD_LENGTH + GENERAL_IDENTIFIER_LENGTH 
                         + 4 + 4 + 4 + 4 + TRADE_ACCOUNT_LENGTH + GENERAL_IDENTIFIER_LENGTH + 32;
-                    Utility.WriteHeader(binaryWriter, size, messageType);
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
                     binaryWriter.Write(logonRequest.ProtocolVersion);
                     binaryWriter.Write(logonRequest.Username.ToFixedBytes(USERNAME_PASSWORD_LENGTH));
                     binaryWriter.Write(logonRequest.Password.ToFixedBytes(USERNAME_PASSWORD_LENGTH));
@@ -58,9 +58,8 @@ namespace DTCCommon.Codecs
                     return;
                 case DTCMessageType.LogonResponse:
                     var logonResponse = message as LogonResponse;
-                    size = 2 + 2 + 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + 8 * 4
-                           + SYMBOL_EXCHANGE_DELIMITER_LENGTH + 8 * 9;
-                    Utility.WriteHeader(binaryWriter, size, messageType);
+                    sizeExcludingHeader = 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + (4 * 1) + SYMBOL_EXCHANGE_DELIMITER_LENGTH + (9 * 1);
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
                     binaryWriter.Write(logonResponse.ProtocolVersion);
                     binaryWriter.Write((int)logonResponse.Result);
                     binaryWriter.Write(logonResponse.ResultText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
@@ -89,7 +88,7 @@ namespace DTCCommon.Codecs
                     binaryWriter.Write(heartbeat.CurrentDateTime); 
                     return;
                 case DTCMessageType.Logoff:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;
                 case DTCMessageType.EncodingRequest:
                     var encodingRequest = message as EncodingRequest;
                     Utility.WriteHeader(binaryWriter, 12, messageType);
@@ -107,149 +106,149 @@ namespace DTCCommon.Codecs
                     binaryWriter.Write(protocolType2); // 3 chars DTC plus null terminator 
                     return;
                 case DTCMessageType.MarketDataRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;
                 case DTCMessageType.MarketDataReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataSnapshot:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataSnapshotInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateTrade:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateTradeCompact:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateTradeInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateBidAsk:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateBidAskCompact:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateBidAskInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionOpen:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionOpenInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionHigh:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionHighInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionLow:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionLowInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionVolume:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateOpenInterest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionSettlement:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionSettlementInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionNumTrades:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateTradingSessionDate:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthSnapshotLevel:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthSnapshotLevelInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthUpdateLevel:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthUpdateLevelCompact:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthUpdateLevelInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthFullUpdate10:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthFullUpdate20:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataFeedStatus:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataFeedSymbolStatus:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewSingleOrder:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewSingleOrderInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewOcoOrder:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewOcoOrderInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.CancelOrder:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.CancelReplaceOrder:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.CancelReplaceOrderInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.OpenOrdersRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.OpenOrdersReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.OrderUpdate:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalOrderFillsRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalOrderFillResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.CurrentPositionsRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.CurrentPositionsReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.PositionUpdate:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.TradeAccountsRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.TradeAccountResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.ExchangeListRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.ExchangeListResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SymbolsForExchangeRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SymbolsForUnderlyingRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SymbolSearchRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.AccountBalanceRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.AccountBalanceReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.AccountBalanceUpdate:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.UserMessage:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.GeneralLogMessage:
-                    throw new NotImplementedException(messageType.ToString());
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;
                 case DTCMessageType.HistoricalPriceDataRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 default:
                     throw new ArgumentOutOfRangeException(messageType.ToString(), messageType, null);
             }
@@ -269,21 +268,75 @@ namespace DTCCommon.Codecs
         public T Load<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new()
         {
             var result = new T();
+            int i;
             switch (messageType)
             {
                 case DTCMessageType.MessageTypeUnset:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.LogonRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    var logonRequest = result as LogonRequest;
+                    i = 0;
+                    logonRequest.ProtocolVersion = BitConverter.ToInt32(bytes, i);
+                    i += 4;
+                    logonRequest.Username = BitConverter.ToString(bytes, i);
+                    i += USERNAME_PASSWORD_LENGTH;
+                    logonRequest.Password = BitConverter.ToString(bytes, i);
+                    i += USERNAME_PASSWORD_LENGTH;
+                    logonRequest.GeneralTextData = BitConverter.ToString(bytes, i);
+                    i += GENERAL_IDENTIFIER_LENGTH;
+                    logonRequest.Integer1 = BitConverter.ToInt32(bytes, i);
+                    i += 4;
+                    logonRequest.Integer2 = BitConverter.ToInt32(bytes, i);
+                    i += 4;
+                    logonRequest.HeartbeatIntervalInSeconds = BitConverter.ToInt32(bytes, i);
+                    i += 4;
+                    logonRequest.TradeMode = (TradeModeEnum)BitConverter.ToInt32(bytes, i);
+                    i += 4;
+                    logonRequest.TradeAccount = BitConverter.ToString(bytes, i);
+                    i += TRADE_ACCOUNT_LENGTH;
+                    logonRequest.HardwareIdentifier = BitConverter.ToString(bytes, i);
+                    i += GENERAL_IDENTIFIER_LENGTH;
+                    logonRequest.ClientName = BitConverter.ToString(bytes, i);
+                    i += 32;
+                    return result;
                 case DTCMessageType.LogonResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    var logonResponse = result as LogonResponse;
+                    i = 0;
+                    logonResponse.ProtocolVersion = BitConverter.ToInt32(bytes, i);
+                    i += 4;
+                    logonResponse.Result = (LogonStatusEnum)BitConverter.ToInt32(bytes, i);
+                    i += 4;
+                    logonResponse.ResultText = BitConverter.ToString(bytes, i);
+                    i += TEXT_DESCRIPTION_LENGTH;
+                    logonResponse.ReconnectAddress = BitConverter.ToString(bytes, i);
+                    i += 64;
+                    logonResponse.Integer1 = BitConverter.ToInt32(bytes, i);
+                    i += 4;
+                    logonResponse.ServerName = BitConverter.ToString(bytes, i);
+                    i += 60;
+                    logonResponse.MarketDepthUpdatesBestBidAndAsk = bytes[i++];
+                    logonResponse.TradingIsSupported = bytes[i++];
+                    logonResponse.OCOOrdersSupported = bytes[i++];
+                    logonResponse.OrderCancelReplaceSupported = bytes[i++];
+                    logonResponse.SymbolExchangeDelimiter = BitConverter.ToString(bytes, i);
+                    i += SYMBOL_EXCHANGE_DELIMITER_LENGTH;
+                    logonResponse.SecurityDefinitionsSupported = bytes[i++];
+                    logonResponse.HistoricalPriceDataSupported = bytes[i++];
+                    logonResponse.ResubscribeWhenMarketDataFeedAvailable = bytes[i++];
+                    logonResponse.MarketDepthIsSupported = bytes[i++];
+                    logonResponse.OneHistoricalPriceDataRequestPerConnection = bytes[i++];
+                    logonResponse.BracketOrdersSupported = bytes[i++];
+                    logonResponse.UseIntegerPriceOrderMessages = bytes[i++];
+                    logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount = bytes[i++];
+                    logonResponse.MarketDataSupported = bytes[i++];
+                    return result;
                 case DTCMessageType.Heartbeat:
                     var heartbeat = result as Heartbeat;
                     heartbeat.NumDroppedMessages = BitConverter.ToUInt32(bytes, 0);
                     heartbeat.CurrentDateTime = BitConverter.ToInt64(bytes, 4);
                     return result;
                 case DTCMessageType.Logoff:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.EncodingRequest:
                     var encodingRequest = result as EncodingRequest;
                     encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, 0);
@@ -297,149 +350,149 @@ namespace DTCCommon.Codecs
                     encodingResponse.ProtocolType = BitConverter.ToString(bytes, 8);
                     return result;
                 case DTCMessageType.MarketDataRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataSnapshot:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataSnapshotInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateTrade:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateTradeCompact:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateTradeInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateBidAsk:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateBidAskCompact:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateBidAskInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionOpen:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionOpenInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionHigh:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionHighInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionLow:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionLowInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionVolume:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateOpenInterest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionSettlement:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionSettlementInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateSessionNumTrades:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataUpdateTradingSessionDate:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthSnapshotLevel:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthSnapshotLevelInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthUpdateLevel:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthUpdateLevelCompact:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthUpdateLevelInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthFullUpdate10:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDepthFullUpdate20:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataFeedStatus:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataFeedSymbolStatus:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewSingleOrder:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewSingleOrderInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewOcoOrder:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewOcoOrderInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.CancelOrder:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.CancelReplaceOrder:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.CancelReplaceOrderInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.OpenOrdersRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.OpenOrdersReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.OrderUpdate:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalOrderFillsRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalOrderFillResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.CurrentPositionsRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.CurrentPositionsReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.PositionUpdate:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.TradeAccountsRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.TradeAccountResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.ExchangeListRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.ExchangeListResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SymbolsForExchangeRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SymbolsForUnderlyingRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SymbolSearchRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.AccountBalanceRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.AccountBalanceReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.AccountBalanceUpdate:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.UserMessage:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.GeneralLogMessage:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataRequest:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataReject:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
-                    throw new NotImplementedException(messageType.ToString());;
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 default:
                     throw new ArgumentOutOfRangeException(messageType.ToString(), messageType, null);
             }

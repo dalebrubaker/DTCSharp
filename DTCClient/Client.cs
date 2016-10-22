@@ -34,7 +34,6 @@ namespace DTCClient
         private CancellationTokenSource _cts;
         private int _nextRequestId;
         private uint _nextSymbolId;
-        private bool _isEncodingResponseReceived;
         private bool _isHistoricalClient;
         private string _clientName;
 
@@ -64,6 +63,8 @@ namespace DTCClient
         public string Server => _server;
 
         public int Port => _port;
+
+        public string ClientName => _clientName;
 
         public Client(string server, int port)
         {
@@ -98,7 +99,7 @@ namespace DTCClient
 
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat();
-            _currentCodec.Write(DTCMessageType.Heartbeat, heartbeat, _binaryWriter);
+            SendMessage(DTCMessageType.Heartbeat, heartbeat);
         }
 
         #region events
@@ -162,16 +163,17 @@ namespace DTCClient
 
         #endregion events
 
-
         /// <summary>
         /// Make the connection to server at port. 
         /// Start the heartbeats.
         /// Start the listener that will throw events for messages received from the server.
         /// To Disconnect simply Dispose() of this class.
         /// </summary>
+        /// <param name="requestedEncoding"></param>
+        /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
         /// <param name="cancellationToken">optional token to stop receiving messages</param>
         /// <returns><c>true</c> if successful. <c>false</c> means protocol buffers are not supported by server</returns>
-        private async Task ConnectAsync(CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<EncodingResponse> ConnectAsync(EncodingEnum requestedEncoding, int timeout = 1000, CancellationToken cancellationToken = default(CancellationToken))
         {
             _tcpClient = new TcpClient {NoDelay = true};
             await _tcpClient.ConnectAsync(_server, _port); // connect to the server
@@ -183,33 +185,45 @@ namespace DTCClient
             Task.Run(MessageReader, _cts.Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
+            // Set up the handler to capture the event
+            var startTime = DateTime.Now;
+            EncodingResponse result = null;
+            EventHandler<EventArgs<EncodingResponse>> handler = null;
+            handler = (s, e) =>
+            {
+                EncodingResponseEvent -= handler; // unregister to avoid a potential memory leak
+                result = e.Data;
+            };
+            EncodingResponseEvent += handler;
+
+            // Request protocol buffers encoding
+            var encodingRequest = new EncodingRequest
+            {
+                Encoding = requestedEncoding,
+                ProtocolType = "DTC",
+                ProtocolVersion = (int)DTCVersion.CurrentVersion
+            };
+            SendMessage(DTCMessageType.EncodingRequest, encodingRequest);
+
+            // Wait until the response is received or until timeout
+            while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
+            {
+                await Task.Delay(1, cancellationToken);
+            }
             if (!_isHistoricalClient)
             {
-                // Request protocol buffers encoding
-                var encodingRequest = new EncodingRequest
-                {
-                    Encoding = EncodingEnum.ProtocolBuffers,
-                    ProtocolType = "DTC",
-                    ProtocolVersion = (int)DTCVersion.CurrentVersion
-                };
-                _isEncodingResponseReceived = false;
-                _currentCodec.Write(encodingRequest, _binaryWriter);
-                var sw = Stopwatch.StartNew();
-                while (!_isEncodingResponseReceived && sw.ElapsedMilliseconds < 10000)
-                {
-                    await Task.Delay(1, cancellationToken);
-                }
-
                 // start the heartbeat
                 _lastHeartbeatReceivedTime = DateTime.Now;
                 _heartbeatTimer.Start();
             }
+            return result;
         }
 
         /// <summary>
         /// Start a TCP connection and send a Logon request to the server. 
         /// If isHistoricalClient, will only use BinaryEncoding and won't do a heartbeat. See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
         /// </summary>
+        /// <param name="requestedEncoding"></param>
         /// <param name="heartbeatIntervalInSeconds">The interval in seconds that each side, the Client and the Server, needs to use to send HEARTBEAT messages to the other side. This should be a value from anywhere from 5 to 60 seconds.</param>
         /// <param name="isHistoricalClient"><c>true</c> means binary encoding only, and no heartbeat</param>
         /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
@@ -222,12 +236,11 @@ namespace DTCClient
         /// <param name="tradeMode">optional to indicate to the Server that the requested trading mode to be one of the following: Demo, Simulated, Live.</param>
         /// <param name="tradeAccount">optional identifier if that is required to login</param>
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
+        /// <param name="cancellationTokenSource"></param>
         /// <returns>The LogonResponse, or null if not received before timeout</returns>
-        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, bool isHistoricalClient = false, int timeout = 1000, string clientName = "",
-            string userName = "", string password = "",
-            string generalTextData = "",
-            int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "",
-            string hardwareIdentifier = "")
+        public async Task<LogonResponse> LogonAsync(EncodingEnum requestedEncoding, int heartbeatIntervalInSeconds, bool isHistoricalClient = false, int timeout = 1000, string clientName = "",
+            string userName = "", string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "",
+            string hardwareIdentifier = "", CancellationTokenSource cancellationTokenSource = null)
         {
             _isHistoricalClient = isHistoricalClient;
             _clientName = clientName;
@@ -237,8 +250,8 @@ namespace DTCClient
             {
                 _heartbeatTimer.Interval = heartbeatIntervalInSeconds * 1000;
             }
-            _cts = new CancellationTokenSource();
-            await ConnectAsync(_cts.Token);
+            _cts = cancellationTokenSource?? new CancellationTokenSource();
+            var encodingResponse = await ConnectAsync(requestedEncoding, timeout, _cts.Token);
 
             // Set up the handler to capture the event
             var startTime = DateTime.Now;
@@ -265,7 +278,7 @@ namespace DTCClient
                 TradeAccount = tradeAccount,
                 TradeMode = tradeMode
             };
-            SendRequest(DTCMessageType.LogonRequest, logonRequest);
+            SendMessage(DTCMessageType.LogonRequest, logonRequest);
 
             // Wait until the response is received or until timeout
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
@@ -298,7 +311,7 @@ namespace DTCClient
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
+        public void SendMessage<T>(DTCMessageType messageType, T message) where T : IMessage
         {
             try
             {
@@ -306,7 +319,7 @@ namespace DTCClient
             }
             catch (Exception ex)
             {
-                throw new DTCSharpException(ex.Message, ex);
+                throw new DTCSharpException(ex.Message);
             }
         }
 
@@ -358,7 +371,6 @@ namespace DTCClient
                             ThrowEvent(Logoff.Parser.ParseFrom(bytes), LogoffEvent);
                             break;
                         case DTCMessageType.EncodingResponse:
-
                             // Note that we must use binary encoding here on the first usage after connect, 
                             //    per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
                             var encodingResponse = _currentCodec.Load<EncodingResponse>(messageType, bytes);
@@ -368,18 +380,17 @@ namespace DTCClient
                                     _currentCodec = new CodecBinary();
                                     break;
                                 case EncodingEnum.BinaryWithVariableLengthStrings:
-                                    throw new NotImplementedException(nameof(encodingResponse.Encoding)); ;
+                                    throw new NotImplementedException($"Not implemented in {nameof(MessageReader)}: {nameof(encodingResponse.Encoding)}"); ;
                                 case EncodingEnum.JsonEncoding:
-                                    throw new NotImplementedException(nameof(encodingResponse.Encoding)); ;
+                                    throw new NotImplementedException($"Not implemented in {nameof(MessageReader)}: {nameof(encodingResponse.Encoding)}"); ;
                                 case EncodingEnum.JsonCompactEncoding:
-                                    throw new NotImplementedException(nameof(encodingResponse.Encoding)); ;
+                                    throw new NotImplementedException($"Not implemented in {nameof(MessageReader)}: {nameof(encodingResponse.Encoding)}"); ;
                                 case EncodingEnum.ProtocolBuffers:
                                     _currentCodec = new CodecProtobuf();
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException();
                             }
-                            _isEncodingResponseReceived = true;
                             ThrowEvent(encodingResponse, EncodingResponseEvent);
                             break;
                         case DTCMessageType.MarketDataReject:
@@ -591,7 +602,7 @@ namespace DTCClient
                 RequestID = NextRequestId,
                 Symbol = symbol
             };
-            SendRequest(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
+            SendMessage(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
 
             // Wait until the response is received or until timeout
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
@@ -690,7 +701,7 @@ namespace DTCClient
                 Symbol = symbol,
                 Exchange = exchange
             };
-            SendRequest(DTCMessageType.MarketDataRequest, request);
+            SendMessage(DTCMessageType.MarketDataRequest, request);
             return symbolId;
         }
 
@@ -701,7 +712,7 @@ namespace DTCClient
                 RequestAction = RequestActionEnum.Unsubscribe,
                 SymbolID = symbolId,
             };
-            SendRequest(DTCMessageType.MarketDataRequest, request);
+            SendMessage(DTCMessageType.MarketDataRequest, request);
         }
     }
 }
