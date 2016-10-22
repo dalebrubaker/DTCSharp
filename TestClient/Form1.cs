@@ -76,18 +76,6 @@ namespace TestClient
             _client = new Client(txtServer.Text, PortListener);
             RegisterClientEvents(_client);
             await LogonAsync(_client, "TestClient", false, EncodingEnum.ProtocolBuffers, txtUsername.Text, ""); // EncodingEnum.BinaryEncoding ProtocolBuffers);
-
-            _clientHistorical = new Client(txtServer.Text, PortHistorical);
-            RegisterClientEvents(_clientHistorical);
-            try
-            {
-                await LogonAsync(_clientHistorical, "TestClientHistorical", true, EncodingEnum.ProtocolBuffers, txtUsername.Text, "");
-            }
-            catch (TaskCanceledException)
-            {
-
-                throw;
-            }
         }
 
         private void UnregisterClientEvents(Client client)
@@ -136,6 +124,28 @@ namespace TestClient
             client.MarketDataUpdateSessionVolumeEvent += Client_MarketDataUpdateSessionVolumeEvent;
             client.MarketDataUpdateSessionHighEvent += Client_MarketDataUpdateSessionHighEvent;
             client.MarketDataUpdateSessionLowEvent += Client_MarketDataUpdateSessionLowEvent;
+
+            client.HistoricalPriceDataResponseHeaderEvent += Client_HistoricalPriceDataResponseHeaderEvent;
+            client.HistoricalPriceDataRejectEvent += Client_HistoricalPriceDataRejectEvent;
+            client.HistoricalPriceDataTickRecordResponseEvent += Client_HistoricalPriceDataTickRecordResponseEvent;
+        }
+
+        private void Client_HistoricalPriceDataTickRecordResponseEvent(object sender, DTCCommon.EventArgs<HistoricalPriceDataTickRecordResponse> e)
+        {
+            var response = e.Data;
+            logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} T:{response.DateTime} B/A:{response.AtBidOrAsk} P:{response.Price} V:{response.Volume} Final:{response.IsFinalRecord}");
+        }
+
+        private void Client_HistoricalPriceDataRejectEvent(object sender, DTCCommon.EventArgs<HistoricalPriceDataReject> e)
+        {
+            var response = e.Data;
+            logControlHistorical.LogMessage($"HistoricalPriceDataReject RequestId:{response.RequestID} RejectReasonCode:{response.RejectReasonCode} RejectText:{response.RejectText} RetryTimeInSeconds:{response.RetryTimeInSeconds}");
+        }
+
+        private void Client_HistoricalPriceDataResponseHeaderEvent(object sender, DTCCommon.EventArgs<HistoricalPriceDataResponseHeader> e)
+        {
+            var response = e.Data;
+            logControlHistorical.LogMessage($"HistoricalPriceDataResponseHeader RequestId:{response.RequestID} RecordInterval:{response.RecordInterval} UseZLibCompression:{response.UseZLibCompression} NoRecordsToReturn:{response.NoRecordsToReturn}");
         }
 
         private void Client_MarketDataUpdateSessionLowEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateSessionLow> e)
@@ -302,6 +312,7 @@ namespace TestClient
 
         private async Task LogonAsync(Client client, string clientName, bool isHistoricalClient, EncodingEnum encoding, string username, string password)
         {
+            var logControl = isHistoricalClient ? logControlHistorical : logControlConnect;
             try
             {
                 const int heartbeatIntervalInSeconds = 10;
@@ -310,7 +321,7 @@ namespace TestClient
                 if (response == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
-                    logControl1.LogMessage("Null logon response from logon attempt to " + clientName);
+                    logControl.LogMessage("Null logon response from logon attempt to " + clientName);
                     return;
                 }
                 toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
@@ -319,17 +330,17 @@ namespace TestClient
                     case LogonStatusEnum.LogonStatusUnset:
                         throw new ArgumentException("Unexpected logon result");
                     case LogonStatusEnum.LogonSuccess:
-                        DisplayLogonResponse(client, response);
+                        DisplayLogonResponse(logControl, client, response);
                         break;
                     case LogonStatusEnum.LogonErrorNoReconnect:
-                        logControl1.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
+                        logControl.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
                         break;
                     case LogonStatusEnum.LogonError:
-                        logControl1.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}.");
+                        logControl.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}.");
                         DisposeClient();
                         break;
                     case LogonStatusEnum.LogonReconnectNewAddress:
-                        logControl1.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
+                        logControl.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
                         DisposeClient();
                         break;
                     default:
@@ -362,30 +373,31 @@ namespace TestClient
 
         private void Client_GeneralLogMessageEvent(object sender, DTCCommon.EventArgs<GeneralLogMessage> e)
         {
-            logControl1.LogMessage($"GeneralLogMessage: {e.Data.MessageText}");
+            logControlConnect.LogMessage($"GeneralLogMessage: {e.Data.MessageText}");
         }
 
         private void Client_UserMessageEvent(object sender, DTCCommon.EventArgs<UserMessage> e)
         {
-            logControl1.LogMessage($"UserMessage: {e.Data.UserMessage_}");
+            logControlConnect.LogMessage($"UserMessage: {e.Data.UserMessage_}");
         }
 
         private void Client_EncodingResponseEvent(object sender, DTCCommon.EventArgs<DTCPB.EncodingResponse> e)
         {
             var client = (Client)sender;
             var response = e.Data;
-            logControl1.LogMessage($"{_client.ClientName} encoding is {response.Encoding}");
+            logControlConnect.LogMessage($"{_client.ClientName} encoding is {response.Encoding}");
         }
 
         /// <summary>
         /// https://dtcprotocol.org/index.php?page=doc/DTCMessages_AuthenticationConnectionMonitoringMessages.php#Messages-LOGON_RESPONSE
         /// </summary>
+        /// <param name="logControl"></param>
         /// <param name="client"></param>
         /// <param name="response"></param>
-        private void DisplayLogonResponse(Client client, LogonResponse response)
+        private void DisplayLogonResponse(LogControl logControl, Client client, LogonResponse response)
         {
-            logControl1.LogMessage("");
-            logControl1.LogMessage("Login succeeded: " + response.Result + " " + response.ResultText);
+            logControl.LogMessage("");
+            logControl.LogMessage("Login succeeded: " + response.Result + " " + response.ResultText);
             var lines = new List<string>
             {
                 $"{client} Logon Response info:",
@@ -410,7 +422,7 @@ namespace TestClient
                 $"ReconnectAddress: {response.ReconnectAddress}",
                 $"Integer_1: {response.Integer1}"
             };
-            logControl1.LogMessagesReversed(lines);
+            logControl.LogMessagesReversed(lines);
         }
 
         private async void btnDisconnect_Click(object sender, EventArgs e)
@@ -483,6 +495,40 @@ namespace TestClient
         private void btnUnsubscribe_Click(object sender, EventArgs e)
         {
             _client.UnsubscribeMarketData(_symbolId);
+        }
+
+        private void btnGetHistoricalTicks_Click(object sender, EventArgs e)
+        {
+            if (_clientHistorical == null)
+            {
+                MessageBox.Show($"{_clientHistorical} is not connected. Reconnect.");
+                return;
+            }
+            var start = dtpStart.Value;
+            var historicalPriceDataRequest = new HistoricalPriceDataRequest
+            {
+                RequestID = _clientHistorical.NextRequestId,
+                Symbol = txtSymbolHistorical.Text,
+                //Exchange = "",
+                RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
+                MaxDaysToReturn = 1,
+            };
+            _clientHistorical.SendMessage(DTCMessageType.HistoricalPriceDataRequest, historicalPriceDataRequest);
+        }
+
+        private async void btnConnectHistorical_Click(object sender, EventArgs e)
+        {
+            _clientHistorical = new Client(txtServer.Text, PortHistorical);
+            RegisterClientEvents(_clientHistorical);
+            try
+            {
+                await LogonAsync(_clientHistorical, "TestClientHistorical", true, EncodingEnum.BinaryEncoding, txtUsername.Text, "");
+            }
+            catch (TaskCanceledException)
+            {
+
+                throw;
+            }
         }
     }
 }
