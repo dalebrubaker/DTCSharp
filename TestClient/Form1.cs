@@ -75,19 +75,19 @@ namespace TestClient
             DisposeClient(); // remove the old client just in case it was missed elsewhere
             _client = new Client(txtServer.Text, PortListener);
             RegisterClientEvents(_client);
-            await LogonAsync(_client, "TestClient", false, EncodingEnum.BinaryEncoding); // EncodingEnum.BinaryEncoding ProtocolBuffers);
+            await LogonAsync(_client, "TestClient", false, EncodingEnum.ProtocolBuffers, txtUsername.Text, ""); // EncodingEnum.BinaryEncoding ProtocolBuffers);
 
-            //_clientHistorical = new Client(txtServer.Text, PortHistorical);
-            //RegisterClientEvents(_clientHistorical);
-            //try
-            //{
-            //    await LogonAsync(_clientHistorical, "TestClientHistorical", true);
-            //}
-            //catch (TaskCanceledException)
-            //{
+            _clientHistorical = new Client(txtServer.Text, PortHistorical);
+            RegisterClientEvents(_clientHistorical);
+            try
+            {
+                await LogonAsync(_clientHistorical, "TestClientHistorical", true, EncodingEnum.ProtocolBuffers, txtUsername.Text, "");
+            }
+            catch (TaskCanceledException)
+            {
 
-            //    throw;
-            //}
+                throw;
+            }
         }
 
         private void UnregisterClientEvents(Client client)
@@ -300,13 +300,13 @@ namespace TestClient
         }
 
 
-        private async Task LogonAsync(Client client, string clientName, bool isHistoricalClient, EncodingEnum encoding)
+        private async Task LogonAsync(Client client, string clientName, bool isHistoricalClient, EncodingEnum encoding, string username, string password)
         {
             try
             {
                 const int heartbeatIntervalInSeconds = 10;
                 const int timeout = 5000;
-                var response = await client.LogonAsync(encoding, heartbeatIntervalInSeconds, isHistoricalClient, timeout, clientName);
+                var response = await client.LogonAsync(encoding, heartbeatIntervalInSeconds, isHistoricalClient, timeout, clientName, username, password);
                 if (response == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
@@ -319,17 +319,17 @@ namespace TestClient
                     case LogonStatusEnum.LogonStatusUnset:
                         throw new ArgumentException("Unexpected logon result");
                     case LogonStatusEnum.LogonSuccess:
-                        DisplayLogonResponse(response);
+                        DisplayLogonResponse(client, response);
                         break;
                     case LogonStatusEnum.LogonErrorNoReconnect:
-                        logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "Reconnect not allowed.");
+                        logControl1.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
                         break;
                     case LogonStatusEnum.LogonError:
-                        logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText);
+                        logControl1.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}.");
                         DisposeClient();
                         break;
                     case LogonStatusEnum.LogonReconnectNewAddress:
-                        logControl1.LogMessage("Login failed: " + response.Result + " " + response.ResultText + "\nReconnect to:" + response.ReconnectAddress);
+                        logControl1.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
                         DisposeClient();
                         break;
                     default:
@@ -380,13 +380,15 @@ namespace TestClient
         /// <summary>
         /// https://dtcprotocol.org/index.php?page=doc/DTCMessages_AuthenticationConnectionMonitoringMessages.php#Messages-LOGON_RESPONSE
         /// </summary>
+        /// <param name="client"></param>
         /// <param name="response"></param>
-        private void DisplayLogonResponse(LogonResponse response)
+        private void DisplayLogonResponse(Client client, LogonResponse response)
         {
+            logControl1.LogMessage("");
             logControl1.LogMessage("Login succeeded: " + response.Result + " " + response.ResultText);
             var lines = new List<string>
             {
-                "Logon Response info:",
+                $"{client} Logon Response info:",
                 $"Result: {response.Result}",
                 $"ResultText: {response.ResultText}",
                 $"ServerName: {response.ServerName}",

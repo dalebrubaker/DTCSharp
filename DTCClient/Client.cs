@@ -273,6 +273,7 @@ namespace DTCClient
                 HeartbeatIntervalInSeconds = heartbeatIntervalInSeconds,
                 Integer1 = integer1,
                 Integer2 = integer2,
+                Username = userName,
                 Password = password,
                 ProtocolVersion = (int)DTCVersion.CurrentVersion,
                 TradeAccount = tradeAccount,
@@ -765,6 +766,11 @@ namespace DTCClient
                 SymbolID = symbolId,
             };
             SendMessage(DTCMessageType.MarketDataRequest, request);
+        }
+
+        public override string ToString()
+        {
+            return $"{_clientName} {_server} {_port}";
         }
     }
 }

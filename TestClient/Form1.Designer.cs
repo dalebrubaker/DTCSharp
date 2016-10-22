@@ -40,20 +40,22 @@
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPageConnect = new System.Windows.Forms.TabPage();
-            this.logControl1 = new TestClient.LogControl();
             this.tabPageSymbols = new System.Windows.Forms.TabPage();
             this.btnSecurityDefinition = new System.Windows.Forms.Button();
             this.btnExchanges = new System.Windows.Forms.Button();
             this.label4 = new System.Windows.Forms.Label();
             this.txtSymbolDef = new System.Windows.Forms.TextBox();
-            this.logControl2 = new TestClient.LogControl();
             this.tabPageLevel1 = new System.Windows.Forms.TabPage();
             this.cbShowBidAsk = new System.Windows.Forms.CheckBox();
             this.btnUnsubscribe = new System.Windows.Forms.Button();
-            this.logControl3 = new TestClient.LogControl();
             this.btnSubscribe = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
             this.txtSymbolLevel1 = new System.Windows.Forms.TextBox();
+            this.txtUsername = new System.Windows.Forms.TextBox();
+            this.label6 = new System.Windows.Forms.Label();
+            this.logControl1 = new TestClient.LogControl();
+            this.logControl2 = new TestClient.LogControl();
+            this.logControl3 = new TestClient.LogControl();
             this.statusStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPageConnect.SuspendLayout();
@@ -136,9 +138,9 @@
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatusLabel1});
-            this.statusStrip1.Location = new System.Drawing.Point(3, 429);
+            this.statusStrip1.Location = new System.Drawing.Point(3, 586);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(763, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(703, 22);
             this.statusStrip1.TabIndex = 8;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -157,11 +159,13 @@
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(777, 480);
+            this.tabControl1.Size = new System.Drawing.Size(717, 637);
             this.tabControl1.TabIndex = 10;
             // 
             // tabPageConnect
             // 
+            this.tabPageConnect.Controls.Add(this.txtUsername);
+            this.tabPageConnect.Controls.Add(this.label6);
             this.tabPageConnect.Controls.Add(this.statusStrip1);
             this.tabPageConnect.Controls.Add(this.label1);
             this.tabPageConnect.Controls.Add(this.txtServer);
@@ -175,21 +179,10 @@
             this.tabPageConnect.Location = new System.Drawing.Point(4, 22);
             this.tabPageConnect.Name = "tabPageConnect";
             this.tabPageConnect.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageConnect.Size = new System.Drawing.Size(769, 454);
+            this.tabPageConnect.Size = new System.Drawing.Size(709, 611);
             this.tabPageConnect.TabIndex = 0;
             this.tabPageConnect.Text = "Connect";
             this.tabPageConnect.UseVisualStyleBackColor = true;
-            // 
-            // logControl1
-            // 
-            this.logControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControl1.Location = new System.Drawing.Point(12, 128);
-            this.logControl1.Name = "logControl1";
-            this.logControl1.Size = new System.Drawing.Size(395, 298);
-            this.logControl1.TabIndex = 9;
-            this.logControl1.Title = "Log";
             // 
             // tabPageSymbols
             // 
@@ -201,7 +194,7 @@
             this.tabPageSymbols.Location = new System.Drawing.Point(4, 22);
             this.tabPageSymbols.Name = "tabPageSymbols";
             this.tabPageSymbols.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageSymbols.Size = new System.Drawing.Size(769, 454);
+            this.tabPageSymbols.Size = new System.Drawing.Size(695, 454);
             this.tabPageSymbols.TabIndex = 1;
             this.tabPageSymbols.Text = "Symbols";
             this.tabPageSymbols.UseVisualStyleBackColor = true;
@@ -243,27 +236,17 @@
             this.txtSymbolDef.TabIndex = 3;
             this.txtSymbolDef.Text = "ESZ16";
             // 
-            // logControl2
-            // 
-            this.logControl2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControl2.Location = new System.Drawing.Point(3, 72);
-            this.logControl2.Name = "logControl2";
-            this.logControl2.Size = new System.Drawing.Size(415, 379);
-            this.logControl2.TabIndex = 4;
-            this.logControl2.Title = "Log";
-            // 
             // tabPageLevel1
             // 
             this.tabPageLevel1.Controls.Add(this.cbShowBidAsk);
             this.tabPageLevel1.Controls.Add(this.btnUnsubscribe);
-            this.tabPageLevel1.Controls.Add(this.logControl3);
             this.tabPageLevel1.Controls.Add(this.btnSubscribe);
             this.tabPageLevel1.Controls.Add(this.label5);
             this.tabPageLevel1.Controls.Add(this.txtSymbolLevel1);
+            this.tabPageLevel1.Controls.Add(this.logControl3);
             this.tabPageLevel1.Location = new System.Drawing.Point(4, 22);
             this.tabPageLevel1.Name = "tabPageLevel1";
-            this.tabPageLevel1.Size = new System.Drawing.Size(769, 454);
+            this.tabPageLevel1.Size = new System.Drawing.Size(695, 454);
             this.tabPageLevel1.TabIndex = 2;
             this.tabPageLevel1.Text = "Level 1";
             this.tabPageLevel1.UseVisualStyleBackColor = true;
@@ -287,16 +270,6 @@
             this.btnUnsubscribe.Text = "Unsubscribe";
             this.btnUnsubscribe.UseVisualStyleBackColor = true;
             this.btnUnsubscribe.Click += new System.EventHandler(this.btnUnsubscribe_Click);
-            // 
-            // logControl3
-            // 
-            this.logControl3.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControl3.Location = new System.Drawing.Point(3, 49);
-            this.logControl3.Name = "logControl3";
-            this.logControl3.Size = new System.Drawing.Size(758, 402);
-            this.logControl3.TabIndex = 10;
-            this.logControl3.Title = "Log";
             // 
             // btnSubscribe
             // 
@@ -325,11 +298,59 @@
             this.txtSymbolLevel1.TabIndex = 8;
             this.txtSymbolLevel1.Text = "ESZ6";
             // 
+            // txtUsername
+            // 
+            this.txtUsername.Location = new System.Drawing.Point(269, 68);
+            this.txtUsername.Name = "txtUsername";
+            this.txtUsername.Size = new System.Drawing.Size(86, 20);
+            this.txtUsername.TabIndex = 11;
+            this.txtUsername.Text = "testUsername";
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(205, 72);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(58, 13);
+            this.label6.TabIndex = 10;
+            this.label6.Text = "Username:";
+            // 
+            // logControl1
+            // 
+            this.logControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControl1.Location = new System.Drawing.Point(12, 128);
+            this.logControl1.Name = "logControl1";
+            this.logControl1.Size = new System.Drawing.Size(675, 455);
+            this.logControl1.TabIndex = 9;
+            this.logControl1.Title = "Log";
+            // 
+            // logControl2
+            // 
+            this.logControl2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControl2.Location = new System.Drawing.Point(3, 72);
+            this.logControl2.Name = "logControl2";
+            this.logControl2.Size = new System.Drawing.Size(341, 379);
+            this.logControl2.TabIndex = 4;
+            this.logControl2.Title = "Log";
+            // 
+            // logControl3
+            // 
+            this.logControl3.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControl3.Location = new System.Drawing.Point(3, 49);
+            this.logControl3.Name = "logControl3";
+            this.logControl3.Size = new System.Drawing.Size(684, 402);
+            this.logControl3.TabIndex = 10;
+            this.logControl3.Title = "Log";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(777, 480);
+            this.ClientSize = new System.Drawing.Size(717, 637);
             this.Controls.Add(this.tabControl1);
             this.Name = "Form1";
             this.Text = "TestClient";
@@ -374,6 +395,8 @@
         private System.Windows.Forms.TextBox txtSymbolLevel1;
         private System.Windows.Forms.Button btnUnsubscribe;
         private System.Windows.Forms.CheckBox cbShowBidAsk;
+        private System.Windows.Forms.TextBox txtUsername;
+        private System.Windows.Forms.Label label6;
     }
 }
 
