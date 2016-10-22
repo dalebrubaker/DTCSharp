@@ -35,14 +35,17 @@ namespace TestClient
 
         private void DisposeClient()
         {
+            if (_clientHistorical != null)
+            {
+                UnregisterClientEvents(_clientHistorical);
+                _clientHistorical.Dispose();
+                _clientHistorical = null;
+            }
             if (_client != null)
             {
                 UnregisterClientEvents(_client);
                 _client.Dispose();
                 _client = null;
-                UnregisterClientEvents(_clientHistorical);
-                _clientHistorical.Dispose();
-                _clientHistorical = null;
                 toolStripStatusLabel1.Text = "Disconnected";
             }
         }
@@ -72,7 +75,7 @@ namespace TestClient
             DisposeClient(); // remove the old client just in case it was missed elsewhere
             _client = new Client(txtServer.Text, PortListener);
             RegisterClientEvents(_client);
-            await LogonAsync(_client, "TestClient", false, EncodingEnum.BinaryEncoding);
+            await LogonAsync(_client, "TestClient", false, EncodingEnum.BinaryEncoding); // EncodingEnum.BinaryEncoding ProtocolBuffers);
 
             //_clientHistorical = new Client(txtServer.Text, PortHistorical);
             //RegisterClientEvents(_clientHistorical);
@@ -82,7 +85,7 @@ namespace TestClient
             //}
             //catch (TaskCanceledException)
             //{
-                
+
             //    throw;
             //}
         }

@@ -243,8 +243,8 @@ namespace DTCCommon.Codecs
                     return;
                 case DTCMessageType.SecurityDefinitionResponse:
                     var securityDefinitionResponse = message as SecurityDefinitionResponse;
-                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + SYMBOL_DESCRIPTION_LENGTH + (3 * 4) + 1 + (2 * 4) + UNDERLYING_SYMBOL_LENGTH 
-                        + 1 + 4 + 1 + (9 * 4) + 1 + 4 + SYMBOL_LENGTH;
+                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + SYMBOL_DESCRIPTION_LENGTH + (3 * 4) + 4 + (2 * 4) + UNDERLYING_SYMBOL_LENGTH 
+                        + 4 + 4 + 4 + (7 * 4) + 4 + 4 + SYMBOL_LENGTH;
                     Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
                     binaryWriter.Write(securityDefinitionResponse.RequestID);
                     binaryWriter.Write(securityDefinitionResponse.Symbol.ToFixedBytes(SYMBOL_LENGTH));
@@ -254,13 +254,13 @@ namespace DTCCommon.Codecs
                     binaryWriter.Write(securityDefinitionResponse.MinPriceIncrement);
                     binaryWriter.Write((int)securityDefinitionResponse.PriceDisplayFormat);
                     binaryWriter.Write(securityDefinitionResponse.CurrencyValuePerIncrement);
-                    binaryWriter.Write((byte)securityDefinitionResponse.IsFinalMessage);
+                    binaryWriter.Write(securityDefinitionResponse.IsFinalMessage);
                     binaryWriter.Write(securityDefinitionResponse.FloatToIntPriceMultiplier);
                     binaryWriter.Write(securityDefinitionResponse.IntToFloatPriceDivisor);
                     binaryWriter.Write(securityDefinitionResponse.UnderlyingSymbol.ToFixedBytes(UNDERLYING_SYMBOL_LENGTH));
-                    binaryWriter.Write((byte)securityDefinitionResponse.UpdatesBidAskOnly);
+                    binaryWriter.Write(securityDefinitionResponse.UpdatesBidAskOnly);
                     binaryWriter.Write(securityDefinitionResponse.StrikePrice);
-                    binaryWriter.Write((uint8_t)securityDefinitionResponse.PutOrCall);
+                    binaryWriter.Write((int)securityDefinitionResponse.PutOrCall);
                     binaryWriter.Write(securityDefinitionResponse.ShortInterest);
                     binaryWriter.Write((uint)securityDefinitionResponse.SecurityExpirationDate);
                     binaryWriter.Write(securityDefinitionResponse.BuyRolloverInterest);
@@ -268,7 +268,7 @@ namespace DTCCommon.Codecs
                     binaryWriter.Write(securityDefinitionResponse.EarningsPerShare);
                     binaryWriter.Write(securityDefinitionResponse.SharesOutstanding);
                     binaryWriter.Write(securityDefinitionResponse.IntToFloatQuantityDivisor);
-                    binaryWriter.Write((uint8_t)securityDefinitionResponse.HasMarketDepthData);
+                    binaryWriter.Write(securityDefinitionResponse.HasMarketDepthData);
                     binaryWriter.Write(securityDefinitionResponse.DisplayPriceMultiplier);
                     binaryWriter.Write(securityDefinitionResponse.ExchangeSymbol.ToFixedBytes(SYMBOL_LENGTH));
                     return;
@@ -562,17 +562,19 @@ namespace DTCCommon.Codecs
                     startIndex += 4;
                     securityDefinitionResponse.CurrencyValuePerIncrement = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
-                    securityDefinitionResponse.IsFinalMessage = bytes[startIndex++];
+                    securityDefinitionResponse.IsFinalMessage = BitConverter.ToUInt32(bytes, startIndex); // aligned on 4-byte boundaries
+                    startIndex += 4;
                     securityDefinitionResponse.FloatToIntPriceMultiplier = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
                     securityDefinitionResponse.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
                     securityDefinitionResponse.UnderlyingSymbol = bytes.StringFromNullTerminatedBytes(startIndex);
                     startIndex += UNDERLYING_SYMBOL_LENGTH;
-                    securityDefinitionResponse.UpdatesBidAskOnly = bytes[startIndex++];
+                    securityDefinitionResponse.UpdatesBidAskOnly = BitConverter.ToUInt32(bytes, startIndex); // aligned on 4-byte boundaries
+                    startIndex += 4;
                     securityDefinitionResponse.StrikePrice = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
-                    securityDefinitionResponse.PutOrCall = (PutCallEnum)BitConverter.ToInt32(bytes, startIndex);
+                    securityDefinitionResponse.PutOrCall = (PutCallEnum)BitConverter.ToUInt32(bytes, startIndex); // aligned on 4-byte boundaries
                     startIndex += 4;
                     securityDefinitionResponse.ShortInterest = BitConverter.ToUInt32(bytes, startIndex);
                     startIndex += 4;
@@ -588,7 +590,8 @@ namespace DTCCommon.Codecs
                     startIndex += 4;
                     securityDefinitionResponse.IntToFloatQuantityDivisor = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
-                    securityDefinitionResponse.HasMarketDepthData = bytes[startIndex++];
+                    securityDefinitionResponse.HasMarketDepthData = BitConverter.ToUInt32(bytes, startIndex); // aligned on 4-byte boundaries
+                    startIndex += 4;
                     securityDefinitionResponse.DisplayPriceMultiplier = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
                     securityDefinitionResponse.ExchangeSymbol = bytes.StringFromNullTerminatedBytes(startIndex);

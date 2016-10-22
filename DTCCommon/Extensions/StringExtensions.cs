@@ -17,7 +17,7 @@ namespace DTCCommon.Extensions
         public static byte[] ToFixedBytes(this string str, int width)
         {
             byte[] result = new byte[width];
-            for (int i = 0; i < 3 && i < str.Length; i++)
+            for (int i = 0; i < width && i < str.Length; i++)
             {
                 result[i] = (byte)str[i];
             }
