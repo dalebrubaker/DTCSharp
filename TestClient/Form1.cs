@@ -20,6 +20,7 @@ namespace TestClient
         private Client _client;
         private uint _symbolId;
         private Client _clientHistorical;
+        List<HistoricalPriceDataRecordResponse> _historicalPriceDataRecordResponses;
 
         public Form1()
         {
@@ -131,10 +132,17 @@ namespace TestClient
             client.HistoricalPriceDataRecordResponseEvent += Client_HistoricalPriceDataRecordResponseEvent;
         }
 
+
         private void Client_HistoricalPriceDataRecordResponseEvent(object sender, DTCCommon.EventArgs<HistoricalPriceDataRecordResponse> e)
         {
             var response = e.Data;
-            logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} T:{response.StartDateTime} O:{response.OpenPrice} O:{response.OpenPrice} O:{response.HighPrice} O:{response.LowPrice} V:{response.Volume} #T:{response.NumTrades} BV:{response.BidVolume} AV:{response.AskVolume} Final:{response.IsFinalRecord}");
+            _historicalPriceDataRecordResponses.Add(e.Data);
+            if (e.Data.IsFinalRecord != 0)
+            {
+                var lastTime = e.Data.StartDateTime.DtcDateTimeToUtc();
+                logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} received {_historicalPriceDataRecordResponses.Count} records through {lastTime.ToLocalTime():yyyyMMdd.HHmmss.fff} (local).");
+                //logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} T:{response.StartDateTime} O:{response.OpenPrice} O:{response.OpenPrice} O:{response.HighPrice} O:{response.LowPrice} V:{response.Volume} #T:{response.NumTrades} BV:{response.BidVolume} AV:{response.AskVolume} Final:{response.IsFinalRecord}");
+            }
         }
 
         private void Client_HistoricalPriceDataTickRecordResponseEvent(object sender, DTCCommon.EventArgs<HistoricalPriceDataTickRecordResponse> e)
@@ -184,7 +192,7 @@ namespace TestClient
             }
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
-            var dateTime = response.DateTime.DateTime4ByteToUtc().ToLocalTime();
+            var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
             logControl3.LogMessage(
                 $"Market Data Update Bid/Ask Int for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime}");
         }
@@ -197,7 +205,7 @@ namespace TestClient
             }
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
-            var dateTime = response.DateTime.DateTime4ByteToUtc().ToLocalTime();
+            var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
             logControl3.LogMessage(
                 $"Market Data Update Bid/Ask for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime}");
         }
@@ -210,7 +218,7 @@ namespace TestClient
             }
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
-            var dateTime = response.DateTime.DateTime4ByteToUtc().ToLocalTime();
+            var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
             logControl3.LogMessage(
                 $"Market Data Update Bid/Ask Compact for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime}");
         }
@@ -219,7 +227,7 @@ namespace TestClient
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
-            var dateTime = response.DateTime.DateTimeDoubleToUtc().ToLocalTime();
+            var dateTime = response.DateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
             logControl3.LogMessage($"Market Data Update Trade Int for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime} B/A:{response.AtBidOrAsk}");
         }
 
@@ -227,7 +235,7 @@ namespace TestClient
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
-            var dateTime = response.DateTime.DateTimeDoubleToUtc().ToLocalTime();
+            var dateTime = response.DateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
             logControl3.LogMessage($"Market Data Update Trade for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime} B/A:{response.AtBidOrAsk}");
         }
 
@@ -235,7 +243,7 @@ namespace TestClient
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
-            var dateTime = response.DateTime.DateTime4ByteToUtc().ToLocalTime();
+            var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
             logControl3.LogMessage($"Market Data Update Trade Compact for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime} B/A:{response.AtBidOrAsk}");
         }
 
@@ -506,20 +514,32 @@ namespace TestClient
 
         private void btnGetHistoricalTicks_Click(object sender, EventArgs e)
         {
+            RequestHistoricalData(HistoricalDataIntervalEnum.IntervalTick);
+        }
+
+        private void btnGetHistoricalMinutes_Click(object sender, EventArgs e)
+        {
+            RequestHistoricalData(HistoricalDataIntervalEnum.Interval1Minute);
+        }
+
+        private void RequestHistoricalData(HistoricalDataIntervalEnum recordInterval)
+        {
             if (_clientHistorical == null)
             {
                 MessageBox.Show($"{_clientHistorical} is not connected. Reconnect.");
                 return;
             }
-            var start = dtpStart.Value;
+            _historicalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>();
+            var start = dtpStart.Value.ToUniversalTime().UtcToDtcDateTime();
             var historicalPriceDataRequest = new HistoricalPriceDataRequest
             {
                 RequestID = _clientHistorical.NextRequestId,
                 Symbol = txtSymbolHistorical.Text,
                 //Exchange = "",
-                RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
-                MaxDaysToReturn = 1,
-                StartDateTime = dtpStart.Value.ToDateTimeDTC();
+                RecordInterval = recordInterval,
+                StartDateTime = start,
+                //EndDateTime = end2,
+                //MaxDaysToReturn = 1,
             };
             _clientHistorical.SendMessage(DTCMessageType.HistoricalPriceDataRequest, historicalPriceDataRequest);
         }
@@ -538,5 +558,6 @@ namespace TestClient
                 throw;
             }
         }
+
     }
 }

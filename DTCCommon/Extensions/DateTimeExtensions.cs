@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,17 +9,37 @@ namespace DTCCommon.Extensions
 {
     public static class DateTimeExtensions
     {
+        private static readonly DateTime EpochStart;
+
+        static DateTimeExtensions()
+        {
+            EpochStart = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        }
+
         /// <summary>
         /// https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime
         /// Convert the 8 byte seconds since 1/1/70 to a DateTime (UTC)
         /// </summary>
-        /// <param name="dt8Byte"></param>
+        /// <param name="unixSeconds"></param>
         /// <returns></returns>
-        public static DateTime DateTime8ByteToUtc(this long dt8Byte)
+        public static DateTime DtcDateTimeToUtc(this long unixSeconds)
         {
-            var ticks = dt8Byte * TimeSpan.TicksPerSecond;
-            var result = new DateTime(ticks, DateTimeKind.Utc);
-            return result;
+            var dateTimeOffset = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+            return dateTimeOffset.DateTime;
+        }
+
+        /// <summary>
+        /// https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime
+        /// Convert dateTime (UTC) to DTC t_DateTime (8 bytes, seconds since 1/1/70)
+        /// </summary>
+        /// <param name="dateTimeUtc"></param>
+        /// <returns></returns>
+        public static long UtcToDtcDateTime(this DateTime dateTimeUtc)
+        {
+            var unixTimeInSeconds = new DateTimeOffset(dateTimeUtc).ToUnixTimeSeconds();
+            return unixTimeInSeconds;
+            //var result = (dateTimeUtc - EpochStart).TotalSeconds;
+            //return (long)result;
         }
 
         /// <summary>
@@ -27,11 +48,20 @@ namespace DTCCommon.Extensions
         /// </summary>
         /// <param name="dt4Byte"></param>
         /// <returns></returns>
-        public static DateTime DateTime4ByteToUtc(this int dt4Byte)
+        public static DateTime DtcDateTime4ByteToUtc(this int dt4Byte)
         {
-            var ticks = dt4Byte * TimeSpan.TicksPerSecond;
-            var result = new DateTime(ticks, DateTimeKind.Utc);
-            return result;
+            return DtcDateTimeToUtc(dt4Byte);
+        }
+
+        /// <summary>
+        /// https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime4Byte
+        /// Convert dateTime (UTC) to DTC t_DateTime4Byte (4 bytes, seconds since 1/1/70)
+        /// </summary>
+        /// <param name="dateTimeUtc"></param>
+        /// <returns></returns>
+        public static int UtcToDtcDateTime4Byte(this DateTime dateTimeUtc)
+        {
+            return (int)UtcToDtcDateTime(dateTimeUtc);
         }
 
         /// <summary>
@@ -41,11 +71,26 @@ namespace DTCCommon.Extensions
         /// </summary>
         /// <param name="dtDouble"></param>
         /// <returns></returns>
-        public static DateTime DateTimeDoubleToUtc(this double dtDouble)
+        public static DateTime DtcDateTimeWithMillisecondsToUtc(this double dtDouble)
         {
             var days = Math.Truncate(dtDouble);
             var msecs = (int)(1000 * (dtDouble - days));
             var result = DateTime.FromOADate(days).AddMilliseconds(msecs);
+            return result;
+        }
+
+        /// <summary>
+        /// https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTimeWithMilliseconds
+        /// Convert the double since 1/1/70 to a DateTime (UTC), which fractional milliseconds
+        /// Convert dateTime (UTC) to DTC t_DateTimeWithMilliseconds (8 bytes, seconds since 1/1/70, fractional portion is milliseconds)
+        /// [As of 10/20/2016 the milliseconds are just sequence numbers, but we'll pretend they've done the work they plan for 2017]
+        /// </summary>
+        /// <param name="dateTimeUtc"></param>
+        /// <returns></returns>
+        public static double UtcToDtcDateTimeWithMilliseconds(this DateTime dateTimeUtc)
+        {
+            var seconds = (long)(dateTimeUtc - EpochStart).TotalSeconds;
+            var result = seconds + (dateTimeUtc - EpochStart).Milliseconds / 1000.0;
             return result;
         }
     }

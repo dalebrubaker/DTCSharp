@@ -40,6 +40,8 @@
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPageConnect = new System.Windows.Forms.TabPage();
+            this.txtUsername = new System.Windows.Forms.TextBox();
+            this.label6 = new System.Windows.Forms.Label();
             this.tabPageSymbols = new System.Windows.Forms.TabPage();
             this.btnSecurityDefinition = new System.Windows.Forms.Button();
             this.btnExchanges = new System.Windows.Forms.Button();
@@ -51,19 +53,18 @@
             this.btnSubscribe = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
             this.txtSymbolLevel1 = new System.Windows.Forms.TextBox();
-            this.txtUsername = new System.Windows.Forms.TextBox();
-            this.label6 = new System.Windows.Forms.Label();
             this.tabPageHistorical = new System.Windows.Forms.TabPage();
+            this.btnConnectHistorical = new System.Windows.Forms.Button();
+            this.label8 = new System.Windows.Forms.Label();
+            this.dtpStart = new System.Windows.Forms.DateTimePicker();
             this.btnGetHistoricalTicks = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.txtSymbolHistorical = new System.Windows.Forms.TextBox();
-            this.dtpStart = new System.Windows.Forms.DateTimePicker();
-            this.label8 = new System.Windows.Forms.Label();
-            this.btnConnectHistorical = new System.Windows.Forms.Button();
             this.logControlConnect = new TestClient.LogControl();
             this.logControl2 = new TestClient.LogControl();
             this.logControl3 = new TestClient.LogControl();
             this.logControlHistorical = new TestClient.LogControl();
+            this.btnGetHistoricalMinutes = new System.Windows.Forms.Button();
             this.statusStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPageConnect.SuspendLayout();
@@ -194,6 +195,23 @@
             this.tabPageConnect.Text = "Connect";
             this.tabPageConnect.UseVisualStyleBackColor = true;
             // 
+            // txtUsername
+            // 
+            this.txtUsername.Location = new System.Drawing.Point(269, 68);
+            this.txtUsername.Name = "txtUsername";
+            this.txtUsername.Size = new System.Drawing.Size(86, 20);
+            this.txtUsername.TabIndex = 11;
+            this.txtUsername.Text = "testUsername";
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(205, 72);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(58, 13);
+            this.label6.TabIndex = 10;
+            this.label6.Text = "Username:";
+            // 
             // tabPageSymbols
             // 
             this.tabPageSymbols.Controls.Add(this.btnSecurityDefinition);
@@ -308,25 +326,9 @@
             this.txtSymbolLevel1.TabIndex = 8;
             this.txtSymbolLevel1.Text = "ESZ6";
             // 
-            // txtUsername
-            // 
-            this.txtUsername.Location = new System.Drawing.Point(269, 68);
-            this.txtUsername.Name = "txtUsername";
-            this.txtUsername.Size = new System.Drawing.Size(86, 20);
-            this.txtUsername.TabIndex = 11;
-            this.txtUsername.Text = "testUsername";
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(205, 72);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(58, 13);
-            this.label6.TabIndex = 10;
-            this.label6.Text = "Username:";
-            // 
             // tabPageHistorical
             // 
+            this.tabPageHistorical.Controls.Add(this.btnGetHistoricalMinutes);
             this.tabPageHistorical.Controls.Add(this.btnConnectHistorical);
             this.tabPageHistorical.Controls.Add(this.label8);
             this.tabPageHistorical.Controls.Add(this.dtpStart);
@@ -341,9 +343,38 @@
             this.tabPageHistorical.Text = "Historical";
             this.tabPageHistorical.UseVisualStyleBackColor = true;
             // 
+            // btnConnectHistorical
+            // 
+            this.btnConnectHistorical.Location = new System.Drawing.Point(361, 15);
+            this.btnConnectHistorical.Name = "btnConnectHistorical";
+            this.btnConnectHistorical.Size = new System.Drawing.Size(75, 23);
+            this.btnConnectHistorical.TabIndex = 13;
+            this.btnConnectHistorical.Text = "Connect";
+            this.btnConnectHistorical.UseVisualStyleBackColor = true;
+            this.btnConnectHistorical.Click += new System.EventHandler(this.btnConnectHistorical_Click);
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(131, 20);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(77, 13);
+            this.label8.TabIndex = 12;
+            this.label8.Text = "Starting (local):";
+            // 
+            // dtpStart
+            // 
+            this.dtpStart.CustomFormat = "MMM d, yyyy HH:mm";
+            this.dtpStart.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
+            this.dtpStart.Location = new System.Drawing.Point(214, 16);
+            this.dtpStart.Name = "dtpStart";
+            this.dtpStart.Size = new System.Drawing.Size(132, 20);
+            this.dtpStart.TabIndex = 11;
+            this.dtpStart.Value = new System.DateTime(2016, 10, 21, 9, 30, 0, 0);
+            // 
             // btnGetHistoricalTicks
             // 
-            this.btnGetHistoricalTicks.Location = new System.Drawing.Point(490, 18);
+            this.btnGetHistoricalTicks.Location = new System.Drawing.Point(570, 13);
             this.btnGetHistoricalTicks.Name = "btnGetHistoricalTicks";
             this.btnGetHistoricalTicks.Size = new System.Drawing.Size(113, 23);
             this.btnGetHistoricalTicks.TabIndex = 9;
@@ -362,40 +393,11 @@
             // 
             // txtSymbolHistorical
             // 
-            this.txtSymbolHistorical.Location = new System.Drawing.Point(58, 17);
+            this.txtSymbolHistorical.Location = new System.Drawing.Point(58, 16);
             this.txtSymbolHistorical.Name = "txtSymbolHistorical";
             this.txtSymbolHistorical.Size = new System.Drawing.Size(67, 20);
             this.txtSymbolHistorical.TabIndex = 8;
             this.txtSymbolHistorical.Text = "ESZ16";
-            // 
-            // dtpStart
-            // 
-            this.dtpStart.CustomFormat = "MMM d, yyyy HH:mm";
-            this.dtpStart.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
-            this.dtpStart.Location = new System.Drawing.Point(198, 17);
-            this.dtpStart.Name = "dtpStart";
-            this.dtpStart.Size = new System.Drawing.Size(205, 20);
-            this.dtpStart.TabIndex = 11;
-            this.dtpStart.Value = new System.DateTime(2016, 10, 21, 0, 0, 0, 0);
-            // 
-            // label8
-            // 
-            this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(146, 20);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(46, 13);
-            this.label8.TabIndex = 12;
-            this.label8.Text = "Starting:";
-            // 
-            // btnConnectHistorical
-            // 
-            this.btnConnectHistorical.Location = new System.Drawing.Point(409, 18);
-            this.btnConnectHistorical.Name = "btnConnectHistorical";
-            this.btnConnectHistorical.Size = new System.Drawing.Size(75, 23);
-            this.btnConnectHistorical.TabIndex = 13;
-            this.btnConnectHistorical.Text = "Connect";
-            this.btnConnectHistorical.UseVisualStyleBackColor = true;
-            this.btnConnectHistorical.Click += new System.EventHandler(this.btnConnectHistorical_Click);
             // 
             // logControlConnect
             // 
@@ -440,6 +442,16 @@
             this.logControlHistorical.Size = new System.Drawing.Size(698, 544);
             this.logControlHistorical.TabIndex = 10;
             this.logControlHistorical.Title = "Log";
+            // 
+            // btnGetHistoricalMinutes
+            // 
+            this.btnGetHistoricalMinutes.Location = new System.Drawing.Point(442, 14);
+            this.btnGetHistoricalMinutes.Name = "btnGetHistoricalMinutes";
+            this.btnGetHistoricalMinutes.Size = new System.Drawing.Size(122, 23);
+            this.btnGetHistoricalMinutes.TabIndex = 14;
+            this.btnGetHistoricalMinutes.Text = "Get Historical Minutes";
+            this.btnGetHistoricalMinutes.UseVisualStyleBackColor = true;
+            this.btnGetHistoricalMinutes.Click += new System.EventHandler(this.btnGetHistoricalMinutes_Click);
             // 
             // Form1
             // 
@@ -502,6 +514,7 @@
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.TextBox txtSymbolHistorical;
         private System.Windows.Forms.Button btnConnectHistorical;
+        private System.Windows.Forms.Button btnGetHistoricalMinutes;
     }
 }
 

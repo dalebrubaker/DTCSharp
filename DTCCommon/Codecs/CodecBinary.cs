@@ -293,12 +293,13 @@ namespace DTCCommon.Codecs
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
-                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 8 + 8 + 4 + 3; // TODO maybe send an extra 0 byte for 4-byte boundary?
+                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 4 + 8 + 8 + 4 + 3 * 1; // TODO maybe send an extra 0 byte for 4-byte boundary?
                     Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
                     binaryWriter.Write(historicalPriceDataRequest.RequestID);
                     binaryWriter.Write(historicalPriceDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
                     binaryWriter.Write(historicalPriceDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
                     binaryWriter.Write((int)historicalPriceDataRequest.RecordInterval);
+                    binaryWriter.Write(0); // 4 bytes for alignment on 8-byte boundary
                     binaryWriter.Write(historicalPriceDataRequest.StartDateTime);
                     binaryWriter.Write(historicalPriceDataRequest.EndDateTime);
                     binaryWriter.Write(historicalPriceDataRequest.MaxDaysToReturn);
