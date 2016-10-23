@@ -2270,6 +2270,7 @@ namespace DTC
 		int32_t RequestAllOrders;
 
 		char ServerOrderID[ORDER_ID_LENGTH];
+		char TradeAccount[TRADE_ACCOUNT_LENGTH];
 
 		s_OpenOrdersRequest()
 		{
@@ -2291,6 +2292,8 @@ namespace DTC
 		int32_t GetRequestAllOrders();
 		void SetServerOrderID(const char* NewValue);
 		const char* GetServerOrderID();
+		void SetTradeAccount(const char* NewValue);
+		const char* GetTradeAccount();
 	};
 
 	/*==========================================================================*/

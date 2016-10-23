@@ -3761,6 +3761,12 @@ namespace DTC
 	}
 
 	/*==========================================================================*/
+	void s_OpenOrdersRequest::SetServerOrderID(const char* NewValue)
+	{
+		strncpy(ServerOrderID, NewValue, sizeof(ServerOrderID) - 1);
+	}
+
+	/*==========================================================================*/
 	const char* s_OpenOrdersRequest::GetServerOrderID()
 	{
 		if (Size < offsetof( s_OpenOrdersRequest, ServerOrderID) + sizeof(ServerOrderID))
@@ -3770,10 +3776,22 @@ namespace DTC
 
 		return ServerOrderID;
 	}
+
 	/*==========================================================================*/
-	void s_OpenOrdersRequest::SetServerOrderID(const char* NewValue)
+	void s_OpenOrdersRequest::SetTradeAccount(const char* NewValue)
 	{
-		strncpy(ServerOrderID, NewValue, sizeof(ServerOrderID) - 1);
+		strncpy(TradeAccount, NewValue, sizeof(TradeAccount) - 1);
+	}
+
+	/*==========================================================================*/
+	const char* s_OpenOrdersRequest::GetTradeAccount()
+	{
+		if (Size < offsetof(s_OpenOrdersRequest, TradeAccount) + sizeof(TradeAccount))
+			return "";
+
+		TradeAccount[sizeof(TradeAccount) - 1] = '\0';
+
+		return TradeAccount;
 	}
 
 	/****************************************************************************/

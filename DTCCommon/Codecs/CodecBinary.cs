@@ -292,14 +292,43 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.GeneralLogMessage:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;
                 case DTCMessageType.HistoricalPriceDataRequest:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
+                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 8 + 8 + 4 + 3; // TODO maybe send an extra 0 byte for 4-byte boundary?
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(historicalPriceDataRequest.RequestID);
+                    binaryWriter.Write(historicalPriceDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
+                    binaryWriter.Write(historicalPriceDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+                    binaryWriter.Write((int)historicalPriceDataRequest.RecordInterval);
+                    binaryWriter.Write(historicalPriceDataRequest.StartDateTime);
+                    binaryWriter.Write(historicalPriceDataRequest.EndDateTime);
+                    binaryWriter.Write(historicalPriceDataRequest.MaxDaysToReturn);
+                    binaryWriter.Write((byte)historicalPriceDataRequest.UseZLibCompression);
+                    binaryWriter.Write((byte)historicalPriceDataRequest.RequestDividendAdjustedStockData);
+                    binaryWriter.Write((byte)historicalPriceDataRequest.Flag1);
+                    return;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
+                    sizeExcludingHeader = 4 + 4 + 2 + 4; // TODO maybe extra 0 bytes for 4-byte boundary?
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(historicalPriceDataResponseHeader.RequestID);
+                    binaryWriter.Write((int)historicalPriceDataResponseHeader.RecordInterval);
+                    binaryWriter.Write((byte)historicalPriceDataResponseHeader.UseZLibCompression);
+                    binaryWriter.Write((byte)historicalPriceDataResponseHeader.NoRecordsToReturn);
+                    binaryWriter.Write(historicalPriceDataResponseHeader.IntToFloatPriceDivisor);
+                    return;
                 case DTCMessageType.HistoricalPriceDataReject:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var historicalPriceDataReject = message as HistoricalPriceDataReject;
+                    sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH + 2 + 2;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(historicalPriceDataReject.RequestID);
+                    binaryWriter.Write(historicalPriceDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+                    binaryWriter.Write((short)historicalPriceDataReject.RejectReasonCode);
+                    binaryWriter.Write((ushort)historicalPriceDataReject.RetryTimeInSeconds);
+                    return;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
+                    // Probably no longer used after version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
@@ -618,15 +647,69 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.GeneralLogMessage:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataRequest:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var historicalPriceDataRequest = result as HistoricalPriceDataRequest;
+                    startIndex = 0;
+                    historicalPriceDataRequest.RequestID = BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    historicalPriceDataRequest.Symbol = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += SYMBOL_LENGTH;
+                    historicalPriceDataRequest.Exchange = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += EXCHANGE_LENGTH;
+                    historicalPriceDataRequest.RecordInterval = (HistoricalDataIntervalEnum)BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    historicalPriceDataRequest.StartDateTime = BitConverter.ToInt64(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRequest.EndDateTime = BitConverter.ToInt64(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRequest.MaxDaysToReturn = BitConverter.ToUInt32(bytes, startIndex);
+                    startIndex += 4;
+                    historicalPriceDataRequest.UseZLibCompression = bytes[startIndex++];
+                    historicalPriceDataRequest.RequestDividendAdjustedStockData = bytes[startIndex++];
+                    historicalPriceDataRequest.Flag1 = bytes[startIndex++];
+                    return result;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var historicalPriceDataResponseHeader = result as HistoricalPriceDataResponseHeader;
+                    startIndex = 0;
+                    historicalPriceDataResponseHeader.RequestID = BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    historicalPriceDataResponseHeader.RecordInterval = (HistoricalDataIntervalEnum)BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    historicalPriceDataResponseHeader.UseZLibCompression = bytes[startIndex++];
+                    historicalPriceDataResponseHeader.NoRecordsToReturn = bytes[startIndex++];
+                    // TODO align to 4-byte here?
+                    historicalPriceDataResponseHeader.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, startIndex);
+                    return result;
                 case DTCMessageType.HistoricalPriceDataReject:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var historicalPriceDataReject = result as HistoricalPriceDataReject;
+                    startIndex = 0;
+                    historicalPriceDataReject.RequestID = BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    historicalPriceDataReject.RejectText = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += TEXT_DESCRIPTION_LENGTH;
+                    historicalPriceDataReject.RejectReasonCode = (HistoricalPriceDataRejectReasonCodeEnum)BitConverter.ToInt16(bytes, startIndex);
+                    startIndex += 2;
+                    historicalPriceDataReject.RetryTimeInSeconds = BitConverter.ToUInt16(bytes, startIndex);
+                    startIndex += 2;
+                    return result;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    // Probably no longer used after version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
+                    var historicalPriceDataTickRecordResponse = result as HistoricalPriceDataTickRecordResponse;
+                    startIndex = 0;
+                    historicalPriceDataTickRecordResponse.RequestID = BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    historicalPriceDataTickRecordResponse.DateTime = BitConverter.ToInt64(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataTickRecordResponse.AtBidOrAsk = (AtBidOrAskEnum)BitConverter.ToInt32(bytes, startIndex);
+                    // TODO is this 2-byte enum padded to 4?
+                    startIndex += 4;
+                    historicalPriceDataTickRecordResponse.Price = BitConverter.ToDouble(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataTickRecordResponse.Volume = BitConverter.ToDouble(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataTickRecordResponse.IsFinalRecord = bytes[startIndex++];
+                    return result;
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
