@@ -692,7 +692,30 @@ namespace DTCCommon.Codecs
                     startIndex += 2;
                     return result;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var historicalPriceDataRecordResponse = result as HistoricalPriceDataRecordResponse;
+                    startIndex = 0;
+                    historicalPriceDataRecordResponse.RequestID = BitConverter.ToInt32(bytes, startIndex);
+                    startIndex += 4;
+                    historicalPriceDataRecordResponse.StartDateTime = BitConverter.ToInt64(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRecordResponse.OpenPrice = BitConverter.ToDouble(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRecordResponse.HighPrice = BitConverter.ToDouble(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRecordResponse.LowPrice = BitConverter.ToDouble(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRecordResponse.LastPrice = BitConverter.ToDouble(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRecordResponse.Volume = BitConverter.ToDouble(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRecordResponse.NumTrades = BitConverter.ToUInt32(bytes, startIndex); // union, also could be OpenInterest
+                    startIndex += 4;
+                    historicalPriceDataRecordResponse.BidVolume = BitConverter.ToDouble(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRecordResponse.AskVolume = BitConverter.ToDouble(bytes, startIndex);
+                    startIndex += 8;
+                    historicalPriceDataRecordResponse.IsFinalRecord = bytes[startIndex++];
+                    return result;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     // Probably no longer used after version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
                     var historicalPriceDataTickRecordResponse = result as HistoricalPriceDataTickRecordResponse;

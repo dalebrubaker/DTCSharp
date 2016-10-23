@@ -128,6 +128,13 @@ namespace TestClient
             client.HistoricalPriceDataResponseHeaderEvent += Client_HistoricalPriceDataResponseHeaderEvent;
             client.HistoricalPriceDataRejectEvent += Client_HistoricalPriceDataRejectEvent;
             client.HistoricalPriceDataTickRecordResponseEvent += Client_HistoricalPriceDataTickRecordResponseEvent;
+            client.HistoricalPriceDataRecordResponseEvent += Client_HistoricalPriceDataRecordResponseEvent;
+        }
+
+        private void Client_HistoricalPriceDataRecordResponseEvent(object sender, DTCCommon.EventArgs<HistoricalPriceDataRecordResponse> e)
+        {
+            var response = e.Data;
+            logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} T:{response.StartDateTime} O:{response.OpenPrice} O:{response.OpenPrice} O:{response.HighPrice} O:{response.LowPrice} V:{response.Volume} #T:{response.NumTrades} BV:{response.BidVolume} AV:{response.AskVolume} Final:{response.IsFinalRecord}");
         }
 
         private void Client_HistoricalPriceDataTickRecordResponseEvent(object sender, DTCCommon.EventArgs<HistoricalPriceDataTickRecordResponse> e)
@@ -512,6 +519,7 @@ namespace TestClient
                 //Exchange = "",
                 RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
                 MaxDaysToReturn = 1,
+                StartDateTime = dtpStart.Value.ToDateTimeDTC();
             };
             _clientHistorical.SendMessage(DTCMessageType.HistoricalPriceDataRequest, historicalPriceDataRequest);
         }
