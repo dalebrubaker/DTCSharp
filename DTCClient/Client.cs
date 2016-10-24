@@ -14,6 +14,7 @@ using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
 using DTCCommon.Exceptions;
+using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
 using Timer = System.Timers.Timer;
@@ -186,7 +187,6 @@ namespace DTCClient
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             // Set up the handler to capture the event
-            var startTime = DateTime.Now;
             EncodingResponse result = null;
             EventHandler<EventArgs<EncodingResponse>> handler = null;
             handler = (s, e) =>
@@ -206,6 +206,7 @@ namespace DTCClient
             SendMessage(DTCMessageType.EncodingRequest, encodingRequest);
 
             // Wait until the response is received or until timeout
+            var startTime = DateTime.Now;
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
             {
                 await Task.Delay(1, cancellationToken);
@@ -238,9 +239,10 @@ namespace DTCClient
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
         /// <param name="cancellationTokenSource"></param>
         /// <returns>The LogonResponse, or null if not received before timeout</returns>
-        public async Task<LogonResponse> LogonAsync(EncodingEnum requestedEncoding, int heartbeatIntervalInSeconds, bool isHistoricalClient = false, int timeout = 1000, string clientName = "",
-            string userName = "", string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "",
-            string hardwareIdentifier = "", CancellationTokenSource cancellationTokenSource = null)
+        public async Task<LogonResponse> LogonAsync(EncodingEnum requestedEncoding, int heartbeatIntervalInSeconds, bool isHistoricalClient = false, 
+            int timeout = 1000, string clientName = "", string userName = "", string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0, 
+            TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", string hardwareIdentifier = "", 
+            CancellationTokenSource cancellationTokenSource = null)
         {
             _isHistoricalClient = isHistoricalClient;
             _clientName = clientName;
@@ -254,7 +256,6 @@ namespace DTCClient
             var encodingResponse = await ConnectAsync(requestedEncoding, timeout, _cts.Token);
 
             // Set up the handler to capture the event
-            var startTime = DateTime.Now;
             LogonResponse result = null;
             EventHandler<EventArgs<LogonResponse>> handler = null;
             handler = (s, e) =>
@@ -282,11 +283,99 @@ namespace DTCClient
             SendMessage(DTCMessageType.LogonRequest, logonRequest);
 
             // Wait until the response is received or until timeout
+            var startTime = DateTime.Now;
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
             {
                 await Task.Delay(1);
             }
             return result;
+        }
+
+        /// <summary>
+        /// See http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData for details
+        /// If the request is rejected, this method will return immediately.
+        /// Otherwise price data will be returned along with a non-null historicalPriceDataResponseHeader. 
+        /// To get earlier access to the historicalPriceDataResponseHeader, subscribe to the HistoricalPriceDataRecordResponseEvent
+        /// 
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        /// <param name="recordInterval"></param>
+        /// <param name="startDateTimeUtc">Use DateTime.MinValue for 0</param>
+        /// <param name="endDateTimeUtc">Use DateTime.MinValue for 0</param>
+        /// <param name="maxDaysToReturn"></param>
+        /// <param name="useZLibCompression"></param>
+        /// <param name="flag1"></param>
+        /// <param name="timeout"></param>
+        /// <param name="requestDividendAdjustedStockData"></param>
+        /// <param name="headerCallback">callback for header</param>
+        /// <param name="dataCallback">callback for HistoricalPriceDataRecordResponses</param>
+        /// <returns>rejection, or null if not rejected</returns>
+        public async Task<HistoricalPriceDataReject> GetHistoricalPriceDataRecordResponsesAsync(string symbol, string exchange, 
+            HistoricalDataIntervalEnum recordInterval, DateTime startDateTimeUtc, DateTime endDateTimeUtc, uint maxDaysToReturn, bool useZLibCompression,
+            int timeout, bool requestDividendAdjustedStockData, bool flag1, Action<HistoricalPriceDataResponseHeader> headerCallback,
+            Action<HistoricalPriceDataRecordResponse> dataCallback)
+        {
+            HistoricalPriceDataReject historicalPriceDataReject = null;
+
+            // Set up handler to capture the reject event
+            EventHandler<EventArgs<HistoricalPriceDataReject>> handlerReject = null;
+            handlerReject = (s, e) =>
+            {
+                HistoricalPriceDataRejectEvent -= handlerReject; // unregister to avoid a potential memory leak
+                historicalPriceDataReject = e.Data;
+                timeout = 0; // force immediate return
+            };
+            HistoricalPriceDataRejectEvent += handlerReject;
+
+            // Set up handler to capture the header event
+            EventHandler<EventArgs<HistoricalPriceDataResponseHeader>> handlerHeader = null;
+            handlerHeader = (s, e) =>
+            {
+                HistoricalPriceDataResponseHeaderEvent -= handlerHeader; // unregister to avoid a potential memory leak
+                headerCallback(e.Data);
+                timeout = int.MaxValue; // wait for the last price data response to arrive
+            };
+            HistoricalPriceDataResponseHeaderEvent += handlerHeader;
+
+            // Set up the handler to capture the HistoricalPriceDataRecordResponseEvent
+            HistoricalPriceDataRecordResponse response;
+            EventHandler<EventArgs<HistoricalPriceDataRecordResponse>> handler = null;
+            handler = (s, e) =>
+            {
+                response = e.Data;
+                dataCallback(response);
+                if (e.Data.IsFinalRecord != 0)
+                {
+                    HistoricalPriceDataRecordResponseEvent -= handler; // unregister to avoid a potential memory leak
+                    timeout = 0; // force immediate exit
+                }
+            };
+            HistoricalPriceDataRecordResponseEvent += handler;
+            
+            // Send the request
+            var request = new HistoricalPriceDataRequest
+            {
+                RequestID = NextRequestId,
+                Symbol = symbol,
+                Exchange = exchange,
+                RecordInterval = recordInterval,
+                StartDateTime =  startDateTimeUtc == DateTime.MinValue ? 0 : startDateTimeUtc.UtcToDtcDateTime(),
+                EndDateTime = endDateTimeUtc == DateTime.MinValue ? 0 : endDateTimeUtc.UtcToDtcDateTime(),
+                MaxDaysToReturn = maxDaysToReturn,
+                UseZLibCompression = useZLibCompression ? 1U : 0,
+                RequestDividendAdjustedStockData = requestDividendAdjustedStockData ? 1U : 0,
+                Flag1 = flag1 ? 1U : 0,
+            };
+            SendMessage(DTCMessageType.HistoricalPriceDataRequest, request);
+
+            // Wait until timeout or reject or response is received
+            var startTime = DateTime.Now; // for checking timeout
+            while ((DateTime.Now - startTime).TotalMilliseconds < timeout)
+            {
+                await Task.Delay(1);
+            }
+            return historicalPriceDataReject;
         }
 
         public void Dispose()
@@ -357,6 +446,10 @@ namespace DTCClient
                         throw;
                     }
                     var messageType = (DTCMessageType)binaryReader.ReadUInt16();
+                    if (messageType != DTCMessageType.Heartbeat)
+                    {
+                        var debug = 1;
+                    }
                     var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                     switch (messageType)
                     {

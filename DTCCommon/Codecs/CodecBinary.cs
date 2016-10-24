@@ -677,8 +677,9 @@ namespace DTCCommon.Codecs
                     startIndex += 4;
                     historicalPriceDataResponseHeader.UseZLibCompression = bytes[startIndex++];
                     historicalPriceDataResponseHeader.NoRecordsToReturn = bytes[startIndex++];
-                    // TODO align to 8-byte here?
+                    startIndex += 2; // align for packing
                     historicalPriceDataResponseHeader.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, startIndex);
+                    startIndex += 4;
                     return result;
                 case DTCMessageType.HistoricalPriceDataReject:
                     var historicalPriceDataReject = result as HistoricalPriceDataReject;
