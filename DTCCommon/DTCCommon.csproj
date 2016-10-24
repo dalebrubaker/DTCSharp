@@ -53,6 +53,7 @@
     <Compile Include="Codecs\CodecBinary.cs" />
     <Compile Include="Codecs\CodecProtobuf.cs" />
     <Compile Include="Codecs\ICodecDTC.cs" />
+    <Compile Include="Codecs\ZipCodec.cs" />
     <Compile Include="EventArgs.cs" />
     <Compile Include="Exceptions\DTCSharpException.cs" />
     <Compile Include="Extensions\DateTimeExtensions.cs" />

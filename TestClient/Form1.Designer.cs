@@ -42,29 +42,29 @@
             this.tabPageConnect = new System.Windows.Forms.TabPage();
             this.txtUsername = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
+            this.logControlConnect = new TestClient.LogControl();
             this.tabPageSymbols = new System.Windows.Forms.TabPage();
             this.btnSecurityDefinition = new System.Windows.Forms.Button();
             this.btnExchanges = new System.Windows.Forms.Button();
             this.label4 = new System.Windows.Forms.Label();
             this.txtSymbolDef = new System.Windows.Forms.TextBox();
+            this.logControl2 = new TestClient.LogControl();
             this.tabPageLevel1 = new System.Windows.Forms.TabPage();
             this.cbShowBidAsk = new System.Windows.Forms.CheckBox();
             this.btnUnsubscribe = new System.Windows.Forms.Button();
             this.btnSubscribe = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
             this.txtSymbolLevel1 = new System.Windows.Forms.TextBox();
+            this.logControl3 = new TestClient.LogControl();
             this.tabPageHistorical = new System.Windows.Forms.TabPage();
+            this.cbZip = new System.Windows.Forms.CheckBox();
+            this.btnGetHistoricalMinutes = new System.Windows.Forms.Button();
             this.label8 = new System.Windows.Forms.Label();
             this.dtpStart = new System.Windows.Forms.DateTimePicker();
+            this.logControlHistorical = new TestClient.LogControl();
             this.btnGetHistoricalTicks = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.txtSymbolHistorical = new System.Windows.Forms.TextBox();
-            this.btnGetHistoricalMinutes = new System.Windows.Forms.Button();
-            this.cbZip = new System.Windows.Forms.CheckBox();
-            this.logControlConnect = new TestClient.LogControl();
-            this.logControl2 = new TestClient.LogControl();
-            this.logControl3 = new TestClient.LogControl();
-            this.logControlHistorical = new TestClient.LogControl();
             this.statusStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPageConnect.SuspendLayout();
@@ -212,6 +212,17 @@
             this.label6.TabIndex = 10;
             this.label6.Text = "Username:";
             // 
+            // logControlConnect
+            // 
+            this.logControlConnect.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControlConnect.Location = new System.Drawing.Point(12, 128);
+            this.logControlConnect.Name = "logControlConnect";
+            this.logControlConnect.Size = new System.Drawing.Size(778, 455);
+            this.logControlConnect.TabIndex = 9;
+            this.logControlConnect.Title = "Log";
+            // 
             // tabPageSymbols
             // 
             this.tabPageSymbols.Controls.Add(this.btnSecurityDefinition);
@@ -263,6 +274,17 @@
             this.txtSymbolDef.Size = new System.Drawing.Size(67, 20);
             this.txtSymbolDef.TabIndex = 3;
             this.txtSymbolDef.Text = "ESZ16";
+            // 
+            // logControl2
+            // 
+            this.logControl2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControl2.Location = new System.Drawing.Point(3, 72);
+            this.logControl2.Name = "logControl2";
+            this.logControl2.Size = new System.Drawing.Size(803, 531);
+            this.logControl2.TabIndex = 4;
+            this.logControl2.Title = "Log";
             // 
             // tabPageLevel1
             // 
@@ -326,6 +348,17 @@
             this.txtSymbolLevel1.TabIndex = 8;
             this.txtSymbolLevel1.Text = "ESZ6";
             // 
+            // logControl3
+            // 
+            this.logControl3.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControl3.Location = new System.Drawing.Point(3, 49);
+            this.logControl3.Name = "logControl3";
+            this.logControl3.Size = new System.Drawing.Size(801, 554);
+            this.logControl3.TabIndex = 10;
+            this.logControl3.Title = "Log";
+            // 
             // tabPageHistorical
             // 
             this.tabPageHistorical.Controls.Add(this.cbZip);
@@ -342,6 +375,26 @@
             this.tabPageHistorical.TabIndex = 3;
             this.tabPageHistorical.Text = "Historical";
             this.tabPageHistorical.UseVisualStyleBackColor = true;
+            // 
+            // cbZip
+            // 
+            this.cbZip.AutoSize = true;
+            this.cbZip.Location = new System.Drawing.Point(355, 18);
+            this.cbZip.Name = "cbZip";
+            this.cbZip.Size = new System.Drawing.Size(41, 17);
+            this.cbZip.TabIndex = 15;
+            this.cbZip.Text = "Zip";
+            this.cbZip.UseVisualStyleBackColor = true;
+            // 
+            // btnGetHistoricalMinutes
+            // 
+            this.btnGetHistoricalMinutes.Location = new System.Drawing.Point(402, 15);
+            this.btnGetHistoricalMinutes.Name = "btnGetHistoricalMinutes";
+            this.btnGetHistoricalMinutes.Size = new System.Drawing.Size(122, 23);
+            this.btnGetHistoricalMinutes.TabIndex = 14;
+            this.btnGetHistoricalMinutes.Text = "Get Historical Minutes";
+            this.btnGetHistoricalMinutes.UseVisualStyleBackColor = true;
+            this.btnGetHistoricalMinutes.Click += new System.EventHandler(this.btnGetHistoricalMinutes_Click);
             // 
             // label8
             // 
@@ -361,6 +414,17 @@
             this.dtpStart.Size = new System.Drawing.Size(132, 20);
             this.dtpStart.TabIndex = 11;
             this.dtpStart.Value = new System.DateTime(2016, 10, 21, 9, 30, 0, 0);
+            // 
+            // logControlHistorical
+            // 
+            this.logControlHistorical.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControlHistorical.Location = new System.Drawing.Point(3, 44);
+            this.logControlHistorical.Name = "logControlHistorical";
+            this.logControlHistorical.Size = new System.Drawing.Size(801, 559);
+            this.logControlHistorical.TabIndex = 10;
+            this.logControlHistorical.Title = "Log";
             // 
             // btnGetHistoricalTicks
             // 
@@ -387,71 +451,7 @@
             this.txtSymbolHistorical.Name = "txtSymbolHistorical";
             this.txtSymbolHistorical.Size = new System.Drawing.Size(67, 20);
             this.txtSymbolHistorical.TabIndex = 8;
-            this.txtSymbolHistorical.Text = "ESZ16";
-            // 
-            // btnGetHistoricalMinutes
-            // 
-            this.btnGetHistoricalMinutes.Location = new System.Drawing.Point(402, 15);
-            this.btnGetHistoricalMinutes.Name = "btnGetHistoricalMinutes";
-            this.btnGetHistoricalMinutes.Size = new System.Drawing.Size(122, 23);
-            this.btnGetHistoricalMinutes.TabIndex = 14;
-            this.btnGetHistoricalMinutes.Text = "Get Historical Minutes";
-            this.btnGetHistoricalMinutes.UseVisualStyleBackColor = true;
-            this.btnGetHistoricalMinutes.Click += new System.EventHandler(this.btnGetHistoricalMinutes_Click);
-            // 
-            // cbZip
-            // 
-            this.cbZip.AutoSize = true;
-            this.cbZip.Location = new System.Drawing.Point(355, 18);
-            this.cbZip.Name = "cbZip";
-            this.cbZip.Size = new System.Drawing.Size(41, 17);
-            this.cbZip.TabIndex = 15;
-            this.cbZip.Text = "Zip";
-            this.cbZip.UseVisualStyleBackColor = true;
-            // 
-            // logControlConnect
-            // 
-            this.logControlConnect.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControlConnect.Location = new System.Drawing.Point(12, 128);
-            this.logControlConnect.Name = "logControlConnect";
-            this.logControlConnect.Size = new System.Drawing.Size(778, 455);
-            this.logControlConnect.TabIndex = 9;
-            this.logControlConnect.Title = "Log";
-            // 
-            // logControl2
-            // 
-            this.logControl2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControl2.Location = new System.Drawing.Point(3, 72);
-            this.logControl2.Name = "logControl2";
-            this.logControl2.Size = new System.Drawing.Size(803, 531);
-            this.logControl2.TabIndex = 4;
-            this.logControl2.Title = "Log";
-            // 
-            // logControl3
-            // 
-            this.logControl3.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControl3.Location = new System.Drawing.Point(3, 49);
-            this.logControl3.Name = "logControl3";
-            this.logControl3.Size = new System.Drawing.Size(801, 554);
-            this.logControl3.TabIndex = 10;
-            this.logControl3.Title = "Log";
-            // 
-            // logControlHistorical
-            // 
-            this.logControlHistorical.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControlHistorical.Location = new System.Drawing.Point(3, 44);
-            this.logControlHistorical.Name = "logControlHistorical";
-            this.logControlHistorical.Size = new System.Drawing.Size(801, 559);
-            this.logControlHistorical.TabIndex = 10;
-            this.logControlHistorical.Title = "Log";
+            this.txtSymbolHistorical.Text = "ESZ6";
             // 
             // Form1
             // 
