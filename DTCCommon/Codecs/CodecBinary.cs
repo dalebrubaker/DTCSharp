@@ -293,7 +293,7 @@ namespace DTCCommon.Codecs
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
-                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 4 + 8 + 8 + 4 + 3 * 1; // TODO maybe send an extra 0 byte for 4-byte boundary?
+                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 4 + 8 + 8 + 4 + 3 * 1;
                     Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
                     binaryWriter.Write(historicalPriceDataRequest.RequestID);
                     binaryWriter.Write(historicalPriceDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
@@ -309,7 +309,7 @@ namespace DTCCommon.Codecs
                     return;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
                     var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
-                    sizeExcludingHeader = 4 + 4 + 2 + 4; // TODO maybe extra 0 bytes for 4-byte boundary?
+                    sizeExcludingHeader = 4 + 4 + 2 + 4; // TODO maybe extra 0 bytes for 8-byte boundary?
                     Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
                     binaryWriter.Write(historicalPriceDataResponseHeader.RequestID);
                     binaryWriter.Write((int)historicalPriceDataResponseHeader.RecordInterval);
@@ -592,7 +592,7 @@ namespace DTCCommon.Codecs
                     startIndex += 4;
                     securityDefinitionResponse.CurrencyValuePerIncrement = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
-                    securityDefinitionResponse.IsFinalMessage = BitConverter.ToUInt32(bytes, startIndex); // aligned on 4-byte boundaries
+                    securityDefinitionResponse.IsFinalMessage = BitConverter.ToUInt32(bytes, startIndex); // aligned on 8-byte boundaries
                     startIndex += 4;
                     securityDefinitionResponse.FloatToIntPriceMultiplier = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
@@ -600,11 +600,11 @@ namespace DTCCommon.Codecs
                     startIndex += 4;
                     securityDefinitionResponse.UnderlyingSymbol = bytes.StringFromNullTerminatedBytes(startIndex);
                     startIndex += UNDERLYING_SYMBOL_LENGTH;
-                    securityDefinitionResponse.UpdatesBidAskOnly = BitConverter.ToUInt32(bytes, startIndex); // aligned on 4-byte boundaries
+                    securityDefinitionResponse.UpdatesBidAskOnly = BitConverter.ToUInt32(bytes, startIndex); // aligned on 8-byte boundaries
                     startIndex += 4;
                     securityDefinitionResponse.StrikePrice = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
-                    securityDefinitionResponse.PutOrCall = (PutCallEnum)BitConverter.ToUInt32(bytes, startIndex); // aligned on 4-byte boundaries
+                    securityDefinitionResponse.PutOrCall = (PutCallEnum)BitConverter.ToUInt32(bytes, startIndex); // aligned on 8-byte boundaries
                     startIndex += 4;
                     securityDefinitionResponse.ShortInterest = BitConverter.ToUInt32(bytes, startIndex);
                     startIndex += 4;
@@ -620,7 +620,7 @@ namespace DTCCommon.Codecs
                     startIndex += 4;
                     securityDefinitionResponse.IntToFloatQuantityDivisor = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
-                    securityDefinitionResponse.HasMarketDepthData = BitConverter.ToUInt32(bytes, startIndex); // aligned on 4-byte boundaries
+                    securityDefinitionResponse.HasMarketDepthData = BitConverter.ToUInt32(bytes, startIndex); // aligned on 8-byte boundaries
                     startIndex += 4;
                     securityDefinitionResponse.DisplayPriceMultiplier = BitConverter.ToSingle(bytes, startIndex);
                     startIndex += 4;
@@ -677,7 +677,7 @@ namespace DTCCommon.Codecs
                     startIndex += 4;
                     historicalPriceDataResponseHeader.UseZLibCompression = bytes[startIndex++];
                     historicalPriceDataResponseHeader.NoRecordsToReturn = bytes[startIndex++];
-                    // TODO align to 4-byte here?
+                    // TODO align to 8-byte here?
                     historicalPriceDataResponseHeader.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, startIndex);
                     return result;
                 case DTCMessageType.HistoricalPriceDataReject:
@@ -698,6 +698,7 @@ namespace DTCCommon.Codecs
                     historicalPriceDataRecordResponse.RequestID = BitConverter.ToInt32(bytes, startIndex);
                     startIndex += 4;
                     historicalPriceDataRecordResponse.StartDateTime = BitConverter.ToInt64(bytes, startIndex);
+                    var debug = $"{historicalPriceDataRecordResponse.StartDateTime.DtcDateTimeToUtc().ToLocalTime():yyyyMMdd.HHmmss.fff} (local).";
                     startIndex += 8;
                     historicalPriceDataRecordResponse.OpenPrice = BitConverter.ToDouble(bytes, startIndex);
                     startIndex += 8;
@@ -711,6 +712,7 @@ namespace DTCCommon.Codecs
                     startIndex += 8;
                     historicalPriceDataRecordResponse.NumTrades = BitConverter.ToUInt32(bytes, startIndex); // union, also could be OpenInterest
                     startIndex += 4;
+                    startIndex += 4; // for 8-byte packing boundary
                     historicalPriceDataRecordResponse.BidVolume = BitConverter.ToDouble(bytes, startIndex);
                     startIndex += 8;
                     historicalPriceDataRecordResponse.AskVolume = BitConverter.ToDouble(bytes, startIndex);

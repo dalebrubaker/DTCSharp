@@ -24,8 +24,8 @@ namespace DTCCommon.Extensions
         /// <returns></returns>
         public static DateTime DtcDateTimeToUtc(this long unixSeconds)
         {
-            var dateTimeOffset = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
-            return dateTimeOffset.DateTime;
+            var result = EpochStart.AddSeconds(unixSeconds);
+            return result;
         }
 
         /// <summary>
@@ -36,10 +36,8 @@ namespace DTCCommon.Extensions
         /// <returns></returns>
         public static long UtcToDtcDateTime(this DateTime dateTimeUtc)
         {
-            var unixTimeInSeconds = new DateTimeOffset(dateTimeUtc).ToUnixTimeSeconds();
+            var unixTimeInSeconds = (long)(dateTimeUtc - EpochStart).TotalSeconds;
             return unixTimeInSeconds;
-            //var result = (dateTimeUtc - EpochStart).TotalSeconds;
-            //return (long)result;
         }
 
         /// <summary>
