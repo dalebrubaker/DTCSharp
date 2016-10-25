@@ -42,31 +42,36 @@
             this.tabPageConnect = new System.Windows.Forms.TabPage();
             this.txtUsername = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
-            this.logControlConnect = new TestClient.LogControl();
             this.tabPageSymbols = new System.Windows.Forms.TabPage();
             this.btnSecurityDefinition = new System.Windows.Forms.Button();
             this.btnExchanges = new System.Windows.Forms.Button();
             this.label4 = new System.Windows.Forms.Label();
             this.txtSymbolDef = new System.Windows.Forms.TextBox();
-            this.logControl2 = new TestClient.LogControl();
             this.tabPageLevel1 = new System.Windows.Forms.TabPage();
-            this.cbShowBidAsk = new System.Windows.Forms.CheckBox();
-            this.btnUnsubscribe = new System.Windows.Forms.Button();
-            this.btnSubscribe = new System.Windows.Forms.Button();
+            this.btnSubscribeCallbacks2 = new System.Windows.Forms.Button();
+            this.cbShowBidAsk2 = new System.Windows.Forms.CheckBox();
+            this.btnUnsubscribe2 = new System.Windows.Forms.Button();
+            this.btnSubscribeEvents2 = new System.Windows.Forms.Button();
+            this.label9 = new System.Windows.Forms.Label();
+            this.txtSymbolLevel1_2 = new System.Windows.Forms.TextBox();
+            this.btnSubscribeCallbacks1 = new System.Windows.Forms.Button();
+            this.cbShowBidAsk1 = new System.Windows.Forms.CheckBox();
+            this.btnUnsubscribe1 = new System.Windows.Forms.Button();
+            this.btnSubscribeEvents1 = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
-            this.txtSymbolLevel1 = new System.Windows.Forms.TextBox();
-            this.logControl3 = new TestClient.LogControl();
+            this.txtSymbolLevel1_1 = new System.Windows.Forms.TextBox();
             this.tabPageHistorical = new System.Windows.Forms.TabPage();
             this.cbZip = new System.Windows.Forms.CheckBox();
             this.btnGetHistoricalMinutes = new System.Windows.Forms.Button();
             this.label8 = new System.Windows.Forms.Label();
             this.dtpStart = new System.Windows.Forms.DateTimePicker();
-            this.logControlHistorical = new TestClient.LogControl();
             this.btnGetHistoricalTicks = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.txtSymbolHistorical = new System.Windows.Forms.TextBox();
-            this.btnUnsubscribe2 = new System.Windows.Forms.Button();
-            this.btnSubscribe2 = new System.Windows.Forms.Button();
+            this.logControlConnect = new TestClient.LogControl();
+            this.logControl2 = new TestClient.LogControl();
+            this.logControl3 = new TestClient.LogControl();
+            this.logControlHistorical = new TestClient.LogControl();
             this.statusStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPageConnect.SuspendLayout();
@@ -214,17 +219,6 @@
             this.label6.TabIndex = 10;
             this.label6.Text = "Username:";
             // 
-            // logControlConnect
-            // 
-            this.logControlConnect.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControlConnect.Location = new System.Drawing.Point(12, 128);
-            this.logControlConnect.Name = "logControlConnect";
-            this.logControlConnect.Size = new System.Drawing.Size(778, 455);
-            this.logControlConnect.TabIndex = 9;
-            this.logControlConnect.Title = "Log";
-            // 
             // tabPageSymbols
             // 
             this.tabPageSymbols.Controls.Add(this.btnSecurityDefinition);
@@ -277,26 +271,20 @@
             this.txtSymbolDef.TabIndex = 3;
             this.txtSymbolDef.Text = "ESZ16";
             // 
-            // logControl2
-            // 
-            this.logControl2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControl2.Location = new System.Drawing.Point(3, 72);
-            this.logControl2.Name = "logControl2";
-            this.logControl2.Size = new System.Drawing.Size(803, 531);
-            this.logControl2.TabIndex = 4;
-            this.logControl2.Title = "Log";
-            // 
             // tabPageLevel1
             // 
+            this.tabPageLevel1.Controls.Add(this.btnSubscribeCallbacks2);
+            this.tabPageLevel1.Controls.Add(this.cbShowBidAsk2);
             this.tabPageLevel1.Controls.Add(this.btnUnsubscribe2);
-            this.tabPageLevel1.Controls.Add(this.btnSubscribe2);
-            this.tabPageLevel1.Controls.Add(this.cbShowBidAsk);
-            this.tabPageLevel1.Controls.Add(this.btnUnsubscribe);
-            this.tabPageLevel1.Controls.Add(this.btnSubscribe);
+            this.tabPageLevel1.Controls.Add(this.btnSubscribeEvents2);
+            this.tabPageLevel1.Controls.Add(this.label9);
+            this.tabPageLevel1.Controls.Add(this.txtSymbolLevel1_2);
+            this.tabPageLevel1.Controls.Add(this.btnSubscribeCallbacks1);
+            this.tabPageLevel1.Controls.Add(this.cbShowBidAsk1);
+            this.tabPageLevel1.Controls.Add(this.btnUnsubscribe1);
+            this.tabPageLevel1.Controls.Add(this.btnSubscribeEvents1);
             this.tabPageLevel1.Controls.Add(this.label5);
-            this.tabPageLevel1.Controls.Add(this.txtSymbolLevel1);
+            this.tabPageLevel1.Controls.Add(this.txtSymbolLevel1_1);
             this.tabPageLevel1.Controls.Add(this.logControl3);
             this.tabPageLevel1.Location = new System.Drawing.Point(4, 22);
             this.tabPageLevel1.Name = "tabPageLevel1";
@@ -305,63 +293,119 @@
             this.tabPageLevel1.Text = "Level 1";
             this.tabPageLevel1.UseVisualStyleBackColor = true;
             // 
-            // cbShowBidAsk
+            // btnSubscribeCallbacks2
             // 
-            this.cbShowBidAsk.AutoSize = true;
-            this.cbShowBidAsk.Location = new System.Drawing.Point(133, 11);
-            this.cbShowBidAsk.Name = "cbShowBidAsk";
-            this.cbShowBidAsk.Size = new System.Drawing.Size(94, 17);
-            this.cbShowBidAsk.TabIndex = 12;
-            this.cbShowBidAsk.Text = "Show Bid/Ask";
-            this.cbShowBidAsk.UseVisualStyleBackColor = true;
+            this.btnSubscribeCallbacks2.Location = new System.Drawing.Point(359, 33);
+            this.btnSubscribeCallbacks2.Name = "btnSubscribeCallbacks2";
+            this.btnSubscribeCallbacks2.Size = new System.Drawing.Size(120, 23);
+            this.btnSubscribeCallbacks2.TabIndex = 20;
+            this.btnSubscribeCallbacks2.Text = "Subscribe Callbacks 2";
+            this.btnSubscribeCallbacks2.UseVisualStyleBackColor = true;
+            this.btnSubscribeCallbacks2.Click += new System.EventHandler(this.btnSubscribeCallbacks2_Click);
             // 
-            // btnUnsubscribe
+            // cbShowBidAsk2
             // 
-            this.btnUnsubscribe.Location = new System.Drawing.Point(330, 8);
-            this.btnUnsubscribe.Name = "btnUnsubscribe";
-            this.btnUnsubscribe.Size = new System.Drawing.Size(91, 23);
-            this.btnUnsubscribe.TabIndex = 11;
-            this.btnUnsubscribe.Text = "Unsubscribe";
-            this.btnUnsubscribe.UseVisualStyleBackColor = true;
-            this.btnUnsubscribe.Click += new System.EventHandler(this.btnUnsubscribe_Click);
+            this.cbShowBidAsk2.AutoSize = true;
+            this.cbShowBidAsk2.Location = new System.Drawing.Point(134, 36);
+            this.cbShowBidAsk2.Name = "cbShowBidAsk2";
+            this.cbShowBidAsk2.Size = new System.Drawing.Size(103, 17);
+            this.cbShowBidAsk2.TabIndex = 19;
+            this.cbShowBidAsk2.Text = "Show Bid/Ask 2";
+            this.cbShowBidAsk2.UseVisualStyleBackColor = true;
             // 
-            // btnSubscribe
+            // btnUnsubscribe2
             // 
-            this.btnSubscribe.Location = new System.Drawing.Point(233, 8);
-            this.btnSubscribe.Name = "btnSubscribe";
-            this.btnSubscribe.Size = new System.Drawing.Size(91, 23);
-            this.btnSubscribe.TabIndex = 9;
-            this.btnSubscribe.Text = "Subscribe";
-            this.btnSubscribe.UseVisualStyleBackColor = true;
-            this.btnSubscribe.Click += new System.EventHandler(this.btnSubscribe_Click);
+            this.btnUnsubscribe2.Location = new System.Drawing.Point(485, 33);
+            this.btnUnsubscribe2.Name = "btnUnsubscribe2";
+            this.btnUnsubscribe2.Size = new System.Drawing.Size(91, 23);
+            this.btnUnsubscribe2.TabIndex = 18;
+            this.btnUnsubscribe2.Text = "Unsubscribe 2";
+            this.btnUnsubscribe2.UseVisualStyleBackColor = true;
+            this.btnUnsubscribe2.Click += new System.EventHandler(this.btnUnsubscribe2_Click);
+            // 
+            // btnSubscribeEvents2
+            // 
+            this.btnSubscribeEvents2.Location = new System.Drawing.Point(243, 33);
+            this.btnSubscribeEvents2.Name = "btnSubscribeEvents2";
+            this.btnSubscribeEvents2.Size = new System.Drawing.Size(110, 23);
+            this.btnSubscribeEvents2.TabIndex = 17;
+            this.btnSubscribeEvents2.Text = "Subscribe Events 2";
+            this.btnSubscribeEvents2.UseVisualStyleBackColor = true;
+            this.btnSubscribeEvents2.Click += new System.EventHandler(this.btnSubscribeEvents2_Click);
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(8, 38);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(50, 13);
+            this.label9.TabIndex = 15;
+            this.label9.Text = "Symbol2:";
+            // 
+            // txtSymbolLevel1_2
+            // 
+            this.txtSymbolLevel1_2.Location = new System.Drawing.Point(58, 34);
+            this.txtSymbolLevel1_2.Name = "txtSymbolLevel1_2";
+            this.txtSymbolLevel1_2.Size = new System.Drawing.Size(67, 20);
+            this.txtSymbolLevel1_2.TabIndex = 16;
+            this.txtSymbolLevel1_2.Text = "NQZ6";
+            // 
+            // btnSubscribeCallbacks1
+            // 
+            this.btnSubscribeCallbacks1.Location = new System.Drawing.Point(359, 7);
+            this.btnSubscribeCallbacks1.Name = "btnSubscribeCallbacks1";
+            this.btnSubscribeCallbacks1.Size = new System.Drawing.Size(120, 23);
+            this.btnSubscribeCallbacks1.TabIndex = 13;
+            this.btnSubscribeCallbacks1.Text = "Subscribe Callbacks 1";
+            this.btnSubscribeCallbacks1.UseVisualStyleBackColor = true;
+            this.btnSubscribeCallbacks1.Click += new System.EventHandler(this.btnSubscribeCallbacks1_Click);
+            // 
+            // cbShowBidAsk1
+            // 
+            this.cbShowBidAsk1.AutoSize = true;
+            this.cbShowBidAsk1.Location = new System.Drawing.Point(133, 11);
+            this.cbShowBidAsk1.Name = "cbShowBidAsk1";
+            this.cbShowBidAsk1.Size = new System.Drawing.Size(103, 17);
+            this.cbShowBidAsk1.TabIndex = 12;
+            this.cbShowBidAsk1.Text = "Show Bid/Ask 1";
+            this.cbShowBidAsk1.UseVisualStyleBackColor = true;
+            // 
+            // btnUnsubscribe1
+            // 
+            this.btnUnsubscribe1.Location = new System.Drawing.Point(485, 8);
+            this.btnUnsubscribe1.Name = "btnUnsubscribe1";
+            this.btnUnsubscribe1.Size = new System.Drawing.Size(91, 23);
+            this.btnUnsubscribe1.TabIndex = 11;
+            this.btnUnsubscribe1.Text = "Unsubscribe 1";
+            this.btnUnsubscribe1.UseVisualStyleBackColor = true;
+            this.btnUnsubscribe1.Click += new System.EventHandler(this.btnUnsubscribe1_Click);
+            // 
+            // btnSubscribeEvents1
+            // 
+            this.btnSubscribeEvents1.Location = new System.Drawing.Point(242, 7);
+            this.btnSubscribeEvents1.Name = "btnSubscribeEvents1";
+            this.btnSubscribeEvents1.Size = new System.Drawing.Size(111, 23);
+            this.btnSubscribeEvents1.TabIndex = 9;
+            this.btnSubscribeEvents1.Text = "Subscribe Events 1";
+            this.btnSubscribeEvents1.UseVisualStyleBackColor = true;
+            this.btnSubscribeEvents1.Click += new System.EventHandler(this.btnSubscribeEvents1_Click);
             // 
             // label5
             // 
             this.label5.AutoSize = true;
             this.label5.Location = new System.Drawing.Point(8, 13);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(44, 13);
+            this.label5.Size = new System.Drawing.Size(50, 13);
             this.label5.TabIndex = 7;
-            this.label5.Text = "Symbol:";
+            this.label5.Text = "Symbol1:";
             // 
-            // txtSymbolLevel1
+            // txtSymbolLevel1_1
             // 
-            this.txtSymbolLevel1.Location = new System.Drawing.Point(58, 9);
-            this.txtSymbolLevel1.Name = "txtSymbolLevel1";
-            this.txtSymbolLevel1.Size = new System.Drawing.Size(67, 20);
-            this.txtSymbolLevel1.TabIndex = 8;
-            this.txtSymbolLevel1.Text = "ESZ6";
-            // 
-            // logControl3
-            // 
-            this.logControl3.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControl3.Location = new System.Drawing.Point(3, 49);
-            this.logControl3.Name = "logControl3";
-            this.logControl3.Size = new System.Drawing.Size(801, 554);
-            this.logControl3.TabIndex = 10;
-            this.logControl3.Title = "Log";
+            this.txtSymbolLevel1_1.Location = new System.Drawing.Point(58, 9);
+            this.txtSymbolLevel1_1.Name = "txtSymbolLevel1_1";
+            this.txtSymbolLevel1_1.Size = new System.Drawing.Size(67, 20);
+            this.txtSymbolLevel1_1.TabIndex = 8;
+            this.txtSymbolLevel1_1.Text = "ESZ6";
             // 
             // tabPageHistorical
             // 
@@ -369,10 +413,10 @@
             this.tabPageHistorical.Controls.Add(this.btnGetHistoricalMinutes);
             this.tabPageHistorical.Controls.Add(this.label8);
             this.tabPageHistorical.Controls.Add(this.dtpStart);
-            this.tabPageHistorical.Controls.Add(this.logControlHistorical);
             this.tabPageHistorical.Controls.Add(this.btnGetHistoricalTicks);
             this.tabPageHistorical.Controls.Add(this.label7);
             this.tabPageHistorical.Controls.Add(this.txtSymbolHistorical);
+            this.tabPageHistorical.Controls.Add(this.logControlHistorical);
             this.tabPageHistorical.Location = new System.Drawing.Point(4, 22);
             this.tabPageHistorical.Name = "tabPageHistorical";
             this.tabPageHistorical.Size = new System.Drawing.Size(812, 611);
@@ -419,17 +463,6 @@
             this.dtpStart.TabIndex = 11;
             this.dtpStart.Value = new System.DateTime(2016, 10, 21, 9, 30, 0, 0);
             // 
-            // logControlHistorical
-            // 
-            this.logControlHistorical.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControlHistorical.Location = new System.Drawing.Point(3, 44);
-            this.logControlHistorical.Name = "logControlHistorical";
-            this.logControlHistorical.Size = new System.Drawing.Size(801, 559);
-            this.logControlHistorical.TabIndex = 10;
-            this.logControlHistorical.Title = "Log";
-            // 
             // btnGetHistoricalTicks
             // 
             this.btnGetHistoricalTicks.Location = new System.Drawing.Point(530, 15);
@@ -457,25 +490,49 @@
             this.txtSymbolHistorical.TabIndex = 8;
             this.txtSymbolHistorical.Text = "ESZ6";
             // 
-            // btnUnsubscribe2
+            // logControlConnect
             // 
-            this.btnUnsubscribe2.Location = new System.Drawing.Point(545, 8);
-            this.btnUnsubscribe2.Name = "btnUnsubscribe2";
-            this.btnUnsubscribe2.Size = new System.Drawing.Size(91, 23);
-            this.btnUnsubscribe2.TabIndex = 14;
-            this.btnUnsubscribe2.Text = "Unsubscribe2";
-            this.btnUnsubscribe2.UseVisualStyleBackColor = true;
-            this.btnUnsubscribe2.Click += new System.EventHandler(this.btnUnsubscribe2_Click);
+            this.logControlConnect.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControlConnect.Location = new System.Drawing.Point(12, 128);
+            this.logControlConnect.Name = "logControlConnect";
+            this.logControlConnect.Size = new System.Drawing.Size(778, 455);
+            this.logControlConnect.TabIndex = 9;
+            this.logControlConnect.Title = "Log";
             // 
-            // btnSubscribe2
+            // logControl2
             // 
-            this.btnSubscribe2.Location = new System.Drawing.Point(448, 8);
-            this.btnSubscribe2.Name = "btnSubscribe2";
-            this.btnSubscribe2.Size = new System.Drawing.Size(91, 23);
-            this.btnSubscribe2.TabIndex = 13;
-            this.btnSubscribe2.Text = "Subscribe2";
-            this.btnSubscribe2.UseVisualStyleBackColor = true;
-            this.btnSubscribe2.Click += new System.EventHandler(this.btnSubscribe2_Click);
+            this.logControl2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControl2.Location = new System.Drawing.Point(3, 72);
+            this.logControl2.Name = "logControl2";
+            this.logControl2.Size = new System.Drawing.Size(803, 531);
+            this.logControl2.TabIndex = 4;
+            this.logControl2.Title = "Log";
+            // 
+            // logControl3
+            // 
+            this.logControl3.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControl3.Location = new System.Drawing.Point(3, 66);
+            this.logControl3.Name = "logControl3";
+            this.logControl3.Size = new System.Drawing.Size(801, 537);
+            this.logControl3.TabIndex = 10;
+            this.logControl3.Title = "Log";
+            // 
+            // logControlHistorical
+            // 
+            this.logControlHistorical.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControlHistorical.Location = new System.Drawing.Point(3, 44);
+            this.logControlHistorical.Name = "logControlHistorical";
+            this.logControlHistorical.Size = new System.Drawing.Size(801, 559);
+            this.logControlHistorical.TabIndex = 10;
+            this.logControlHistorical.Title = "Log";
             // 
             // Form1
             // 
@@ -523,11 +580,11 @@
         private System.Windows.Forms.Button btnSecurityDefinition;
         private System.Windows.Forms.TabPage tabPageLevel1;
         private LogControl logControl3;
-        private System.Windows.Forms.Button btnSubscribe;
+        private System.Windows.Forms.Button btnSubscribeEvents1;
         private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.TextBox txtSymbolLevel1;
-        private System.Windows.Forms.Button btnUnsubscribe;
-        private System.Windows.Forms.CheckBox cbShowBidAsk;
+        private System.Windows.Forms.TextBox txtSymbolLevel1_1;
+        private System.Windows.Forms.Button btnUnsubscribe1;
+        private System.Windows.Forms.CheckBox cbShowBidAsk1;
         private System.Windows.Forms.TextBox txtUsername;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.TabPage tabPageHistorical;
@@ -539,8 +596,13 @@
         private System.Windows.Forms.TextBox txtSymbolHistorical;
         private System.Windows.Forms.Button btnGetHistoricalMinutes;
         private System.Windows.Forms.CheckBox cbZip;
+        private System.Windows.Forms.Button btnSubscribeCallbacks1;
+        private System.Windows.Forms.Button btnSubscribeCallbacks2;
+        private System.Windows.Forms.CheckBox cbShowBidAsk2;
         private System.Windows.Forms.Button btnUnsubscribe2;
-        private System.Windows.Forms.Button btnSubscribe2;
+        private System.Windows.Forms.Button btnSubscribeEvents2;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.TextBox txtSymbolLevel1_2;
     }
 }
 
