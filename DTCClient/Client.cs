@@ -294,10 +294,8 @@ namespace DTCClient
 
         /// <summary>
         /// See http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData for details
-        /// If the request is rejected, this method will return immediately.
-        /// Otherwise price data will be returned along with a non-null historicalPriceDataResponseHeader. 
-        /// To get earlier access to the historicalPriceDataResponseHeader, subscribe to the HistoricalPriceDataRecordResponseEvent
-        /// 
+        /// If the request is rejected, this method will return null immediately.
+        /// Otherwise the HistoricalPriceDataResponseHeader will be sent to headerCallback followed by HistoricalPriceDataRecordResponse to dataCallback.
         /// </summary>
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
@@ -380,23 +378,142 @@ namespace DTCClient
             return historicalPriceDataReject;
         }
 
-        public void Dispose()
+        /// <summary>
+        /// Get the SecurityDefinitionResponse for symbol, or null if not received before timeout
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
+        /// <returns>the SecurityDefinitionResponse, or null if not received before timeout</returns>
+        public async Task<SecurityDefinitionResponse> GetSecurityDefinitionAsync(string symbol, int timeout = 1000)
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            // Set up the handler to capture the event
+            var startTime = DateTime.Now;
+            SecurityDefinitionResponse result = null;
+            EventHandler<EventArgs<SecurityDefinitionResponse>> handler = null;
+            handler = (s, e) =>
+            {
+                SecurityDefinitionResponseEvent -= handler; // unregister to avoid a potential memory leak
+                result = e.Data;
+            };
+            SecurityDefinitionResponseEvent += handler;
+
+            // Send the request
+            var securityDefinitionForSymbolRequest = new SecurityDefinitionForSymbolRequest
+            {
+                RequestID = NextRequestId,
+                Symbol = symbol
+            };
+            SendMessage(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
+
+            // Wait until the response is received or until timeout
+            while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
+            {
+                await Task.Delay(1);
+            }
+            return result;
         }
 
-        protected virtual void Dispose(bool disposing)
+        /// <summary>
+        /// Return symbol|exchange
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        /// <returns></returns>
+        public string CombineSymbolExchange(string symbol, string exchange)
         {
-            if (disposing && !_isDisposed)
+            return $"{symbol}|{exchange}";
+        }
+
+        /// <summary>
+        /// Split symbol|exchange.
+        /// </summary>
+        /// <param name="combo"></param>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        public void SplitSymbolExchange(string combo, out string symbol, out string exchange)
+        {
+            if (string.IsNullOrEmpty(combo))
             {
-                _cts?.Cancel();
-                _binaryWriter?.Dispose();
-                _tcpClient.Close();
-                _tcpClient?.Dispose();
-                _heartbeatTimer?.Dispose();
-                _isDisposed = true;
+                symbol = null;
+                exchange = null;
+                return;
             }
+            var splits = combo.Split('|');
+            symbol = splits[0];
+            exchange = splits[1];
+        }
+
+        /// <summary>
+        /// Get the symbol and exchange for symbolId, or null if not found
+        /// </summary>
+        /// <param name="symbolId"></param>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        public void GetSymbolExchangeForSymbolId(uint symbolId, out string symbol, out string exchange)
+        {
+            string combo;
+            SymbolExchangeComboBySymbolId.TryGetValue(symbolId, out combo);
+            SplitSymbolExchange(combo, out symbol, out exchange);
+        }
+
+        /// <summary>
+        /// Get the symbolId for symbol and exchange, or 0 if not found
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        /// <returns></returns>
+        public uint GetSymbolId(string symbol, string exchange)
+        {
+            var combo = CombineSymbolExchange(symbol, exchange);
+            uint symbolId;
+            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out symbolId))
+            {
+                return 0;
+            }
+            SplitSymbolExchange(combo, out symbol, out exchange);
+            return symbolId;
+        }
+
+        /// <summary>
+        /// Request market data for symbol|exchange
+        /// Add a symbolId if not already assigned 
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        /// <returns>the symbol ID for symbol|exchange, or 0 if not logged on or market data is not supported</returns>
+        public uint SubscribeMarketData(string symbol, string exchange)
+        {
+            if (LogonResponse == null || LogonResponse.MarketDataSupported == 0)
+            {
+                return 0;
+            }
+            var combo = CombineSymbolExchange(symbol, exchange);
+            uint symbolId;
+            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out symbolId))
+            {
+                symbolId = NextSymbolId;
+                SymbolIdBySymbolExchangeCombo[combo] = symbolId;
+                SymbolExchangeComboBySymbolId[symbolId] = combo;
+            }
+            var request = new MarketDataRequest
+            {
+                RequestAction = RequestActionEnum.Subscribe,
+                SymbolID = symbolId,
+                Symbol = symbol,
+                Exchange = exchange
+            };
+            SendMessage(DTCMessageType.MarketDataRequest, request);
+            return symbolId;
+        }
+
+        public void UnsubscribeMarketData(uint symbolId)
+        {
+            var request = new MarketDataRequest
+            {
+                RequestAction = RequestActionEnum.Unsubscribe,
+                SymbolID = symbolId,
+            };
+            SendMessage(DTCMessageType.MarketDataRequest, request);
         }
 
         /// <summary>
@@ -726,147 +843,29 @@ namespace DTCClient
             }
         }
 
-        /// <summary>
-        /// Get the SecurityDefinitionResponse for symbol, or null if not received before timeout
-        /// </summary>
-        /// <param name="symbol"></param>
-        /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
-        /// <returns>the SecurityDefinitionResponse, or null if not received before timeout</returns>
-        public async Task<SecurityDefinitionResponse> GetSecurityDefinitionAsync(string symbol, int timeout = 1000)
+        public void Dispose()
         {
-            // Set up the handler to capture the event
-            var startTime = DateTime.Now;
-            SecurityDefinitionResponse result = null;
-            EventHandler<EventArgs<SecurityDefinitionResponse>> handler = null;
-            handler = (s, e) =>
-            {
-                SecurityDefinitionResponseEvent -= handler; // unregister to avoid a potential memory leak
-                result = e.Data;
-            };
-            SecurityDefinitionResponseEvent += handler;
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-            // Send the request
-            var securityDefinitionForSymbolRequest = new SecurityDefinitionForSymbolRequest
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing && !_isDisposed)
             {
-                RequestID = NextRequestId,
-                Symbol = symbol
-            };
-            SendMessage(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
-
-            // Wait until the response is received or until timeout
-            while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
-            {
-                await Task.Delay(1);
+                _cts?.Cancel();
+                _binaryWriter?.Dispose();
+                _tcpClient.Close();
+                _tcpClient?.Dispose();
+                _heartbeatTimer?.Dispose();
+                _isDisposed = true;
             }
-            return result;
-        }
-
-        /// <summary>
-        /// Return symbol|exchange
-        /// </summary>
-        /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        /// <returns></returns>
-        public string CombineSymbolExchange(string symbol, string exchange)
-        {
-            return $"{symbol}|{exchange}";
-        }
-
-        /// <summary>
-        /// Split symbol|exchange.
-        /// </summary>
-        /// <param name="combo"></param>
-        /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        public void SplitSymbolExchange(string combo, out string symbol, out string exchange)
-        {
-            if (string.IsNullOrEmpty(combo))
-            {
-                symbol = null;
-                exchange = null;
-                return;
-            }
-            var splits = combo.Split('|');
-            symbol = splits[0];
-            exchange = splits[1];
-        }
-
-        /// <summary>
-        /// Get the symbol and exchange for symbolId, or null if not found
-        /// </summary>
-        /// <param name="symbolId"></param>
-        /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        public void GetSymbolExchangeForSymbolId(uint symbolId, out string symbol, out string exchange)
-        {
-            string combo;
-            SymbolExchangeComboBySymbolId.TryGetValue(symbolId, out combo);
-            SplitSymbolExchange(combo, out symbol, out exchange);
-        }
-
-        /// <summary>
-        /// Get the symbolId for symbol and exchange, or 0 if not found
-        /// </summary>
-        /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        /// <returns></returns>
-        public uint GetSymbolId(string symbol, string exchange)
-        {
-            var combo = CombineSymbolExchange(symbol, exchange);
-            uint symbolId;
-            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out symbolId))
-            {
-                return 0;
-            }
-            SplitSymbolExchange(combo, out symbol, out exchange);
-            return symbolId;
-        }
-
-        /// <summary>
-        /// Request market data for symbol|exchange
-        /// Add a symbolId if not already assigned 
-        /// </summary>
-        /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        /// <returns>the symbol ID for symbol|exchange, or 0 if not logged on or market data is not supported</returns>
-        public uint SubscribeMarketData(string symbol, string exchange)
-        {
-            if (LogonResponse == null || LogonResponse.MarketDataSupported == 0)
-            {
-                return 0;
-            }
-            var combo = CombineSymbolExchange(symbol, exchange);
-            uint symbolId;
-            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out symbolId))
-            {
-                symbolId = NextSymbolId;
-                SymbolIdBySymbolExchangeCombo[combo] = symbolId;
-                SymbolExchangeComboBySymbolId[symbolId] = combo;
-            }
-            var request = new MarketDataRequest
-            {
-                RequestAction = RequestActionEnum.Subscribe,
-                SymbolID = symbolId,
-                Symbol = symbol,
-                Exchange = exchange
-            };
-            SendMessage(DTCMessageType.MarketDataRequest, request);
-            return symbolId;
-        }
-
-        public void UnsubscribeMarketData(uint symbolId)
-        {
-            var request = new MarketDataRequest
-            {
-                RequestAction = RequestActionEnum.Unsubscribe,
-                SymbolID = symbolId,
-            };
-            SendMessage(DTCMessageType.MarketDataRequest, request);
         }
 
         public override string ToString()
         {
             return $"{_clientName} {_server} {_port}";
         }
+
     }
 }
