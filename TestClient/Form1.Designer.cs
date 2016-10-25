@@ -65,6 +65,8 @@
             this.btnGetHistoricalTicks = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.txtSymbolHistorical = new System.Windows.Forms.TextBox();
+            this.btnUnsubscribe2 = new System.Windows.Forms.Button();
+            this.btnSubscribe2 = new System.Windows.Forms.Button();
             this.statusStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPageConnect.SuspendLayout();
@@ -288,6 +290,8 @@
             // 
             // tabPageLevel1
             // 
+            this.tabPageLevel1.Controls.Add(this.btnUnsubscribe2);
+            this.tabPageLevel1.Controls.Add(this.btnSubscribe2);
             this.tabPageLevel1.Controls.Add(this.cbShowBidAsk);
             this.tabPageLevel1.Controls.Add(this.btnUnsubscribe);
             this.tabPageLevel1.Controls.Add(this.btnSubscribe);
@@ -453,6 +457,26 @@
             this.txtSymbolHistorical.TabIndex = 8;
             this.txtSymbolHistorical.Text = "ESZ6";
             // 
+            // btnUnsubscribe2
+            // 
+            this.btnUnsubscribe2.Location = new System.Drawing.Point(545, 8);
+            this.btnUnsubscribe2.Name = "btnUnsubscribe2";
+            this.btnUnsubscribe2.Size = new System.Drawing.Size(91, 23);
+            this.btnUnsubscribe2.TabIndex = 14;
+            this.btnUnsubscribe2.Text = "Unsubscribe2";
+            this.btnUnsubscribe2.UseVisualStyleBackColor = true;
+            this.btnUnsubscribe2.Click += new System.EventHandler(this.btnUnsubscribe2_Click);
+            // 
+            // btnSubscribe2
+            // 
+            this.btnSubscribe2.Location = new System.Drawing.Point(448, 8);
+            this.btnSubscribe2.Name = "btnSubscribe2";
+            this.btnSubscribe2.Size = new System.Drawing.Size(91, 23);
+            this.btnSubscribe2.TabIndex = 13;
+            this.btnSubscribe2.Text = "Subscribe2";
+            this.btnSubscribe2.UseVisualStyleBackColor = true;
+            this.btnSubscribe2.Click += new System.EventHandler(this.btnSubscribe2_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -515,6 +539,8 @@
         private System.Windows.Forms.TextBox txtSymbolHistorical;
         private System.Windows.Forms.Button btnGetHistoricalMinutes;
         private System.Windows.Forms.CheckBox cbZip;
+        private System.Windows.Forms.Button btnUnsubscribe2;
+        private System.Windows.Forms.Button btnSubscribe2;
     }
 }
 

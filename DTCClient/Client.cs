@@ -47,11 +47,13 @@ namespace DTCClient
 
         /// <summary>
         /// See http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#SymbolIDRequestIDRules
+        /// This is auto-incrementing
         /// </summary>
         public int NextRequestId => ++_nextRequestId;
 
         /// <summary>
         /// See http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#SymbolIDRequestIDRules
+        /// This is auto-incrementing
         /// </summary>
         public uint NextSymbolId => ++_nextSymbolId;
 
@@ -299,21 +301,22 @@ namespace DTCClient
         /// </summary>
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
+        /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
         /// <param name="recordInterval"></param>
         /// <param name="startDateTimeUtc">Use DateTime.MinValue for 0</param>
         /// <param name="endDateTimeUtc">Use DateTime.MinValue for 0</param>
         /// <param name="maxDaysToReturn"></param>
         /// <param name="useZLibCompression"></param>
         /// <param name="flag1"></param>
-        /// <param name="timeout"></param>
         /// <param name="requestDividendAdjustedStockData"></param>
         /// <param name="headerCallback">callback for header</param>
         /// <param name="dataCallback">callback for HistoricalPriceDataRecordResponses</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>rejection, or null if not rejected</returns>
-        public async Task<HistoricalPriceDataReject> GetHistoricalPriceDataRecordResponsesAsync(string symbol, string exchange,
+        public async Task<HistoricalPriceDataReject> GetHistoricalPriceDataRecordResponsesAsync(int timeout, string symbol, string exchange,
             HistoricalDataIntervalEnum recordInterval, DateTime startDateTimeUtc, DateTime endDateTimeUtc, uint maxDaysToReturn, bool useZLibCompression,
-            int timeout, bool requestDividendAdjustedStockData, bool flag1, Action<HistoricalPriceDataResponseHeader> headerCallback,
-            Action<HistoricalPriceDataRecordResponse> dataCallback)
+            bool requestDividendAdjustedStockData, bool flag1, Action<HistoricalPriceDataResponseHeader> headerCallback,
+            Action<HistoricalPriceDataRecordResponse> dataCallback, CancellationToken cancellationToken = default(CancellationToken))
         {
             HistoricalPriceDataReject historicalPriceDataReject = null;
 
@@ -371,9 +374,9 @@ namespace DTCClient
 
             // Wait until timeout or reject or response is received
             var startTime = DateTime.Now; // for checking timeout
-            while ((DateTime.Now - startTime).TotalMilliseconds < timeout)
+            while ((DateTime.Now - startTime).TotalMilliseconds < timeout && !cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(1);
+                await Task.Delay(1, cancellationToken);
             }
             return historicalPriceDataReject;
         }
@@ -457,7 +460,7 @@ namespace DTCClient
         }
 
         /// <summary>
-        /// Get the symbolId for symbol and exchange, or 0 if not found
+        /// Get the for symbol and exchange, adding it if it doesn't already exist
         /// </summary>
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
@@ -468,15 +471,17 @@ namespace DTCClient
             uint symbolId;
             if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out symbolId))
             {
-                return 0;
+                symbolId = NextSymbolId;
+                SymbolIdBySymbolExchangeCombo[combo] = symbolId;
+                SymbolExchangeComboBySymbolId[symbolId] = combo;
             }
-            SplitSymbolExchange(combo, out symbol, out exchange);
             return symbolId;
         }
 
         /// <summary>
         /// Request market data for symbol|exchange
         /// Add a symbolId if not already assigned 
+        /// This is done for you within GetMarketDataUpdateTradeCompact()
         /// </summary>
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
@@ -487,14 +492,7 @@ namespace DTCClient
             {
                 return 0;
             }
-            var combo = CombineSymbolExchange(symbol, exchange);
-            uint symbolId;
-            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out symbolId))
-            {
-                symbolId = NextSymbolId;
-                SymbolIdBySymbolExchangeCombo[combo] = symbolId;
-                SymbolExchangeComboBySymbolId[symbolId] = combo;
-            }
+            uint symbolId = GetSymbolId(symbol, exchange);
             var request = new MarketDataRequest
             {
                 RequestAction = RequestActionEnum.Subscribe,
@@ -514,6 +512,175 @@ namespace DTCClient
                 SymbolID = symbolId,
             };
             SendMessage(DTCMessageType.MarketDataRequest, request);
+        }
+
+        /// <summary>
+        /// For details see: https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#MarketData
+        /// Also https://dtcprotocol.org/index.php?page=doc/DTCMessages_MarketDataMessages.php#Messages-MARKET_DATA_REQUEST
+        /// This method subscribes to market data updates. A snapshot response is immediately returned to snapshotCallback. 
+        /// Then MarketDataUpdateTradeCompact responses are sent to dataCallback. Optionally, other responses are to the other callbacks.
+        /// To stop the callbacks, use MarketDataUnsubscribe() and cancel this method using cancellationToken
+        /// </summary>
+        /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
+        /// <param name="symbol"></param>
+        /// <param name="exchange"></param>
+        /// <param name="snapshotCallback">Must not be null</param>
+        /// <param name="dataCallback">Must not be null</param>
+        /// <param name="bidAskCallback">Won't be used if null</param>
+        /// <param name="sessionOpenCallback">Won't be used if null</param>
+        /// <param name="sessionHighCallback">Won't be used if null</param>
+        /// <param name="sessionLowCallback">Won't be used if null</param>
+        /// <param name="sessionSettlementCallback">Won't be used if null</param>
+        /// <param name="sessionVolumeCallback">Won't be used if null</param>
+        /// <param name="openInterestCallback">Won't be used if null</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>rejection, or null if not rejected</returns>
+        public async Task<MarketDataReject> GetMarketDataUpdateTradeCompact(int timeout, string symbol, string exchange, 
+            Action<MarketDataSnapshot> snapshotCallback, Action<MarketDataUpdateTradeCompact> dataCallback, 
+            Action<MarketDataUpdateBidAskCompact> bidAskCallback = null,
+            Action<MarketDataUpdateSessionOpen> sessionOpenCallback = null,
+            Action<MarketDataUpdateSessionHigh> sessionHighCallback = null,
+            Action<MarketDataUpdateSessionLow> sessionLowCallback = null, 
+            Action<MarketDataUpdateSessionSettlement> sessionSettlementCallback = null,
+            Action<MarketDataUpdateSessionVolume> sessionVolumeCallback = null,
+            Action<MarketDataUpdateOpenInterest> openInterestCallback = null, 
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            MarketDataReject marketDataReject = null;
+            if (LogonResponse == null)
+            {
+                return new MarketDataReject {RejectText = "Not logged on."};
+            }
+            if (LogonResponse.MarketDataSupported == 0)
+            {
+                return new MarketDataReject { RejectText = "Market data is not supported." };
+            }
+
+            // Set up handler to capture the reject event
+            EventHandler<EventArgs<MarketDataReject>> handlerReject = null;
+            handlerReject = (s, e) =>
+            {
+                MarketDataRejectEvent -= handlerReject; // unregister to avoid a potential memory leak
+                marketDataReject = e.Data;
+                timeout = 0; // force immediate return
+            };
+            MarketDataRejectEvent += handlerReject;
+
+            // Set up handler to capture the snapshot event
+            EventHandler<EventArgs<MarketDataSnapshot>> handlerSnapshot = null;
+            handlerSnapshot = (s, e) =>
+            {
+                MarketDataSnapshotEvent -= handlerSnapshot; // unregister to avoid a potential memory leak
+                snapshotCallback(e.Data);
+                timeout = int.MaxValue; // disable timeout
+            };
+            MarketDataSnapshotEvent += handlerSnapshot;
+
+            // Set up handler to capture the trade update events
+            EventHandler<EventArgs<MarketDataUpdateTradeCompact>> handlerTrade = null;
+            handlerTrade = (s, e) =>
+            {
+                MarketDataUpdateTradeCompactEvent -= handlerTrade; // unregister to avoid a potential memory leak
+                dataCallback(e.Data);
+            };
+            MarketDataUpdateTradeCompactEvent += handlerTrade;
+
+            if (bidAskCallback != null)
+            {
+                EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> handlerBidAsk = null;
+                handlerBidAsk = (s, e) =>
+                {
+                    MarketDataUpdateBidAskCompactEvent -= handlerBidAsk; // unregister to avoid a potential memory leak
+                    bidAskCallback(e.Data);
+                };
+                MarketDataUpdateBidAskCompactEvent += handlerBidAsk;
+            }
+
+            if (sessionOpenCallback != null)
+            {
+                EventHandler<EventArgs<MarketDataUpdateSessionOpen>> handlerSessionOpen = null;
+                handlerSessionOpen = (s, e) =>
+                {
+                    MarketDataUpdateSessionOpenEvent -= handlerSessionOpen; // unregister to avoid a potential memory leak
+                    sessionOpenCallback(e.Data);
+                };
+                MarketDataUpdateSessionOpenEvent += handlerSessionOpen;
+            }
+
+            if (sessionHighCallback != null)
+            {
+                EventHandler<EventArgs<MarketDataUpdateSessionHigh>> handlerSessionHigh = null;
+                handlerSessionHigh = (s, e) =>
+                {
+                    MarketDataUpdateSessionHighEvent -= handlerSessionHigh; // unregister to avoid a potential memory leak
+                    sessionHighCallback(e.Data);
+                };
+                MarketDataUpdateSessionHighEvent += handlerSessionHigh;
+            }
+
+            if (sessionLowCallback != null)
+            {
+                EventHandler<EventArgs<MarketDataUpdateSessionLow>> handlerSessionLow = null;
+                handlerSessionLow = (s, e) =>
+                {
+                    MarketDataUpdateSessionLowEvent -= handlerSessionLow; // unregister to avoid a potential memory leak
+                    sessionLowCallback(e.Data);
+                };
+                MarketDataUpdateSessionLowEvent += handlerSessionLow;
+            }
+
+            if (sessionSettlementCallback != null)
+            {
+                EventHandler<EventArgs<MarketDataUpdateSessionSettlement>> handlerSessionSettlement = null;
+                handlerSessionSettlement = (s, e) =>
+                {
+                    MarketDataUpdateSessionSettlementEvent -= handlerSessionSettlement; // unregister to avoid a potential memory leak
+                    sessionSettlementCallback(e.Data);
+                };
+                MarketDataUpdateSessionSettlementEvent += handlerSessionSettlement;
+            }
+
+            if (sessionVolumeCallback != null)
+            {
+                EventHandler<EventArgs<MarketDataUpdateSessionVolume>> handlerSessionVolume = null;
+                handlerSessionVolume = (s, e) =>
+                {
+                    MarketDataUpdateSessionVolumeEvent -= handlerSessionVolume; // unregister to avoid a potential memory leak
+                    sessionVolumeCallback(e.Data);
+                };
+                MarketDataUpdateSessionVolumeEvent += handlerSessionVolume;
+            }
+
+            if (openInterestCallback != null)
+            {
+                EventHandler<EventArgs<MarketDataUpdateOpenInterest>> handlerOpenInterest = null;
+                handlerOpenInterest = (s, e) =>
+                {
+                    MarketDataUpdateOpenInterestEvent -= handlerOpenInterest; // unregister to avoid a potential memory leak
+                    openInterestCallback(e.Data);
+                };
+                MarketDataUpdateOpenInterestEvent += handlerOpenInterest;
+            }
+
+            // Send the request
+            var symbolId = GetSymbolId(symbol, exchange);
+            var request = new MarketDataRequest
+            {
+                RequestAction = RequestActionEnum.Subscribe,
+                SymbolID = symbolId,
+                Symbol = symbol,
+                Exchange = exchange
+            };
+            SendMessage(DTCMessageType.MarketDataRequest, request);
+
+            // Wait until timeout or cancellation
+            var startTime = DateTime.Now; // for checking timeout
+            while ((DateTime.Now - startTime).TotalMilliseconds < timeout && !cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(1, cancellationToken);
+            }
+
+            return marketDataReject;
         }
 
         /// <summary>

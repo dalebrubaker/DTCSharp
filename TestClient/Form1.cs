@@ -549,5 +549,14 @@ namespace TestClient
             logControlHistorical.LogMessage($"HistoricalPriceDataResponseHeader RequestId:{response.RequestID} RecordInterval:{response.RecordInterval} UseZLibCompression:{response.UseZLibCompression} NoRecordsToReturn:{response.NoRecordsToReturn}");
         }
 
+        private void btnSubscribe2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnUnsubscribe2_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }
