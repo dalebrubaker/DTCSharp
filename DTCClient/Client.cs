@@ -526,7 +526,7 @@ namespace DTCClient
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
         /// <param name="snapshotCallback">Must not be null</param>
-        /// <param name="dataCallback">Must not be null</param>
+        /// <param name="tradeCallback">Must not be null</param>
         /// <param name="bidAskCallback">Won't be used if null</param>
         /// <param name="sessionOpenCallback">Won't be used if null</param>
         /// <param name="sessionHighCallback">Won't be used if null</param>
@@ -536,7 +536,7 @@ namespace DTCClient
         /// <param name="openInterestCallback">Won't be used if null</param>
         /// <returns>rejection, or null if not rejected</returns>
         public async Task<MarketDataReject> GetMarketDataUpdateTradeCompactAsync(CancellationToken cancellationToken, int timeout, string symbol, string exchange, 
-            Action<MarketDataSnapshot> snapshotCallback, Action<MarketDataUpdateTradeCompact> dataCallback, 
+            Action<MarketDataSnapshot> snapshotCallback, Action<MarketDataUpdateTradeCompact> tradeCallback, 
             Action<MarketDataUpdateBidAskCompact> bidAskCallback = null,
             Action<MarketDataUpdateSessionOpen> sessionOpenCallback = null,
             Action<MarketDataUpdateSessionHigh> sessionHighCallback = null,
@@ -565,127 +565,50 @@ namespace DTCClient
                 marketDataReject = e.Data;
                 timeout = 0; // force immediate return
             };
-            MarketDataRejectEvent += handlerReject;
 
-            // Set up handler to capture the snapshot event
-            EventHandler<EventArgs<MarketDataSnapshot>> handlerSnapshot = (s, e) =>
+            using (var handleSnapshot = new EventToCallbackForSymbol<MarketDataSnapshot>(symbolId, symbol, exchange,
+                handler => MarketDataSnapshotEvent += handler, handler => MarketDataSnapshotEvent -= handler, snapshotCallback))
+            using (var handleTrade = new EventToCallbackForSymbol<MarketDataUpdateTradeCompact>(symbolId, symbol, exchange,
+                handler => MarketDataUpdateTradeCompactEvent += handler, handler => MarketDataUpdateTradeCompactEvent -= handler, tradeCallback))
+            using (var handleBidAsk = new EventToCallbackForSymbol<MarketDataUpdateBidAskCompact>(symbolId, symbol, exchange,
+                handler => MarketDataUpdateBidAskCompactEvent += handler, handler => MarketDataUpdateBidAskCompactEvent -= handler, bidAskCallback))
+            using (var handleSessionOpen = new EventToCallbackForSymbol<MarketDataUpdateSessionOpen>(symbolId, symbol, exchange,
+                handler => MarketDataUpdateSessionOpenEvent += handler, handler => MarketDataUpdateSessionOpenEvent -= handler, sessionOpenCallback))
+            using (var handleSessionHigh = new EventToCallbackForSymbol<MarketDataUpdateSessionHigh>(symbolId, symbol, exchange,
+                handler => MarketDataUpdateSessionHighEvent += handler, handler => MarketDataUpdateSessionHighEvent -= handler, sessionHighCallback))
+            using (var handleSessionLow = new EventToCallbackForSymbol<MarketDataUpdateSessionLow>(symbolId, symbol, exchange,
+                handler => MarketDataUpdateSessionLowEvent += handler, handler => MarketDataUpdateSessionLowEvent -= handler, sessionLowCallback))
+            using (var handleSessionSettlement = new EventToCallbackForSymbol<MarketDataUpdateSessionSettlement>(symbolId, symbol, exchange,
+                handler => MarketDataUpdateSessionSettlementEvent += handler, handler => MarketDataUpdateSessionSettlementEvent -= handler, sessionSettlementCallback))
+            using (var handleSessionVolume = new EventToCallbackForSymbol<MarketDataUpdateSessionVolume>(symbolId, symbol, exchange,
+                handler => MarketDataUpdateSessionVolumeEvent += handler, handler => MarketDataUpdateSessionVolumeEvent -= handler, sessionVolumeCallback))
+            using (var handleOpenInterest = new EventToCallbackForSymbol<MarketDataUpdateOpenInterest>(symbolId, symbol, exchange,
+                handler => MarketDataUpdateOpenInterestEvent += handler, handler => MarketDataUpdateOpenInterestEvent -= handler, openInterestCallback))
             {
-                if (e.Data.SymbolID == symbolId)
+                // Send the request
+                var request = new MarketDataRequest
                 {
-                    snapshotCallback(e.Data);
+                    RequestAction = RequestActionEnum.Subscribe,
+                    SymbolID = symbolId,
+                    Symbol = symbol,
+                    Exchange = exchange
+                };
+                SendMessage(DTCMessageType.MarketDataRequest, request);
+
+                // Wait until timeout or cancellation
+                var startTime = DateTime.Now; // for checking timeout
+                while ((DateTime.Now - startTime).TotalMilliseconds < timeout 
+                    && !cancellationToken.IsCancellationRequested)
+                {
+                    if (handleSnapshot.IsDataReceived || handleTrade.IsDataReceived)
+                    {
+                        // We're receiving data, so never timeout
+                        timeout = int.MaxValue;
+                    }
+                    await Task.Delay(1, cancellationToken);
                 }
-                timeout = int.MaxValue; // disable timeout
-            };
-            MarketDataSnapshotEvent += handlerSnapshot;
-
-            // Set up handler to capture the trade update events
-            EventHandler<EventArgs<MarketDataUpdateTradeCompact>> handlerTrade = (s, e) =>
-            {
-                if (e.Data.SymbolID == symbolId)
-                {
-                    dataCallback(e.Data);
-                }
-            };
-            MarketDataUpdateTradeCompactEvent += handlerTrade;
-
-            if (bidAskCallback != null)
-            {
-                EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> handlerBidAsk = null;
-                handlerBidAsk = (s, e) =>
-                {
-                    // TODO Fix these events. Generic? In using statement for auto-unregister? In a class for symbolId checking?
-                    MarketDataUpdateBidAskCompactEvent -= handlerBidAsk; // unregister to avoid a potential memory leak
-                    bidAskCallback(e.Data);
-                };
-                MarketDataUpdateBidAskCompactEvent += handlerBidAsk;
+                return marketDataReject;
             }
-
-            if (sessionOpenCallback != null)
-            {
-                EventHandler<EventArgs<MarketDataUpdateSessionOpen>> handlerSessionOpen = null;
-                handlerSessionOpen = (s, e) =>
-                {
-                    MarketDataUpdateSessionOpenEvent -= handlerSessionOpen; // unregister to avoid a potential memory leak
-                    sessionOpenCallback(e.Data);
-                };
-                MarketDataUpdateSessionOpenEvent += handlerSessionOpen;
-            }
-
-            if (sessionHighCallback != null)
-            {
-                EventHandler<EventArgs<MarketDataUpdateSessionHigh>> handlerSessionHigh = null;
-                handlerSessionHigh = (s, e) =>
-                {
-                    MarketDataUpdateSessionHighEvent -= handlerSessionHigh; // unregister to avoid a potential memory leak
-                    sessionHighCallback(e.Data);
-                };
-                MarketDataUpdateSessionHighEvent += handlerSessionHigh;
-            }
-
-            if (sessionLowCallback != null)
-            {
-                EventHandler<EventArgs<MarketDataUpdateSessionLow>> handlerSessionLow = null;
-                handlerSessionLow = (s, e) =>
-                {
-                    MarketDataUpdateSessionLowEvent -= handlerSessionLow; // unregister to avoid a potential memory leak
-                    sessionLowCallback(e.Data);
-                };
-                MarketDataUpdateSessionLowEvent += handlerSessionLow;
-            }
-
-            if (sessionSettlementCallback != null)
-            {
-                EventHandler<EventArgs<MarketDataUpdateSessionSettlement>> handlerSessionSettlement = null;
-                handlerSessionSettlement = (s, e) =>
-                {
-                    MarketDataUpdateSessionSettlementEvent -= handlerSessionSettlement; // unregister to avoid a potential memory leak
-                    sessionSettlementCallback(e.Data);
-                };
-                MarketDataUpdateSessionSettlementEvent += handlerSessionSettlement;
-            }
-
-            if (sessionVolumeCallback != null)
-            {
-                EventHandler<EventArgs<MarketDataUpdateSessionVolume>> handlerSessionVolume = null;
-                handlerSessionVolume = (s, e) =>
-                {
-                    MarketDataUpdateSessionVolumeEvent -= handlerSessionVolume; // unregister to avoid a potential memory leak
-                    sessionVolumeCallback(e.Data);
-                };
-                MarketDataUpdateSessionVolumeEvent += handlerSessionVolume;
-            }
-
-            if (openInterestCallback != null)
-            {
-                EventHandler<EventArgs<MarketDataUpdateOpenInterest>> handlerOpenInterest = null;
-                handlerOpenInterest = (s, e) =>
-                {
-                    MarketDataUpdateOpenInterestEvent -= handlerOpenInterest; // unregister to avoid a potential memory leak
-                    openInterestCallback(e.Data);
-                };
-                MarketDataUpdateOpenInterestEvent += handlerOpenInterest;
-            }
-
-            // Send the request
-            var request = new MarketDataRequest
-            {
-                RequestAction = RequestActionEnum.Subscribe,
-                SymbolID = symbolId,
-                Symbol = symbol,
-                Exchange = exchange
-            };
-            SendMessage(DTCMessageType.MarketDataRequest, request);
-
-            // Wait until timeout or cancellation
-            var startTime = DateTime.Now; // for checking timeout
-            while ((DateTime.Now - startTime).TotalMilliseconds < timeout && !cancellationToken.IsCancellationRequested)
-            {
-                await Task.Delay(1, cancellationToken);
-            }
-            MarketDataSnapshotEvent -= handlerSnapshot; // unregister to avoid a potential memory leak
-            MarketDataUpdateTradeCompactEvent -= handlerTrade; // unregister to avoid a potential memory leak
-
-            return marketDataReject;
         }
 
         /// <summary>
