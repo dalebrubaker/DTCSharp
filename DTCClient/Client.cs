@@ -298,6 +298,7 @@ namespace DTCClient
         /// See http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData for details
         /// If the request is rejected, this method will return null immediately.
         /// Otherwise the HistoricalPriceDataResponseHeader will be sent to headerCallback followed by HistoricalPriceDataRecordResponse to dataCallback.
+        /// Probably this will work only for one symbol per client. Make a new client for each request.
         /// </summary>
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
