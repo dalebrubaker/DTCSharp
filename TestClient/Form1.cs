@@ -19,6 +19,8 @@ namespace TestClient
         private List<MarketDataUpdateTradeCompact> _ticks;
         const int MaxLevel1Rows = 100;
         private int _numRegistrationsForMarketData;
+        private CancellationTokenSource _ctsLevel1Symbol1;
+        private CancellationTokenSource _ctsLevel1Symbol2;
 
         public Form1()
         {
@@ -231,7 +233,8 @@ namespace TestClient
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
-            logControlLevel1.LogMessage($"Market Data Update Trade Int for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}");
+            logControlLevel1.LogMessage(
+                $"Market Data Update Trade Int for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}");
         }
 
         private void Client_MarketDataUpdateTradeEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateTrade> e)
@@ -494,7 +497,8 @@ namespace TestClient
                     HistoricalPriceDataRecordResponseCallback);
                 if (historicalPriceDataReject != null)
                 {
-                    logControlHistorical.LogMessage($"HistoricalPriceDataReject RequestId:{historicalPriceDataReject.RequestID} RejectReasonCode:{historicalPriceDataReject.RejectReasonCode} RejectText:{historicalPriceDataReject.RejectText} RetryTimeInSeconds:{historicalPriceDataReject.RetryTimeInSeconds}");
+                    logControlHistorical.LogMessage(
+                        $"HistoricalPriceDataReject RequestId:{historicalPriceDataReject.RequestID} RejectReasonCode:{historicalPriceDataReject.RejectReasonCode} RejectText:{historicalPriceDataReject.RejectText} RetryTimeInSeconds:{historicalPriceDataReject.RetryTimeInSeconds}");
                 }
             }
         }
@@ -505,14 +509,16 @@ namespace TestClient
             if (response.IsFinalRecord != 0)
             {
                 var lastTime = response.StartDateTime.DtcDateTimeToUtc();
-                logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} received {_historicalPriceDataRecordResponses.Count} records through {lastTime.ToLocalTime():yyyyMMdd.HHmmss.fff} (local).");
+                logControlHistorical.LogMessage(
+                    $"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} received {_historicalPriceDataRecordResponses.Count} records through {lastTime.ToLocalTime():yyyyMMdd.HHmmss.fff} (local).");
                 //logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} T:{response.StartDateTime} O:{response.OpenPrice} O:{response.OpenPrice} O:{response.HighPrice} O:{response.LowPrice} V:{response.Volume} #T:{response.NumTrades} BV:{response.BidVolume} AV:{response.AskVolume} Final:{response.IsFinalRecord}");
             }
         }
 
         private void HistoricalPriceDataResponseHeaderCallback(HistoricalPriceDataResponseHeader response)
         {
-            logControlHistorical.LogMessage($"HistoricalPriceDataResponseHeader RequestId:{response.RequestID} RecordInterval:{response.RecordInterval} UseZLibCompression:{response.UseZLibCompression} NoRecordsToReturn:{response.NoRecordsToReturn}");
+            logControlHistorical.LogMessage(
+                $"HistoricalPriceDataResponseHeader RequestId:{response.RequestID} RecordInterval:{response.RecordInterval} UseZLibCompression:{response.UseZLibCompression} NoRecordsToReturn:{response.NoRecordsToReturn}");
         }
 
         private void btnSubscribeEvents1_Click(object sender, EventArgs e)
@@ -530,13 +536,16 @@ namespace TestClient
         {
             btnUnsubscribe1.Enabled = false;
             btnSubscribeEvents1.Enabled = true;
+            btnSubscribeCallbacks1.Enabled = true;
             if (--_numRegistrationsForMarketData == 0)
             {
                 UnregisterClientEventsMarketData(_client);
             }
+            _ctsLevel1Symbol1?.Cancel();
+            _ctsLevel1Symbol1 = null;
             _client.UnsubscribeMarketData(_symbolId1);
         }
-        
+
         private void btnSubscribeEvents2_Click(object sender, EventArgs e)
         {
             btnUnsubscribe2.Enabled = true;
@@ -552,21 +561,60 @@ namespace TestClient
         {
             btnUnsubscribe2.Enabled = false;
             btnSubscribeEvents2.Enabled = true;
+            btnSubscribeCallbacks2.Enabled = true;
             if (--_numRegistrationsForMarketData == 0)
             {
                 UnregisterClientEventsMarketData(_client);
             }
+            _ctsLevel1Symbol2?.Cancel();
+            _ctsLevel1Symbol2 = null;
             _client.UnsubscribeMarketData(_symbolId2);
         }
 
-        private void btnSubscribeCallbacks1_Click(object sender, EventArgs e)
+        private async void btnSubscribeCallbacks1_Click(object sender, EventArgs e)
         {
-
+            btnUnsubscribe1.Enabled = true;
+            btnSubscribeCallbacks1.Enabled = false;
+            _ctsLevel1Symbol1 = new CancellationTokenSource();
+            var symbol = txtSymbolLevel1_1.Text;
+            try
+            {
+                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol1.Token, 5000, symbol, "", MarketDataSnapshotCallback,
+                            MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback);
+                if (reject != null)
+                {
+                    var message = $"Subscription to {symbol} rejected: {reject.RejectText}";
+                    logControlLevel1.LogMessage(message);
+                    MessageBox.Show(message);
+                }
+            }
+            catch (TaskCanceledException ex)
+            {
+                // ignore this exception thrown when we unsubscribe
+            }
         }
 
-        private void btnSubscribeCallbacks2_Click(object sender, EventArgs e)
+        private async void btnSubscribeCallbacks2_Click(object sender, EventArgs e)
         {
-
+            btnUnsubscribe2.Enabled = true;
+            btnSubscribeCallbacks2.Enabled = false;
+            _ctsLevel1Symbol2 = new CancellationTokenSource();
+            var symbol = txtSymbolLevel1_2.Text;
+            try
+            {
+                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol2.Token, 5000, symbol, "", MarketDataSnapshotCallback,
+                            MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback);
+                if (reject != null)
+                {
+                    var message = $"Subscription to {symbol} rejected: {reject.RejectText}";
+                    logControlLevel1.LogMessage(message);
+                    MessageBox.Show(message);
+                }
+            }
+            catch (TaskCanceledException ex)
+            {
+                // ignore this exception thrown when we unsubscribe
+            }
         }
 
         private void MarketDataSnapshotCallback(MarketDataSnapshot response)

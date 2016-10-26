@@ -519,9 +519,10 @@ namespace DTCClient
         /// Also https://dtcprotocol.org/index.php?page=doc/DTCMessages_MarketDataMessages.php#Messages-MARKET_DATA_REQUEST
         /// This method subscribes to market data updates. A snapshot response is immediately returned to snapshotCallback. 
         /// Then MarketDataUpdateTradeCompact responses are sent to dataCallback. Optionally, other responses are to the other callbacks.
-        /// To stop the callbacks, use MarketDataUnsubscribe() and cancel this method using cancellationToken
+        /// To stop the callbacks, use MarketDataUnsubscribe() and cancel this method using cancellationToken (CancellationTokenSource.Cancel())
         /// </summary>
         /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
+        /// <param name="cancellationToken">To stop the callbacks, use MarketDataUnsubscribe() and cancel this method using cancellationToken (CancellationTokenSource.Cancel())</param>
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
         /// <param name="snapshotCallback">Must not be null</param>
@@ -533,9 +534,8 @@ namespace DTCClient
         /// <param name="sessionSettlementCallback">Won't be used if null</param>
         /// <param name="sessionVolumeCallback">Won't be used if null</param>
         /// <param name="openInterestCallback">Won't be used if null</param>
-        /// <param name="cancellationToken"></param>
         /// <returns>rejection, or null if not rejected</returns>
-        public async Task<MarketDataReject> GetMarketDataUpdateTradeCompact(int timeout, string symbol, string exchange, 
+        public async Task<MarketDataReject> GetMarketDataUpdateTradeCompactAsync(CancellationToken cancellationToken, int timeout, string symbol, string exchange, 
             Action<MarketDataSnapshot> snapshotCallback, Action<MarketDataUpdateTradeCompact> dataCallback, 
             Action<MarketDataUpdateBidAskCompact> bidAskCallback = null,
             Action<MarketDataUpdateSessionOpen> sessionOpenCallback = null,
@@ -543,9 +543,10 @@ namespace DTCClient
             Action<MarketDataUpdateSessionLow> sessionLowCallback = null, 
             Action<MarketDataUpdateSessionSettlement> sessionSettlementCallback = null,
             Action<MarketDataUpdateSessionVolume> sessionVolumeCallback = null,
-            Action<MarketDataUpdateOpenInterest> openInterestCallback = null, 
-            CancellationToken cancellationToken = default(CancellationToken))
+            Action<MarketDataUpdateOpenInterest> openInterestCallback = null 
+            )
         {
+            var symbolId = GetSymbolId(symbol, exchange);
             MarketDataReject marketDataReject = null;
             if (LogonResponse == null)
             {
@@ -567,21 +568,23 @@ namespace DTCClient
             MarketDataRejectEvent += handlerReject;
 
             // Set up handler to capture the snapshot event
-            EventHandler<EventArgs<MarketDataSnapshot>> handlerSnapshot = null;
-            handlerSnapshot = (s, e) =>
+            EventHandler<EventArgs<MarketDataSnapshot>> handlerSnapshot = (s, e) =>
             {
-                MarketDataSnapshotEvent -= handlerSnapshot; // unregister to avoid a potential memory leak
-                snapshotCallback(e.Data);
+                if (e.Data.SymbolID == symbolId)
+                {
+                    snapshotCallback(e.Data);
+                }
                 timeout = int.MaxValue; // disable timeout
             };
             MarketDataSnapshotEvent += handlerSnapshot;
 
             // Set up handler to capture the trade update events
-            EventHandler<EventArgs<MarketDataUpdateTradeCompact>> handlerTrade = null;
-            handlerTrade = (s, e) =>
+            EventHandler<EventArgs<MarketDataUpdateTradeCompact>> handlerTrade = (s, e) =>
             {
-                MarketDataUpdateTradeCompactEvent -= handlerTrade; // unregister to avoid a potential memory leak
-                dataCallback(e.Data);
+                if (e.Data.SymbolID == symbolId)
+                {
+                    dataCallback(e.Data);
+                }
             };
             MarketDataUpdateTradeCompactEvent += handlerTrade;
 
@@ -590,6 +593,7 @@ namespace DTCClient
                 EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> handlerBidAsk = null;
                 handlerBidAsk = (s, e) =>
                 {
+                    // TODO Fix these events. Generic? In using statement for auto-unregister? In a class for symbolId checking?
                     MarketDataUpdateBidAskCompactEvent -= handlerBidAsk; // unregister to avoid a potential memory leak
                     bidAskCallback(e.Data);
                 };
@@ -663,7 +667,6 @@ namespace DTCClient
             }
 
             // Send the request
-            var symbolId = GetSymbolId(symbol, exchange);
             var request = new MarketDataRequest
             {
                 RequestAction = RequestActionEnum.Subscribe,
@@ -679,6 +682,8 @@ namespace DTCClient
             {
                 await Task.Delay(1, cancellationToken);
             }
+            MarketDataSnapshotEvent -= handlerSnapshot; // unregister to avoid a potential memory leak
+            MarketDataUpdateTradeCompactEvent -= handlerTrade; // unregister to avoid a potential memory leak
 
             return marketDataReject;
         }
