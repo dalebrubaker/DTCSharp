@@ -952,7 +952,6 @@ namespace DTCClient
                 _cts?.Cancel();
                 _binaryWriter?.Dispose();
                 _tcpClient.Close();
-                _tcpClient?.Dispose();
                 _heartbeatTimer?.Dispose();
                 _isDisposed = true;
             }

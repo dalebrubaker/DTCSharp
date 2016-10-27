@@ -79,7 +79,8 @@ namespace TestClient
                 const int heartbeatIntervalInSeconds = 10;
                 const int timeout = 5000;
                 const bool isHistoricalClient = false;
-                var response = await _client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, isHistoricalClient, timeout, clientName, txtUsername.Text, "");
+                var response = await _client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, isHistoricalClient, timeout, 
+                    clientName, txtUsername.Text, txtPassword.Text);
                 if (response == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
@@ -96,6 +97,7 @@ namespace TestClient
                         break;
                     case LogonStatusEnum.LogonErrorNoReconnect:
                         logControlConnect.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
+                        DisposeClient();
                         break;
                     case LogonStatusEnum.LogonError:
                         logControlConnect.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}.");
