@@ -644,9 +644,17 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.AccountBalanceUpdate:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.UserMessage:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var userMessage = result as UserMessage;
+                    startIndex = 0;
+                    userMessage.UserMessage_ = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += TEXT_MESSAGE_LENGTH;
+                    return result;
                 case DTCMessageType.GeneralLogMessage:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var generalLogMessage = result as GeneralLogMessage;
+                    startIndex = 0;
+                    generalLogMessage.MessageText = bytes.StringFromNullTerminatedBytes(startIndex);
+                    startIndex += 128;
+                    return result;
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = result as HistoricalPriceDataRequest;
                     startIndex = 0;

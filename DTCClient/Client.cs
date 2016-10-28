@@ -466,7 +466,7 @@ namespace DTCClient
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
         /// <returns></returns>
-        public uint GetSymbolId(string symbol, string exchange)
+        public uint RequireSymbolId(string symbol, string exchange)
         {
             var combo = CombineSymbolExchange(symbol, exchange);
             uint symbolId;
@@ -493,7 +493,7 @@ namespace DTCClient
             {
                 return 0;
             }
-            uint symbolId = GetSymbolId(symbol, exchange);
+            uint symbolId = RequireSymbolId(symbol, exchange);
             var request = new MarketDataRequest
             {
                 RequestAction = RequestActionEnum.Subscribe,
@@ -547,7 +547,7 @@ namespace DTCClient
             Action<MarketDataUpdateOpenInterest> openInterestCallback = null 
             )
         {
-            var symbolId = GetSymbolId(symbol, exchange);
+            var symbolId = RequireSymbolId(symbol, exchange);
             MarketDataReject marketDataReject = null;
             if (LogonResponse == null)
             {

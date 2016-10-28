@@ -455,7 +455,8 @@ namespace TestClient
                     const int heartbeatIntervalInSeconds = 10;
                     const bool isHistoricalClient = true;
                     var clientName = $"HistoricalClient|{txtSymbolHistorical.Text}";
-                    var response = await client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, isHistoricalClient, timeout, clientName, txtUsername.Text, "");
+                    var response = await client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, isHistoricalClient, timeout, clientName, 
+                        txtUsername.Text, txtPassword.Text);
                     if (response == null)
                     {
                         logControlHistorical.LogMessage("Null logon response from logon attempt to " + clientName);
@@ -473,11 +474,9 @@ namespace TestClient
                             return;
                         case LogonStatusEnum.LogonError:
                             logControlHistorical.LogMessage($"{client} Login failed: {response.Result} {response.ResultText}.");
-                            DisposeClient();
                             return;
                         case LogonStatusEnum.LogonReconnectNewAddress:
                             logControlHistorical.LogMessage($"{client} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
-                            DisposeClient();
                             return;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -513,7 +512,6 @@ namespace TestClient
                 var lastTime = response.StartDateTime.DtcDateTimeToUtc();
                 logControlHistorical.LogMessage(
                     $"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} received {_historicalPriceDataRecordResponses.Count} records through {lastTime.ToLocalTime():yyyyMMdd.HHmmss.fff} (local).");
-                //logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} T:{response.StartDateTime} O:{response.OpenPrice} O:{response.OpenPrice} O:{response.HighPrice} O:{response.LowPrice} V:{response.Volume} #T:{response.NumTrades} BV:{response.BidVolume} AV:{response.AskVolume} Final:{response.IsFinalRecord}");
             }
         }
 
