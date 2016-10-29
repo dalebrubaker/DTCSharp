@@ -14,24 +14,24 @@ namespace DTCServer
 {
     public class Server
     {
-        private int _port;
+        private readonly int _port;
         private readonly int _heartbeatIntervalInSeconds;
         private readonly bool _useHeartbeat;
-        private readonly IServerStub _serverStub;
-        private IPAddress _ipAddress;
+        private readonly IServerImpl _serverImpl;
+        private readonly IPAddress _ipAddress;
 
         /// <summary>
         /// Start a TCP Listener on port at ipAddress
         /// If not useHeartbeat, won't do a heartbeat. See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
         /// </summary>
-        /// <param name="serverStub">the server implementation that provides responses to client requests</param>
+        /// <param name="serverImpl">the server implementation that provides responses to client requests</param>
         /// <param name="ipAddress"></param>
         /// <param name="port"></param>
         /// <param name="heartbeatIntervalInSeconds">The initial interval in seconds that each side, the Client and the Server, needs to use to send HEARTBEAT messages to the other side. This should be a value from anywhere from 5 to 60 seconds.</param>
         /// <param name="useHeartbeat"><c>true</c>no heartbeat sent to server and none checked from server</param>
-        public Server(IServerStub serverStub, IPAddress ipAddress, int port, int heartbeatIntervalInSeconds, bool useHeartbeat)
+        public Server(IServerImpl serverImpl, IPAddress ipAddress, int port, int heartbeatIntervalInSeconds, bool useHeartbeat)
         {
-            _serverStub = serverStub;
+            _serverImpl = serverImpl;
             _ipAddress = ipAddress;
             _port = port;
             _heartbeatIntervalInSeconds = heartbeatIntervalInSeconds;
@@ -53,7 +53,7 @@ namespace DTCServer
                     using (var tcpClient = await listener.AcceptTcpClientAsync())
                     {
                         var stream = tcpClient.GetStream();
-                        var clientHandler = new ClientHandler(_serverStub, tcpClient, _useHeartbeat);
+                        var clientHandler = new ClientHandler(_serverImpl, tcpClient, _useHeartbeat);
                         await clientHandler.Run(cancellationToken);
 //                        var temp = tcpClient;
 //#pragma warning disable 4014
@@ -73,7 +73,7 @@ namespace DTCServer
         private async Task Handle(TcpClient tcpClient, CancellationToken cancellationToken)
         {
             var stream = tcpClient.GetStream();
-            var clientHandler = new ClientHandler(_serverStub, tcpClient, _useHeartbeat);
+            var clientHandler = new ClientHandler(_serverImpl, tcpClient, _useHeartbeat);
             await clientHandler.Run(cancellationToken);
         }
 

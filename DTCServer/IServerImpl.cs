@@ -3,7 +3,10 @@ using DTCPB;
 
 namespace DTCServer
 {
-    public interface IServerStub
+    /// <summary>
+    /// Interface to be implemented to make a server
+    /// </summary>
+    public interface IServerImpl
     {
         Task<LogonResponse> LogonRequestAsync(string clientHandlerId, LogonRequest logonRequest);
         Task LogoffAsync(string clientHandlerId, Logoff logoff);

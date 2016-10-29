@@ -19,7 +19,7 @@ namespace DTCServer
 {
     public class ClientHandler : IDisposable
     {
-        private readonly IServerStub _serverStub;
+        private readonly IServerImpl _serverImpl;
         private readonly TcpClient _tcpClient;
         private readonly bool _useHeartbeat;
         private bool _isDisposed;
@@ -32,9 +32,9 @@ namespace DTCServer
         private readonly ConcurrentQueue<MessageWithType<IMessage>> _responsesQueue;
         private DateTime _lastHeartbeatReceivedTime;
 
-        public ClientHandler(IServerStub serverStub, TcpClient tcpClient, bool useHeartbeat)
+        public ClientHandler(IServerImpl serverImpl, TcpClient tcpClient, bool useHeartbeat)
         {
-            _serverStub = serverStub;
+            _serverImpl = serverImpl;
             _tcpClient = tcpClient;
             _useHeartbeat = useHeartbeat;
             _networkStream = _tcpClient.GetStream();
@@ -133,13 +133,13 @@ namespace DTCServer
                             _lastHeartbeatReceivedTime = DateTime.Now;
                             _heartbeatTimer.Start();
                         }
-                        var logonResponse = await _serverStub.LogonRequestAsync(_remoteEndPoint, logonRequest);
+                        var logonResponse = await _serverImpl.LogonRequestAsync(_remoteEndPoint, logonRequest);
                         _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.LogonResponse, logonResponse));
                         break;
                     case DTCMessageType.Heartbeat:
                         _lastHeartbeatReceivedTime = DateTime.Now;
                         var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
-                        await _serverStub.HeartbeatAsync(_remoteEndPoint, heartbeat);
+                        await _serverImpl.HeartbeatAsync(_remoteEndPoint, heartbeat);
                         break;
                     case DTCMessageType.Logoff:
                         if (_useHeartbeat && _heartbeatTimer != null)
@@ -149,11 +149,11 @@ namespace DTCServer
                             _heartbeatTimer.Stop();
                         }
                         var logoff = _currentCodec.Load<Logoff>(messageType, bytes);
-                        await _serverStub.LogoffAsync(_remoteEndPoint, logoff);
+                        await _serverImpl.LogoffAsync(_remoteEndPoint, logoff);
                         break;
                     case DTCMessageType.EncodingRequest:
                         var encodingRequest = _currentCodec.Load<EncodingRequest>(messageType, bytes);
-                        var encodingResponse = await _serverStub.EncodingRequestAsync(_remoteEndPoint, encodingRequest);
+                        var encodingResponse = await _serverImpl.EncodingRequestAsync(_remoteEndPoint, encodingRequest);
                         _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.EncodingResponse, encodingResponse));
                         while (!_responsesQueue.IsEmpty)
                         {

@@ -8,7 +8,7 @@ namespace TestServer
     /// <summary>
     /// The server implementation that provides responses to client requests
     /// </summary>
-    public class ServerStub  : IServerStub
+    public class ExampleServerImpl  : IServerImpl
     {
         public event EventHandler<string> MessageEvent;
 

@@ -23,7 +23,7 @@ namespace Tests
         [Fact]
         public void LogonTest()
         {
-            var serverStub = new ServerStub();
+            var serverImpl = new ExampleServerImpl();
         }
     }
 }
