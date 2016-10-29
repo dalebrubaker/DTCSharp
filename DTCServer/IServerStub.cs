@@ -5,6 +5,9 @@ namespace DTCServer
 {
     public interface IServerStub
     {
-        Task<LogonResponse> LogonRequest(LogonRequest logonRequest);
+        Task<LogonResponse> LogonRequestAsync(string clientHandlerId, LogonRequest logonRequest);
+        Task LogoffAsync(string clientHandlerId, Logoff logoff);
+        Task<EncodingResponse> EncodingRequestAsync(string clientHandlerId, EncodingRequest encodingRequest);
+        Task HeartbeatAsync(string clientHandlerId, Heartbeat heartbeat);
     }
 }

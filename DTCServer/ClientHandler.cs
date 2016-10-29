@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
 using DTCCommon.Exceptions;
@@ -22,13 +23,14 @@ namespace DTCServer
         private readonly TcpClient _tcpClient;
         private readonly bool _useHeartbeat;
         private bool _isDisposed;
-        private readonly Timer _heartbeatTimer;
+        private Timer _heartbeatTimer;
         private readonly string _remoteEndPoint;
         private readonly string _localEndPoint;
         private ICodecDTC _currentCodec;
         private NetworkStream _networkStream;
         private BinaryWriter _binaryWriter;
         private ConcurrentQueue<MessageWithType<IMessage>> _responsesQueue;
+        private DateTime _lastHeartbeatReceivedTime;
 
         public ClientHandler(IServerStub serverStub, TcpClient tcpClient, bool useHeartbeat)
         {
@@ -38,7 +40,6 @@ namespace DTCServer
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
             _currentCodec = new CodecBinary();
-            _heartbeatTimer = new Timer(10000);
             _remoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _localEndPoint = tcpClient.Client.LocalEndPoint.ToString();
 
@@ -68,6 +69,25 @@ namespace DTCServer
                 }
                 await Task.Delay(1, cancellationToken);
             }
+        }
+
+        private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            if (!_useHeartbeat)
+            {
+                return;
+            }
+            var maxWaitForHeartbeatTime = TimeSpan.FromMilliseconds(Math.Max(_heartbeatTimer.Interval * 2, 5000));
+            var timeSinceHeartbeat = (DateTime.Now - _lastHeartbeatReceivedTime);
+            if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
+            {
+                Dispose(true);
+                throw new DTCSharpException($"Too long since Server sent us a heartbeat. Closing clientHandler: {this}");
+            }
+
+            // Send a heartbeat to the server
+            var heartbeat = new Heartbeat();
+            _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.Heartbeat, heartbeat));
         }
 
         /// <summary>
@@ -104,16 +124,51 @@ namespace DTCServer
                 {
                     case DTCMessageType.LogonRequest:
                         var logonRequest = _currentCodec.Load<LogonRequest>(messageType, bytes);
-                        var logonResponse = await _serverStub.LogonRequest(logonRequest);
+                        if (_useHeartbeat)
+                        {
+                            // start the heartbeat
+                            _heartbeatTimer = new Timer(logonRequest.HeartbeatIntervalInSeconds * 1000);
+                            _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
+                            _lastHeartbeatReceivedTime = DateTime.Now;
+                            _heartbeatTimer.Start();
+                        }
+                        var logonResponse = await _serverStub.LogonRequestAsync(ToString(), logonRequest);
                         _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.LogonResponse, logonResponse));
                         break;
                     case DTCMessageType.Heartbeat:
+                        _lastHeartbeatReceivedTime = DateTime.Now;
+                        var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
+                        await _serverStub.HeartbeatAsync(ToString(), heartbeat);
                         break;
                     case DTCMessageType.Logoff:
+                        if (_useHeartbeat && _heartbeatTimer != null)
+                        {
+                            // stop the heartbeat
+                            _heartbeatTimer.Elapsed -= HeartbeatTimer_Elapsed;
+                            _heartbeatTimer.Stop();
+                        }
+                        var logoff = _currentCodec.Load<Logoff>(messageType, bytes);
+                        await _serverStub.LogoffAsync(ToString(), logoff);
                         break;
                     case DTCMessageType.EncodingRequest:
-                        break;
-                    case DTCMessageType.EncodingResponse:
+                        var encodingRequest = _currentCodec.Load<EncodingRequest>(messageType, bytes);
+                        var encodingResponse = await _serverStub.EncodingRequestAsync(ToString(), encodingRequest);
+                        _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.EncodingResponse, encodingResponse));
+                        switch (encodingResponse.Encoding)
+                        {
+                            case EncodingEnum.BinaryEncoding:
+                                _currentCodec = new CodecBinary();
+                                break;
+                            case EncodingEnum.BinaryWithVariableLengthStrings:
+                            case EncodingEnum.JsonEncoding:
+                            case EncodingEnum.JsonCompactEncoding:
+                                throw new NotImplementedException($"Not implemented in {nameof(Run)}: {nameof(encodingResponse.Encoding)}");
+                            case EncodingEnum.ProtocolBuffers:
+                                _currentCodec = new CodecProtobuf();
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
                         break;
                     case DTCMessageType.MarketDataRequest:
                         break;
@@ -261,13 +316,13 @@ namespace DTCServer
                         break;
                     case DTCMessageType.MessageTypeUnset:
                     case DTCMessageType.LogonResponse:
+                    case DTCMessageType.EncodingResponse:
                     default:
                         throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(Run)}.");
                 }
             }
         }
-
-
+        
         public void Dispose()
         {
             Dispose(true);
@@ -279,6 +334,9 @@ namespace DTCServer
             if (disposing && !_isDisposed)
             {
                 _heartbeatTimer?.Dispose();
+                _networkStream?.Dispose();
+                _binaryWriter?.Dispose();
+                _tcpClient.Close();
                 _isDisposed = true;
             }
         }

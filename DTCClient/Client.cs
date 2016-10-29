@@ -95,7 +95,7 @@ namespace DTCClient
         #region events
 
         public event EventHandler<EventArgs<EncodingResponse>> EncodingResponseEvent;
-        // public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent; heartbeat is internal only
+        public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent;
         public event EventHandler<EventArgs<Logoff>> LogoffEvent;
         public event EventHandler<EventArgs<LogonResponse>> LogonResponseEvent;
         public event EventHandler<EventArgs<MarketDataReject>> MarketDataRejectEvent;
@@ -649,8 +649,9 @@ namespace DTCClient
                         ThrowEvent(LogonResponse, LogonResponseEvent);
                         break;
                     case DTCMessageType.Heartbeat:
-                        var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
                         _lastHeartbeatReceivedTime = DateTime.Now;
+                        var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
+                        ThrowEvent(heartbeat, HeartbeatEvent);
                         break;
                     case DTCMessageType.Logoff:
                         var logoff = _currentCodec.Load<Logoff>(messageType, bytes);
@@ -666,14 +667,9 @@ namespace DTCClient
                                 _currentCodec = new CodecBinary();
                                 break;
                             case EncodingEnum.BinaryWithVariableLengthStrings:
-                                throw new NotImplementedException($"Not implemented in {nameof(MessageReader)}: {nameof(encodingResponse.Encoding)}");
-                                ;
                             case EncodingEnum.JsonEncoding:
-                                throw new NotImplementedException($"Not implemented in {nameof(MessageReader)}: {nameof(encodingResponse.Encoding)}");
-                                ;
                             case EncodingEnum.JsonCompactEncoding:
                                 throw new NotImplementedException($"Not implemented in {nameof(MessageReader)}: {nameof(encodingResponse.Encoding)}");
-                                ;
                             case EncodingEnum.ProtocolBuffers:
                                 _currentCodec = new CodecProtobuf();
                                 break;
@@ -934,10 +930,11 @@ namespace DTCClient
         {
             if (disposing && !_isDisposed)
             {
+                _heartbeatTimer?.Dispose();
                 _cts?.Cancel();
+                _networkStream?.Dispose();
                 _binaryWriter?.Dispose();
                 _tcpClient.Close();
-                _heartbeatTimer?.Dispose();
                 _isDisposed = true;
             }
         }

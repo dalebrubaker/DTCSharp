@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DTCServer;
@@ -18,8 +19,9 @@ namespace TestServer
         private Server _serverPrimary;
         private Server _serverHistorical;
         private IPAddress _ipAddress;
-        private ServerStub _serverStubPrimary;
-        private ServerStub _serverStubHistorical;
+        private readonly ServerStub _serverStub;
+        private CancellationTokenSource _ctsPrimary;
+        private CancellationTokenSource _ctsHistorical;
 
         public ServerForm()
         {
@@ -29,8 +31,13 @@ namespace TestServer
             var hostEntry = Dns.GetHostEntry(serverName);
             _ipAddress = hostEntry.AddressList.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
             lblServerIPAddress.Text = $"Server IP Address: {_ipAddress}";
-            _serverStubPrimary = new ServerStub();
-            _serverStubHistorical = new ServerStub();
+            _serverStub = new ServerStub();
+            _serverStub.MessageEvent += ServerStub_MessageEvent;
+        }
+
+        private void ServerStub_MessageEvent(object sender, string message)
+        {
+            logControl1.LogMessage(message);
         }
 
         private int PortListener
@@ -59,13 +66,16 @@ namespace TestServer
             btnStopPrimary.Enabled = true;
             const int heartbeatIntervalInSeconds = 10;
             const bool useHeartbeat = true;
-            _serverPrimary = new Server(_serverStubPrimary, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
+            _serverPrimary = new Server(_serverStub, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
+            _ctsPrimary = new CancellationTokenSource();
+            _serverPrimary.Run(_ctsPrimary.Token);
         }
 
         private void btnStopPrimary_Click(object sender, EventArgs e)
         {
             btnStartPrimary.Enabled = true;
             btnStopPrimary.Enabled = false;
+            _ctsPrimary.Cancel();
         }
 
         private void btnStartHistorical_Click(object sender, EventArgs e)
@@ -74,14 +84,16 @@ namespace TestServer
             btnStopHistorical.Enabled = true;
             const int heartbeatIntervalInSeconds = 0;
             const bool useHeartbeat = false; // See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
-            _serverHistorical = new Server(_serverStubHistorical, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
-
+            _serverHistorical = new Server(_serverStub, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
+            _ctsHistorical = new CancellationTokenSource();
+            _serverHistorical.Run(_ctsHistorical.Token);
         }
 
         private void btnStopHistorical_Click(object sender, EventArgs e)
         {
             btnStartHistorical.Enabled = true;
             btnStopHistorical.Enabled = false;
+            _ctsHistorical.Cancel();
         }
     }
 }

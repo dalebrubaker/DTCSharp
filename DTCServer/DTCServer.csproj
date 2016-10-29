@@ -55,7 +55,6 @@
     <Compile Include="IServerStub.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Server.cs" />
-    <Compile Include="ServerStub.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
