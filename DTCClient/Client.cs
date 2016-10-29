@@ -1,14 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -22,11 +16,11 @@ using Timer = System.Timers.Timer;
 
 namespace DTCClient
 {
-    public partial class Client : IDisposable
+    public class Client : IDisposable
     {
         private readonly string _server;
         private readonly int _port;
-        private readonly Timer _heartbeatTimer;
+        private Timer _heartbeatTimer;
         private bool _isDisposed;
         private BinaryWriter _binaryWriter;
         private TcpClient _tcpClient;
@@ -76,20 +70,12 @@ namespace DTCClient
             _port = port;
             SymbolIdBySymbolExchangeCombo = new ConcurrentDictionary<string, uint>();
             SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
-            _heartbeatTimer = new Timer(10000);
-            _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
             _currentCodec = new CodecBinary();
-            HeartbeatEvent += Client_HeartbeatEvent;
-        }
-
-        private void Client_HeartbeatEvent(object sender, EventArgs<Heartbeat> e)
-        {
-            _lastHeartbeatReceivedTime = DateTime.Now;
         }
 
         private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            if (_useHeartbeat)
+            if (!_useHeartbeat)
             {
                 return;
             }
@@ -109,7 +95,7 @@ namespace DTCClient
         #region events
 
         public event EventHandler<EventArgs<EncodingResponse>> EncodingResponseEvent;
-        public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent;
+        // public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent; heartbeat is internal only
         public event EventHandler<EventArgs<Logoff>> LogoffEvent;
         public event EventHandler<EventArgs<LogonResponse>> LogonResponseEvent;
         public event EventHandler<EventArgs<MarketDataReject>> MarketDataRejectEvent;
@@ -169,7 +155,6 @@ namespace DTCClient
 
         /// <summary>
         /// Make the connection to server at port. 
-        /// Start the heartbeats.
         /// Start the listener that will throw events for messages received from the server.
         /// To Disconnect simply Dispose() of this class.
         /// </summary>
@@ -214,12 +199,6 @@ namespace DTCClient
             {
                 await Task.Delay(1, cancellationToken);
             }
-            if (!_useHeartbeat)
-            {
-                // start the heartbeat
-                _lastHeartbeatReceivedTime = DateTime.Now;
-                _heartbeatTimer.Start();
-            }
             return result;
         }
 
@@ -251,12 +230,16 @@ namespace DTCClient
             _clientName = clientName;
 
             // Make a connection
-            if (_useHeartbeat)
-            {
-                _heartbeatTimer.Interval = heartbeatIntervalInSeconds * 1000;
-            }
             _cts = cancellationTokenSource ?? new CancellationTokenSource();
             var encodingResponse = await ConnectAsync(requestedEncoding, timeout, _cts.Token);
+            if (_useHeartbeat)
+            {
+                // start the heartbeat
+                _heartbeatTimer = new Timer(heartbeatIntervalInSeconds * 1000);
+                _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
+                _lastHeartbeatReceivedTime = DateTime.Now;
+                _heartbeatTimer.Start();
+            }
 
             // Set up the handler to capture the event
             LogonResponse result = null;
@@ -667,7 +650,7 @@ namespace DTCClient
                         break;
                     case DTCMessageType.Heartbeat:
                         var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
-                        ThrowEvent(heartbeat, HeartbeatEvent);
+                        _lastHeartbeatReceivedTime = DateTime.Now;
                         break;
                     case DTCMessageType.Logoff:
                         var logoff = _currentCodec.Load<Logoff>(messageType, bytes);

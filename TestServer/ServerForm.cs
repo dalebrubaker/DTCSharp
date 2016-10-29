@@ -18,6 +18,8 @@ namespace TestServer
         private Server _serverPrimary;
         private Server _serverHistorical;
         private IPAddress _ipAddress;
+        private ServerStub _serverStubPrimary;
+        private ServerStub _serverStubHistorical;
 
         public ServerForm()
         {
@@ -27,6 +29,8 @@ namespace TestServer
             var hostEntry = Dns.GetHostEntry(serverName);
             _ipAddress = hostEntry.AddressList.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
             lblServerIPAddress.Text = $"Server IP Address: {_ipAddress}";
+            _serverStubPrimary = new ServerStub();
+            _serverStubHistorical = new ServerStub();
         }
 
         private int PortListener
@@ -55,7 +59,7 @@ namespace TestServer
             btnStopPrimary.Enabled = true;
             const int heartbeatIntervalInSeconds = 10;
             const bool useHeartbeat = true;
-            _serverPrimary = new Server(_ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
+            _serverPrimary = new Server(_serverStubPrimary, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
         }
 
         private void btnStopPrimary_Click(object sender, EventArgs e)
@@ -68,9 +72,9 @@ namespace TestServer
         {
             btnStartHistorical.Enabled = false;
             btnStopHistorical.Enabled = true;
-            const int heartbeatIntervalInSeconds = 10;
+            const int heartbeatIntervalInSeconds = 0;
             const bool useHeartbeat = false; // See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
-            _serverHistorical = new Server(_ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
+            _serverHistorical = new Server(_serverStubHistorical, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
 
         }
 
