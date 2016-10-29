@@ -41,13 +41,17 @@
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPageConnect = new System.Windows.Forms.TabPage();
+            this.txtPassword = new System.Windows.Forms.TextBox();
+            this.label10 = new System.Windows.Forms.Label();
             this.txtUsername = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
+            this.logControlConnect = new TestClient.LogControl();
             this.tabPageSymbols = new System.Windows.Forms.TabPage();
             this.btnSecurityDefinition = new System.Windows.Forms.Button();
             this.btnExchanges = new System.Windows.Forms.Button();
             this.label4 = new System.Windows.Forms.Label();
             this.txtSymbolDef = new System.Windows.Forms.TextBox();
+            this.logControlSymbols = new TestClient.LogControl();
             this.tabPageLevel1 = new System.Windows.Forms.TabPage();
             this.btnSubscribeCallbacks2 = new System.Windows.Forms.Button();
             this.cbShowBidAsk2 = new System.Windows.Forms.CheckBox();
@@ -61,6 +65,7 @@
             this.btnSubscribeEvents1 = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
             this.txtSymbolLevel1_1 = new System.Windows.Forms.TextBox();
+            this.logControlLevel1 = new TestClient.LogControl();
             this.tabPageHistorical = new System.Windows.Forms.TabPage();
             this.cbZip = new System.Windows.Forms.CheckBox();
             this.btnGetHistoricalMinutes = new System.Windows.Forms.Button();
@@ -69,13 +74,8 @@
             this.btnGetHistoricalTicks = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.txtSymbolHistorical = new System.Windows.Forms.TextBox();
-            this.timerLevel1Update = new System.Windows.Forms.Timer(this.components);
-            this.logControlConnect = new TestClient.LogControl();
-            this.logControlSymbols = new TestClient.LogControl();
-            this.logControlLevel1 = new TestClient.LogControl();
             this.logControlHistorical = new TestClient.LogControl();
-            this.txtPassword = new System.Windows.Forms.TextBox();
-            this.label10 = new System.Windows.Forms.Label();
+            this.timerLevel1Update = new System.Windows.Forms.Timer(this.components);
             this.statusStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPageConnect.SuspendLayout();
@@ -87,7 +87,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(9, 14);
+            this.label1.Location = new System.Drawing.Point(12, 14);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(41, 13);
             this.label1.TabIndex = 0;
@@ -95,7 +95,7 @@
             // 
             // txtServer
             // 
-            this.txtServer.Location = new System.Drawing.Point(99, 11);
+            this.txtServer.Location = new System.Drawing.Point(99, 10);
             this.txtServer.Name = "txtServer";
             this.txtServer.Size = new System.Drawing.Size(100, 20);
             this.txtServer.TabIndex = 1;
@@ -103,16 +103,16 @@
             // 
             // txtPortListening
             // 
-            this.txtPortListening.Location = new System.Drawing.Point(99, 39);
+            this.txtPortListening.Location = new System.Drawing.Point(99, 35);
             this.txtPortListening.Name = "txtPortListening";
             this.txtPortListening.Size = new System.Drawing.Size(100, 20);
             this.txtPortListening.TabIndex = 3;
-            this.txtPortListening.Text = "50000";
+            this.txtPortListening.Text = "49999";
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(9, 39);
+            this.label2.Location = new System.Drawing.Point(12, 39);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(74, 13);
             this.label2.TabIndex = 2;
@@ -124,7 +124,7 @@
             this.txtPortHistorical.Name = "txtPortHistorical";
             this.txtPortHistorical.Size = new System.Drawing.Size(100, 20);
             this.txtPortHistorical.TabIndex = 5;
-            this.txtPortHistorical.Text = "50001";
+            this.txtPortHistorical.Text = "49998";
             // 
             // label3
             // 
@@ -137,7 +137,7 @@
             // 
             // btnConnect
             // 
-            this.btnConnect.Location = new System.Drawing.Point(15, 99);
+            this.btnConnect.Location = new System.Drawing.Point(12, 99);
             this.btnConnect.Name = "btnConnect";
             this.btnConnect.Size = new System.Drawing.Size(75, 23);
             this.btnConnect.TabIndex = 6;
@@ -208,9 +208,27 @@
             this.tabPageConnect.Text = "Connect";
             this.tabPageConnect.UseVisualStyleBackColor = true;
             // 
+            // txtPassword
+            // 
+            this.txtPassword.Location = new System.Drawing.Point(271, 35);
+            this.txtPassword.Name = "txtPassword";
+            this.txtPassword.Size = new System.Drawing.Size(86, 20);
+            this.txtPassword.TabIndex = 136;
+            this.txtPassword.Text = "password";
+            this.txtPassword.UseSystemPasswordChar = true;
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(207, 39);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(56, 13);
+            this.label10.TabIndex = 135;
+            this.label10.Text = "Password:";
+            // 
             // txtUsername
             // 
-            this.txtUsername.Location = new System.Drawing.Point(269, 14);
+            this.txtUsername.Location = new System.Drawing.Point(269, 10);
             this.txtUsername.Name = "txtUsername";
             this.txtUsername.Size = new System.Drawing.Size(86, 20);
             this.txtUsername.TabIndex = 11;
@@ -219,11 +237,22 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(205, 18);
+            this.label6.Location = new System.Drawing.Point(205, 14);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(58, 13);
             this.label6.TabIndex = 10;
             this.label6.Text = "Username:";
+            // 
+            // logControlConnect
+            // 
+            this.logControlConnect.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControlConnect.Location = new System.Drawing.Point(12, 128);
+            this.logControlConnect.Name = "logControlConnect";
+            this.logControlConnect.Size = new System.Drawing.Size(778, 455);
+            this.logControlConnect.TabIndex = 9;
+            this.logControlConnect.Title = "Log";
             // 
             // tabPageSymbols
             // 
@@ -276,6 +305,17 @@
             this.txtSymbolDef.Size = new System.Drawing.Size(67, 20);
             this.txtSymbolDef.TabIndex = 3;
             this.txtSymbolDef.Text = "ESZ16";
+            // 
+            // logControlSymbols
+            // 
+            this.logControlSymbols.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControlSymbols.Location = new System.Drawing.Point(3, 72);
+            this.logControlSymbols.Name = "logControlSymbols";
+            this.logControlSymbols.Size = new System.Drawing.Size(803, 531);
+            this.logControlSymbols.TabIndex = 4;
+            this.logControlSymbols.Title = "Log";
             // 
             // tabPageLevel1
             // 
@@ -413,6 +453,17 @@
             this.txtSymbolLevel1_1.TabIndex = 8;
             this.txtSymbolLevel1_1.Text = "ESZ6";
             // 
+            // logControlLevel1
+            // 
+            this.logControlLevel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.logControlLevel1.Location = new System.Drawing.Point(3, 66);
+            this.logControlLevel1.Name = "logControlLevel1";
+            this.logControlLevel1.Size = new System.Drawing.Size(801, 537);
+            this.logControlLevel1.TabIndex = 10;
+            this.logControlLevel1.Title = "Log";
+            // 
             // tabPageHistorical
             // 
             this.tabPageHistorical.Controls.Add(this.cbZip);
@@ -496,45 +547,6 @@
             this.txtSymbolHistorical.TabIndex = 8;
             this.txtSymbolHistorical.Text = "ESZ6";
             // 
-            // timerLevel1Update
-            // 
-            this.timerLevel1Update.Enabled = true;
-            this.timerLevel1Update.Interval = 200;
-            this.timerLevel1Update.Tick += new System.EventHandler(this.timerLevel1Update_Tick);
-            // 
-            // logControlConnect
-            // 
-            this.logControlConnect.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControlConnect.Location = new System.Drawing.Point(12, 128);
-            this.logControlConnect.Name = "logControlConnect";
-            this.logControlConnect.Size = new System.Drawing.Size(778, 455);
-            this.logControlConnect.TabIndex = 9;
-            this.logControlConnect.Title = "Log";
-            // 
-            // logControlSymbols
-            // 
-            this.logControlSymbols.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControlSymbols.Location = new System.Drawing.Point(3, 72);
-            this.logControlSymbols.Name = "logControlSymbols";
-            this.logControlSymbols.Size = new System.Drawing.Size(803, 531);
-            this.logControlSymbols.TabIndex = 4;
-            this.logControlSymbols.Title = "Log";
-            // 
-            // logControlLevel1
-            // 
-            this.logControlLevel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControlLevel1.Location = new System.Drawing.Point(3, 66);
-            this.logControlLevel1.Name = "logControlLevel1";
-            this.logControlLevel1.Size = new System.Drawing.Size(801, 537);
-            this.logControlLevel1.TabIndex = 10;
-            this.logControlLevel1.Title = "Log";
-            // 
             // logControlHistorical
             // 
             this.logControlHistorical.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -546,23 +558,11 @@
             this.logControlHistorical.TabIndex = 10;
             this.logControlHistorical.Title = "Log";
             // 
-            // txtPassword
+            // timerLevel1Update
             // 
-            this.txtPassword.Location = new System.Drawing.Point(271, 38);
-            this.txtPassword.Name = "txtPassword";
-            this.txtPassword.Size = new System.Drawing.Size(86, 20);
-            this.txtPassword.TabIndex = 136;
-            this.txtPassword.Text = "password";
-            this.txtPassword.UseSystemPasswordChar = true;
-            // 
-            // label10
-            // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(207, 42);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(56, 13);
-            this.label10.TabIndex = 135;
-            this.label10.Text = "Password:";
+            this.timerLevel1Update.Enabled = true;
+            this.timerLevel1Update.Interval = 200;
+            this.timerLevel1Update.Tick += new System.EventHandler(this.timerLevel1Update_Tick);
             // 
             // Form1
             // 
