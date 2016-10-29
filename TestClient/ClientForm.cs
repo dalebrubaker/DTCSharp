@@ -118,6 +118,7 @@ namespace TestClient
             }
             catch (Exception ex)
             {
+
                 throw new DTCSharpException(ex.Message, ex);
             }
         }

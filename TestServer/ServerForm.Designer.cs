@@ -38,13 +38,16 @@
             this.btnStopPrimary = new System.Windows.Forms.Button();
             this.btnStartHistorical = new System.Windows.Forms.Button();
             this.btnStopHistorical = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
+            this.txtServer = new System.Windows.Forms.TextBox();
             this.logControl1 = new TestServer.LogControl();
+            this.lblUsingIpAddress = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(12, 61);
+            this.label2.Location = new System.Drawing.Point(12, 91);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(74, 13);
             this.label2.TabIndex = 6;
@@ -52,7 +55,7 @@
             // 
             // txtPortListening
             // 
-            this.txtPortListening.Location = new System.Drawing.Point(99, 57);
+            this.txtPortListening.Location = new System.Drawing.Point(99, 87);
             this.txtPortListening.Name = "txtPortListening";
             this.txtPortListening.Size = new System.Drawing.Size(100, 20);
             this.txtPortListening.TabIndex = 7;
@@ -60,7 +63,7 @@
             // 
             // txtPortHistorical
             // 
-            this.txtPortHistorical.Location = new System.Drawing.Point(99, 87);
+            this.txtPortHistorical.Location = new System.Drawing.Point(99, 117);
             this.txtPortHistorical.Name = "txtPortHistorical";
             this.txtPortHistorical.Size = new System.Drawing.Size(100, 20);
             this.txtPortHistorical.TabIndex = 9;
@@ -69,7 +72,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(12, 90);
+            this.label3.Location = new System.Drawing.Point(12, 120);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(75, 13);
             this.label3.TabIndex = 8;
@@ -95,7 +98,7 @@
             // 
             // btnStartPrimary
             // 
-            this.btnStartPrimary.Location = new System.Drawing.Point(220, 56);
+            this.btnStartPrimary.Location = new System.Drawing.Point(220, 86);
             this.btnStartPrimary.Name = "btnStartPrimary";
             this.btnStartPrimary.Size = new System.Drawing.Size(84, 23);
             this.btnStartPrimary.TabIndex = 12;
@@ -106,7 +109,7 @@
             // btnStopPrimary
             // 
             this.btnStopPrimary.Enabled = false;
-            this.btnStopPrimary.Location = new System.Drawing.Point(310, 56);
+            this.btnStopPrimary.Location = new System.Drawing.Point(310, 86);
             this.btnStopPrimary.Name = "btnStopPrimary";
             this.btnStopPrimary.Size = new System.Drawing.Size(84, 23);
             this.btnStopPrimary.TabIndex = 13;
@@ -116,7 +119,7 @@
             // 
             // btnStartHistorical
             // 
-            this.btnStartHistorical.Location = new System.Drawing.Point(220, 85);
+            this.btnStartHistorical.Location = new System.Drawing.Point(220, 115);
             this.btnStartHistorical.Name = "btnStartHistorical";
             this.btnStartHistorical.Size = new System.Drawing.Size(84, 23);
             this.btnStartHistorical.TabIndex = 15;
@@ -127,7 +130,7 @@
             // btnStopHistorical
             // 
             this.btnStopHistorical.Enabled = false;
-            this.btnStopHistorical.Location = new System.Drawing.Point(310, 85);
+            this.btnStopHistorical.Location = new System.Drawing.Point(310, 115);
             this.btnStopHistorical.Name = "btnStopHistorical";
             this.btnStopHistorical.Size = new System.Drawing.Size(84, 23);
             this.btnStopHistorical.TabIndex = 16;
@@ -135,22 +138,51 @@
             this.btnStopHistorical.UseVisualStyleBackColor = true;
             this.btnStopHistorical.Click += new System.EventHandler(this.btnStopHistorical_Click);
             // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(12, 61);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(41, 13);
+            this.label1.TabIndex = 17;
+            this.label1.Text = "Server:";
+            // 
+            // txtServer
+            // 
+            this.txtServer.Location = new System.Drawing.Point(99, 57);
+            this.txtServer.Name = "txtServer";
+            this.txtServer.Size = new System.Drawing.Size(100, 20);
+            this.txtServer.TabIndex = 18;
+            this.txtServer.Text = "localhost";
+            // 
             // logControl1
             // 
             this.logControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.logControl1.Location = new System.Drawing.Point(15, 114);
+            this.logControl1.Location = new System.Drawing.Point(15, 158);
             this.logControl1.Name = "logControl1";
-            this.logControl1.Size = new System.Drawing.Size(480, 275);
+            this.logControl1.Size = new System.Drawing.Size(631, 438);
             this.logControl1.TabIndex = 14;
             this.logControl1.Title = "Log";
+            // 
+            // lblUsingIpAddress
+            // 
+            this.lblUsingIpAddress.AutoSize = true;
+            this.lblUsingIpAddress.Location = new System.Drawing.Point(217, 61);
+            this.lblUsingIpAddress.Name = "lblUsingIpAddress";
+            this.lblUsingIpAddress.Size = new System.Drawing.Size(91, 13);
+            this.lblUsingIpAddress.TabIndex = 19;
+            this.lblUsingIpAddress.Text = "Using IP Address:";
             // 
             // ServerForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(507, 401);
+            this.ClientSize = new System.Drawing.Size(658, 608);
+            this.Controls.Add(this.lblUsingIpAddress);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.txtServer);
             this.Controls.Add(this.btnStartHistorical);
             this.Controls.Add(this.btnStopHistorical);
             this.Controls.Add(this.logControl1);
@@ -182,6 +214,9 @@
         private LogControl logControl1;
         private System.Windows.Forms.Button btnStartHistorical;
         private System.Windows.Forms.Button btnStopHistorical;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox txtServer;
+        private System.Windows.Forms.Label lblUsingIpAddress;
     }
 }
 

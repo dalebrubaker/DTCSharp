@@ -27,9 +27,9 @@ namespace DTCServer
         private readonly string _remoteEndPoint;
         private readonly string _localEndPoint;
         private ICodecDTC _currentCodec;
-        private NetworkStream _networkStream;
-        private BinaryWriter _binaryWriter;
-        private ConcurrentQueue<MessageWithType<IMessage>> _responsesQueue;
+        private readonly NetworkStream _networkStream;
+        private readonly BinaryWriter _binaryWriter;
+        private readonly ConcurrentQueue<MessageWithType<IMessage>> _responsesQueue;
         private DateTime _lastHeartbeatReceivedTime;
 
         public ClientHandler(IServerStub serverStub, TcpClient tcpClient, bool useHeartbeat)
@@ -42,6 +42,7 @@ namespace DTCServer
             _currentCodec = new CodecBinary();
             _remoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _localEndPoint = tcpClient.Client.LocalEndPoint.ToString();
+            _responsesQueue = new ConcurrentQueue<MessageWithType<IMessage>>();
 
         }
 
@@ -132,13 +133,13 @@ namespace DTCServer
                             _lastHeartbeatReceivedTime = DateTime.Now;
                             _heartbeatTimer.Start();
                         }
-                        var logonResponse = await _serverStub.LogonRequestAsync(ToString(), logonRequest);
+                        var logonResponse = await _serverStub.LogonRequestAsync(_remoteEndPoint, logonRequest);
                         _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.LogonResponse, logonResponse));
                         break;
                     case DTCMessageType.Heartbeat:
                         _lastHeartbeatReceivedTime = DateTime.Now;
                         var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
-                        await _serverStub.HeartbeatAsync(ToString(), heartbeat);
+                        await _serverStub.HeartbeatAsync(_remoteEndPoint, heartbeat);
                         break;
                     case DTCMessageType.Logoff:
                         if (_useHeartbeat && _heartbeatTimer != null)
@@ -148,12 +149,17 @@ namespace DTCServer
                             _heartbeatTimer.Stop();
                         }
                         var logoff = _currentCodec.Load<Logoff>(messageType, bytes);
-                        await _serverStub.LogoffAsync(ToString(), logoff);
+                        await _serverStub.LogoffAsync(_remoteEndPoint, logoff);
                         break;
                     case DTCMessageType.EncodingRequest:
                         var encodingRequest = _currentCodec.Load<EncodingRequest>(messageType, bytes);
-                        var encodingResponse = await _serverStub.EncodingRequestAsync(ToString(), encodingRequest);
+                        var encodingResponse = await _serverStub.EncodingRequestAsync(_remoteEndPoint, encodingRequest);
                         _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.EncodingResponse, encodingResponse));
+                        while (!_responsesQueue.IsEmpty)
+                        {
+                            // Wait until the encoding response has been sent before changing the _currentCodec
+                            await Task.Delay(1, cancellationToken);
+                        }
                         switch (encodingResponse.Encoding)
                         {
                             case EncodingEnum.BinaryEncoding:

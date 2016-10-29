@@ -29,8 +29,10 @@ namespace TestServer
             var serverName = Environment.MachineName;
             lblServerName.Text = $"Server Name: {serverName}";
             var hostEntry = Dns.GetHostEntry(serverName);
-            _ipAddress = hostEntry.AddressList.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-            lblServerIPAddress.Text = $"Server IP Address: {_ipAddress}";
+            var ipAddress = hostEntry.AddressList.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+            lblServerIPAddress.Text = $"Server IP Address: {ipAddress}";
+            _ipAddress = txtServer.Text.Trim().ToLower() == "localhost" ? IPAddress.Loopback : ipAddress;
+            lblUsingIpAddress.Text = $"Using IP Address: {_ipAddress}";
             _serverStub = new ServerStub();
             _serverStub.MessageEvent += ServerStub_MessageEvent;
         }

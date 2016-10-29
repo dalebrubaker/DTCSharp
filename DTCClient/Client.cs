@@ -191,7 +191,15 @@ namespace DTCClient
                 ProtocolType = "DTC",
                 ProtocolVersion = (int)DTCVersion.CurrentVersion
             };
-            SendMessage(DTCMessageType.EncodingRequest, encodingRequest);
+            await Task.Delay(1000, cancellationToken); // give server a bit of time to respond to the connection
+            try
+            {
+                SendMessage(DTCMessageType.EncodingRequest, encodingRequest);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
 
             // Wait until the response is received or until timeout
             var startTime = DateTime.Now;

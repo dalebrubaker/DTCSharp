@@ -52,10 +52,13 @@ namespace DTCServer
                 {
                     using (var tcpClient = await listener.AcceptTcpClientAsync())
                     {
-                        var temp = tcpClient;
-#pragma warning disable 4014
-                        Task.Run(() => Handle(temp, cancellationToken), cancellationToken);
-#pragma warning restore 4014
+                        var stream = tcpClient.GetStream();
+                        var clientHandler = new ClientHandler(_serverStub, tcpClient, _useHeartbeat);
+                        await clientHandler.Run(cancellationToken);
+//                        var temp = tcpClient;
+//#pragma warning disable 4014
+//                        Task.Run(() => Handle(temp, cancellationToken), cancellationToken);
+//#pragma warning restore 4014
                     }
                 }
                 catch (Exception ex)
@@ -69,6 +72,7 @@ namespace DTCServer
 
         private async Task Handle(TcpClient tcpClient, CancellationToken cancellationToken)
         {
+            var stream = tcpClient.GetStream();
             var clientHandler = new ClientHandler(_serverStub, tcpClient, _useHeartbeat);
             await clientHandler.Run(cancellationToken);
         }

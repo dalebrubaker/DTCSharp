@@ -20,7 +20,7 @@ namespace TestServer
 
         public Task<LogonResponse> LogonRequestAsync(string clientHandlerId, LogonRequest logonRequest)
         {
-            OnMessage($"Received Login Request from client {logonRequest.ClientName} via {clientHandlerId}");
+            OnMessage($"Received Logon Request from client {logonRequest.ClientName} at {clientHandlerId}");
             var response = new LogonResponse
             {
                 ProtocolVersion = logonRequest.ProtocolVersion,
@@ -42,7 +42,7 @@ namespace TestServer
 
         public Task<EncodingResponse> EncodingRequestAsync(string clientHandlerId, EncodingRequest encodingRequest)
         {
-            OnMessage($"Received Encoding Request via {clientHandlerId}");
+            OnMessage($"Received Encoding Request from {clientHandlerId}");
             switch (encodingRequest.Encoding)
             {
                 case EncodingEnum.BinaryEncoding:
@@ -67,7 +67,7 @@ namespace TestServer
 
         public Task HeartbeatAsync(string clientHandlerId, Heartbeat heartbeat)
         {
-            OnMessage($"Heartbeat received via {clientHandlerId}.");
+            OnMessage($"Heartbeat received from {clientHandlerId}.");
             return null;
         }
     }
