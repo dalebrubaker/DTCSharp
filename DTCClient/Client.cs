@@ -652,10 +652,12 @@ namespace DTCClient
                 // Read the header
                 var size = binaryReader.ReadUInt16(); 
                 var messageType = (DTCMessageType)binaryReader.ReadUInt16();
+#if DEBUG
                 if (messageType != DTCMessageType.Heartbeat)
                 {
                     var debug = 1;
                 }
+#endif
                 var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                 switch (messageType)
                 {

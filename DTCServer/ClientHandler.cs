@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DTCCommon;
 using DTCCommon.Codecs;
+using DTCCommon.Exceptions;
 using DTCPB;
 using Google.Protobuf;
 using Timer = System.Timers.Timer;
@@ -16,6 +18,7 @@ namespace DTCServer
 {
     public class ClientHandler : IDisposable
     {
+        private readonly IServerStub _serverStub;
         private readonly TcpClient _tcpClient;
         private readonly bool _useHeartbeat;
         private bool _isDisposed;
@@ -25,9 +28,11 @@ namespace DTCServer
         private ICodecDTC _currentCodec;
         private NetworkStream _networkStream;
         private BinaryWriter _binaryWriter;
+        private ConcurrentQueue<MessageWithType<IMessage>> _responsesQueue;
 
-        public ClientHandler(TcpClient tcpClient, bool useHeartbeat)
+        public ClientHandler(IServerStub serverStub, TcpClient tcpClient, bool useHeartbeat)
         {
+            _serverStub = serverStub;
             _tcpClient = tcpClient;
             _useHeartbeat = useHeartbeat;
             _networkStream = _tcpClient.GetStream();
@@ -39,8 +44,43 @@ namespace DTCServer
 
         }
 
-        public async Task Run(CancellationToken cancellationToken, Action<DTCMessageType, IMessage> messageCallback)
+        /// <summary>
+        /// This method runs "forever" on its own thread.
+        /// All responses are sent on this thread
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        private async Task ResponseLoop(CancellationToken cancellationToken)
         {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                MessageWithType<IMessage> messageWithType;
+                if (_responsesQueue.TryDequeue(out messageWithType))
+                {
+                    try
+                    {
+                        _currentCodec.Write(messageWithType.MessageType, messageWithType.Message, _binaryWriter);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new DTCSharpException(ex.Message);
+                    }
+                }
+                await Task.Delay(1, cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// This method runs "forever".
+        /// All requests are received on this thread
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task Run(CancellationToken cancellationToken)
+        {
+#pragma warning disable 4014
+            Task.Run(() => ResponseLoop(cancellationToken), cancellationToken);
+#pragma warning restore 4014
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -53,16 +93,19 @@ namespace DTCServer
                 // Read the header
                 var size = binaryReader.ReadUInt16();
                 var messageType = (DTCMessageType)binaryReader.ReadUInt16();
+#if DEBUG
                 if (messageType != DTCMessageType.Heartbeat)
                 {
                     var debug = 1;
                 }
+#endif
                 var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                 switch (messageType)
                 {
                     case DTCMessageType.LogonRequest:
                         var logonRequest = _currentCodec.Load<LogonRequest>(messageType, bytes);
-                        messageCallback(messageType, logonRequest);
+                        var logonResponse = await _serverStub.LogonRequest(logonRequest);
+                        _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.LogonResponse, logonResponse));
                         break;
                     case DTCMessageType.Heartbeat:
                         break;

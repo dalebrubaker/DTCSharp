@@ -62,6 +62,7 @@
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Generated\DTCProtocol3.cs" />
     <Compile Include="MessageTypes.cs" />
+    <Compile Include="MessageWithType.cs" />
     <Compile Include="Partials\EncodingResponse.cs" />
     <Compile Include="Partials\EncodingRequest.cs" />
     <Compile Include="Partials\IMessageSymbolId.cs" />
