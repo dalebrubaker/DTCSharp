@@ -36,7 +36,7 @@ namespace DTCClient
         private CancellationTokenSource _cts;
         private int _nextRequestId;
         private uint _nextSymbolId;
-        private bool _isHistoricalClient;
+        private bool _useHeartbeat;
         private string _clientName;
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace DTCClient
 
         private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            if (_isHistoricalClient)
+            if (_useHeartbeat)
             {
                 return;
             }
@@ -214,7 +214,7 @@ namespace DTCClient
             {
                 await Task.Delay(1, cancellationToken);
             }
-            if (!_isHistoricalClient)
+            if (!_useHeartbeat)
             {
                 // start the heartbeat
                 _lastHeartbeatReceivedTime = DateTime.Now;
@@ -225,11 +225,11 @@ namespace DTCClient
 
         /// <summary>
         /// Start a TCP connection and send a Logon request to the server. 
-        /// If isHistoricalClient, will only use BinaryEncoding and won't do a heartbeat. See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
+        /// If not useHeartbeat, won't do a heartbeat. See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
         /// </summary>
         /// <param name="requestedEncoding"></param>
         /// <param name="heartbeatIntervalInSeconds">The interval in seconds that each side, the Client and the Server, needs to use to send HEARTBEAT messages to the other side. This should be a value from anywhere from 5 to 60 seconds.</param>
-        /// <param name="isHistoricalClient"><c>true</c> means binary encoding only, and no heartbeat</param>
+        /// <param name="useHeartbeat"><c>true</c>no heartbeat sent to server and none checked from server</param>
         /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
         /// <param name="clientName">optional name for this client</param>
         /// <param name="userName">Optional user name for the server to authenticate the Client</param>
@@ -242,16 +242,16 @@ namespace DTCClient
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
         /// <param name="cancellationTokenSource"></param>
         /// <returns>The LogonResponse, or null if not received before timeout</returns>
-        public async Task<LogonResponse> LogonAsync(EncodingEnum requestedEncoding, int heartbeatIntervalInSeconds, bool isHistoricalClient = false,
+        public async Task<LogonResponse> LogonAsync(EncodingEnum requestedEncoding, int heartbeatIntervalInSeconds, bool useHeartbeat = true,
             int timeout = 1000, string clientName = "", string userName = "", string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0,
             TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", string hardwareIdentifier = "",
             CancellationTokenSource cancellationTokenSource = null)
         {
-            _isHistoricalClient = isHistoricalClient;
+            _useHeartbeat = useHeartbeat;
             _clientName = clientName;
 
             // Make a connection
-            if (_isHistoricalClient)
+            if (_useHeartbeat)
             {
                 _heartbeatTimer.Interval = heartbeatIntervalInSeconds * 1000;
             }

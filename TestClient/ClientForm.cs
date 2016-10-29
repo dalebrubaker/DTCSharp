@@ -10,7 +10,7 @@ using DTCPB;
 
 namespace TestClient
 {
-    public partial class Form1 : Form
+    public partial class ClientForm : Form
     {
         private Client _client;
         private uint _symbolId1;
@@ -22,7 +22,7 @@ namespace TestClient
         private CancellationTokenSource _ctsLevel1Symbol1;
         private CancellationTokenSource _ctsLevel1Symbol2;
 
-        public Form1()
+        public ClientForm()
         {
             InitializeComponent();
             this.Disposed += Form1_Disposed;
@@ -78,8 +78,8 @@ namespace TestClient
             {
                 const int heartbeatIntervalInSeconds = 10;
                 const int timeout = 5000;
-                const bool isHistoricalClient = false;
-                var response = await _client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, isHistoricalClient, timeout, 
+                const bool useHeartbeat = true;
+                var response = await _client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, useHeartbeat, timeout, 
                     clientName, txtUsername.Text, txtPassword.Text);
                 if (response == null)
                 {
@@ -453,9 +453,9 @@ namespace TestClient
                 try
                 {
                     const int heartbeatIntervalInSeconds = 10;
-                    const bool isHistoricalClient = true;
+                    const bool useHeartbeat = false;
                     var clientName = $"HistoricalClient|{txtSymbolHistorical.Text}";
-                    var response = await client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, isHistoricalClient, timeout, clientName, 
+                    var response = await client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, useHeartbeat, timeout, clientName, 
                         txtUsername.Text, txtPassword.Text);
                     if (response == null)
                     {
