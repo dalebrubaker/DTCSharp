@@ -12,7 +12,6 @@ namespace Tests
     {
         public ClientServerTests()
         {
-            
         }
 
         public void Dispose()

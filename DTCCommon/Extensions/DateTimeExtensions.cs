@@ -9,7 +9,7 @@ namespace DTCCommon.Extensions
 {
     public static class DateTimeExtensions
     {
-        private static readonly DateTime EpochStart;
+        public static readonly DateTime EpochStart;
 
         static DateTimeExtensions()
         {
@@ -71,9 +71,9 @@ namespace DTCCommon.Extensions
         /// <returns></returns>
         public static DateTime DtcDateTimeWithMillisecondsToUtc(this double dtDouble)
         {
-            var days = Math.Truncate(dtDouble);
-            var msecs = (int)(1000 * (dtDouble - days));
-            var result = DateTime.FromOADate(days).AddMilliseconds(msecs);
+            var seconds = Math.Truncate(dtDouble);
+            var msecs = (int)(1000 * (dtDouble - seconds));
+            var result = EpochStart.AddSeconds(seconds).AddMilliseconds(msecs);
             return result;
         }
 
@@ -87,8 +87,9 @@ namespace DTCCommon.Extensions
         /// <returns></returns>
         public static double UtcToDtcDateTimeWithMilliseconds(this DateTime dateTimeUtc)
         {
-            var seconds = (long)(dateTimeUtc - EpochStart).TotalSeconds;
-            var result = seconds + (dateTimeUtc - EpochStart).Milliseconds / 1000.0;
+            var timeSpan = (dateTimeUtc - EpochStart);
+            var seconds = Math.Truncate(timeSpan.TotalSeconds);
+            var result = seconds + timeSpan.Milliseconds / 1000.0;
             return result;
         }
     }
