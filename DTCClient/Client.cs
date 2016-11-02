@@ -19,7 +19,7 @@ namespace DTCClient
     public class Client : IDisposable
     {
         private readonly string _server;
-        private readonly int _port;
+        private readonly bool _callbackToMainThread;
         private Timer _heartbeatTimer;
         private bool _isDisposed;
         private BinaryWriter _binaryWriter;
@@ -31,7 +31,26 @@ namespace DTCClient
         private int _nextRequestId;
         private uint _nextSymbolId;
         private bool _useHeartbeat;
-        private string _clientName;
+        private readonly TaskScheduler _taskSchedulerCurrContext;
+        private readonly SynchronizationContext _synchronizationContext;
+
+        /// <summary>
+        /// Constructor for a client
+        /// </summary>
+        /// <param name="server">the machine name an IP address</param>
+        /// <param name="port">the port for this client</param>
+        /// <param name="callbackToMainThread">true means to marshal event and callbacks and returns from async methods to the current thread (current synchronization context))</param>
+        public Client(string server, int port, bool callbackToMainThread)
+        {
+            _server = server;
+            _callbackToMainThread = callbackToMainThread;
+            Port = port;
+            SymbolIdBySymbolExchangeCombo = new ConcurrentDictionary<string, uint>();
+            SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
+            _currentCodec = new CodecBinary();
+            _taskSchedulerCurrContext = TaskScheduler.FromCurrentSynchronizationContext();
+            _synchronizationContext = SynchronizationContext.Current;
+        }
 
         /// <summary>
         /// The most recent _logonResponse.
@@ -60,18 +79,9 @@ namespace DTCClient
 
         public string Server => _server;
 
-        public int Port => _port;
+        public int Port { get; }
 
-        public string ClientName => _clientName;
-
-        public Client(string server, int port)
-        {
-            _server = server;
-            _port = port;
-            SymbolIdBySymbolExchangeCombo = new ConcurrentDictionary<string, uint>();
-            SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
-            _currentCodec = new CodecBinary();
-        }
+        public string ClientName { get; private set; }
 
         private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
@@ -84,7 +94,7 @@ namespace DTCClient
             if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
             {
                 Dispose(true);
-                throw new DTCSharpException("Too long since Server sent us a heartbeat. Closing client: " + _clientName);
+                throw new DTCSharpException("Too long since Server sent us a heartbeat. Closing client: " + ClientName);
             }
 
             // Send a heartbeat to the server
@@ -165,13 +175,13 @@ namespace DTCClient
         private async Task<EncodingResponse> ConnectAsync(EncodingEnum requestedEncoding, int timeout = 1000, CancellationToken cancellationToken = default(CancellationToken))
         {
             _tcpClient = new TcpClient {NoDelay = true};
-            await _tcpClient.ConnectAsync(_server, _port); // connect to the server
+            await _tcpClient.ConnectAsync(_server, Port).ConfigureAwait(_callbackToMainThread); // connect to the server
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
             _currentCodec = new CodecBinary();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             // Fire and forget
-            Task.Run(MessageReader, _cts.Token);
+            Task.Run(MessageReaderAsync, _cts.Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             // Set up the handler to capture the event
@@ -191,7 +201,7 @@ namespace DTCClient
                 ProtocolType = "DTC",
                 ProtocolVersion = (int)DTCVersion.CurrentVersion
             };
-            await Task.Delay(1000, cancellationToken); // give server a bit of time to respond to the connection
+            await Task.Delay(1000, cancellationToken).ConfigureAwait(_callbackToMainThread); // give server a bit of time to respond to the connection
             try
             {
                 SendMessage(DTCMessageType.EncodingRequest, encodingRequest);
@@ -205,7 +215,7 @@ namespace DTCClient
             var startTime = DateTime.Now;
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
             {
-                await Task.Delay(1, cancellationToken);
+                await Task.Delay(1, cancellationToken).ConfigureAwait(_callbackToMainThread);
             }
             return result;
         }
@@ -235,11 +245,11 @@ namespace DTCClient
             CancellationTokenSource cancellationTokenSource = null)
         {
             _useHeartbeat = useHeartbeat;
-            _clientName = clientName;
+            ClientName = clientName;
 
             // Make a connection
             _cts = cancellationTokenSource ?? new CancellationTokenSource();
-            var encodingResponse = await ConnectAsync(requestedEncoding, timeout, _cts.Token);
+            var encodingResponse = await ConnectAsync(requestedEncoding, timeout, _cts.Token).ConfigureAwait(_callbackToMainThread);
             if (_useHeartbeat)
             {
                 // start the heartbeat
@@ -280,7 +290,7 @@ namespace DTCClient
             var startTime = DateTime.Now;
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
             {
-                await Task.Delay(1);
+                await Task.Delay(1).ConfigureAwait(_callbackToMainThread);
             }
             return result;
         }
@@ -368,7 +378,7 @@ namespace DTCClient
             var startTime = DateTime.Now; // for checking timeout
             while ((DateTime.Now - startTime).TotalMilliseconds < timeout && !cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(1, cancellationToken);
+                await Task.Delay(1, cancellationToken).ConfigureAwait(_callbackToMainThread);
             }
             return historicalPriceDataReject;
         }
@@ -403,7 +413,7 @@ namespace DTCClient
             // Wait until the response is received or until timeout
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
             {
-                await Task.Delay(1);
+                await Task.Delay(1).ConfigureAwait(_callbackToMainThread);
             }
             return result;
         }
@@ -597,7 +607,7 @@ namespace DTCClient
                         // We're receiving data, so never timeout
                         timeout = int.MaxValue;
                     }
-                    await Task.Delay(1, cancellationToken);
+                    await Task.Delay(1, cancellationToken).ConfigureAwait(_callbackToMainThread);
                 }
                 return marketDataReject;
             }
@@ -620,23 +630,35 @@ namespace DTCClient
             }
         }
 
-        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
+        private void ThrowEventImpl<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
         {
             var temp = eventForMessage; // for thread safety
             temp?.Invoke(this, new EventArgs<T>(message));
         }
 
+        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
+        {
+            if (_callbackToMainThread)
+            {
+                _synchronizationContext.Post(s => ThrowEventImpl(message, eventForMessage), null);
+            }
+            else
+            {
+                ThrowEventImpl(message, eventForMessage);
+            }
+        }
+
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
         /// </summary>
-        private async Task MessageReader()
+        private async Task MessageReaderAsync()
         {
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!_cts.Token.IsCancellationRequested)
             {
                 if (!_networkStream.DataAvailable)
                 {
-                    await Task.Delay(1, _cts.Token);
+                    await Task.Delay(1, _cts.Token).ConfigureAwait(false);
                     continue;
                 }
 
@@ -677,7 +699,7 @@ namespace DTCClient
                             case EncodingEnum.BinaryWithVariableLengthStrings:
                             case EncodingEnum.JsonEncoding:
                             case EncodingEnum.JsonCompactEncoding:
-                                throw new NotImplementedException($"Not implemented in {nameof(MessageReader)}: {nameof(encodingResponse.Encoding)}");
+                                throw new NotImplementedException($"Not implemented in {nameof(MessageReaderAsync)}: {nameof(encodingResponse.Encoding)}");
                             case EncodingEnum.ProtocolBuffers:
                                 _currentCodec = new CodecProtobuf();
                                 break;
@@ -923,7 +945,7 @@ namespace DTCClient
                     case DTCMessageType.AccountBalanceRequest:
                     case DTCMessageType.HistoricalPriceDataRequest:
                     default:
-                        throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {_clientName} {nameof(MessageReader)}.");
+                        throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {ClientName} {nameof(MessageReaderAsync)}.");
                 }
             }
         }
@@ -949,7 +971,7 @@ namespace DTCClient
 
         public override string ToString()
         {
-            return $"{_clientName} {_server} {_port}";
+            return $"{ClientName} {_server} {Port}";
         }
 
     }

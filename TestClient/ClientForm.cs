@@ -71,7 +71,7 @@ namespace TestClient
         private async void btnConnect_Click(object sender, EventArgs e)
         {
             DisposeClient(); // remove the old client just in case it was missed elsewhere
-            _client = new Client(txtServer.Text, PortListener);
+            _client = new Client(txtServer.Text, PortListener, callbackToMainThread:true);
             RegisterClientEvents(_client);
             var clientName = "TestClient";
             try
@@ -80,7 +80,7 @@ namespace TestClient
                 const int timeout = 5000;
                 const bool useHeartbeat = true;
                 var response = await _client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, useHeartbeat, timeout, 
-                    clientName, txtUsername.Text, txtPassword.Text);
+                    clientName, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
                 if (response == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
@@ -111,15 +111,13 @@ namespace TestClient
                         throw new ArgumentOutOfRangeException();
                 }
             }
-            catch (TaskCanceledException exc)
+            catch (TaskCanceledException ex)
             {
-
-                throw;
+                MessageBox.Show(ex.Message);
             }
             catch (Exception ex)
             {
-
-                throw new DTCSharpException(ex.Message, ex);
+                MessageBox.Show(ex.Message);
             }
         }
 
@@ -448,7 +446,7 @@ namespace TestClient
         private async Task RequestHistoricalDataAsync(HistoricalDataIntervalEnum recordInterval)
         {
             _historicalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>();
-            using (var client = new Client(txtServer.Text, PortHistorical))
+            using (var client = new Client(txtServer.Text, PortHistorical, callbackToMainThread:false))
             {
                 const int timeout = 5000;
                 try
@@ -457,7 +455,7 @@ namespace TestClient
                     const bool useHeartbeat = false;
                     var clientName = $"HistoricalClient|{txtSymbolHistorical.Text}";
                     var response = await client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, useHeartbeat, timeout, clientName, 
-                        txtUsername.Text, txtPassword.Text);
+                        txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
                     if (response == null)
                     {
                         logControlHistorical.LogMessage("Null logon response from logon attempt to " + clientName);
@@ -485,18 +483,17 @@ namespace TestClient
                 }
                 catch (TaskCanceledException exc)
                 {
-
-                    throw;
+                    MessageBox.Show(exc.Message);
                 }
                 catch (Exception ex)
                 {
-                    throw new DTCSharpException(ex.Message, ex);
+                    MessageBox.Show(ex.Message);
                 }
 
                 // Now we have successfully logged on
                 var historicalPriceDataReject = await client.GetHistoricalPriceDataRecordResponsesAsync(timeout, txtSymbolHistorical.Text, "", recordInterval,
                     dtpStart.Value.ToUniversalTime(), DateTime.MinValue, 0U, cbZip.Checked, false, false, HistoricalPriceDataResponseHeaderCallback,
-                    HistoricalPriceDataRecordResponseCallback);
+                    HistoricalPriceDataRecordResponseCallback).ConfigureAwait(false);
                 if (historicalPriceDataReject != null)
                 {
                     logControlHistorical.LogMessage(

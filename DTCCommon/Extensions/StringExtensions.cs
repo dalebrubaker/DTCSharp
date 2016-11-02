@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DTCCommon.Extensions
 {
@@ -38,7 +35,7 @@ namespace DTCCommon.Extensions
                 return "";
             }
             var length = endIndex - startIndex;
-            var result = System.Text.Encoding.UTF8.GetString(bytes, startIndex, length);
+            var result = Encoding.UTF8.GetString(bytes, startIndex, length);
             return result;
         }
     }
