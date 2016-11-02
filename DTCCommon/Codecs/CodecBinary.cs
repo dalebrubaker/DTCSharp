@@ -309,12 +309,13 @@ namespace DTCCommon.Codecs
                     return;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
                     var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
-                    sizeExcludingHeader = 4 + 4 + 2 + 4; // TODO maybe extra 0 bytes for 8-byte boundary?
+                    sizeExcludingHeader = 4 + 4 + 2 + 4;
                     Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
                     binaryWriter.Write(historicalPriceDataResponseHeader.RequestID);
                     binaryWriter.Write((int)historicalPriceDataResponseHeader.RecordInterval);
                     binaryWriter.Write((byte)historicalPriceDataResponseHeader.UseZLibCompression);
                     binaryWriter.Write((byte)historicalPriceDataResponseHeader.NoRecordsToReturn);
+                    binaryWriter.Write((short)0); // align for packing
                     binaryWriter.Write(historicalPriceDataResponseHeader.IntToFloatPriceDivisor);
                     return;
                 case DTCMessageType.HistoricalPriceDataReject:
@@ -327,7 +328,22 @@ namespace DTCCommon.Codecs
                     binaryWriter.Write((ushort)historicalPriceDataReject.RetryTimeInSeconds);
                     return;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var historicalPriceDataRecordResponse = message as HistoricalPriceDataRecordResponse;
+                    sizeExcludingHeader = 4 + 9 * 8 + 1;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write(historicalPriceDataRecordResponse.RequestID);
+                    binaryWriter.Write(historicalPriceDataRecordResponse.StartDateTime);
+                    binaryWriter.Write(historicalPriceDataRecordResponse.OpenPrice);
+                    binaryWriter.Write(historicalPriceDataRecordResponse.HighPrice);
+                    binaryWriter.Write(historicalPriceDataRecordResponse.LowPrice);
+                    binaryWriter.Write(historicalPriceDataRecordResponse.LastPrice);
+                    binaryWriter.Write(historicalPriceDataRecordResponse.Volume);
+                    binaryWriter.Write(historicalPriceDataRecordResponse.NumTrades);
+                    binaryWriter.Write(0);// for 8-byte packing boundary
+                    binaryWriter.Write(historicalPriceDataRecordResponse.BidVolume);
+                    binaryWriter.Write(historicalPriceDataRecordResponse.AskVolume);
+                    binaryWriter.Write((byte)historicalPriceDataRecordResponse.IsFinalRecord);
+                    return;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     // Probably no longer used after version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;

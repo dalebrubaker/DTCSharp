@@ -43,7 +43,11 @@ namespace Tests
             Utility.ReadHeader(bytes, out sizeExcludingHeader, out messageTypeHeader);
             Assert.Equal(messageType, messageTypeHeader);
             var loadedMessage = _codecBinary.Load<T>(messageType, bytes, 4);
-            Assert.Equal(message, loadedMessage);;
+            if (!loadedMessage.Equals(message))
+            {
+                var debug = 1;
+            }
+            Assert.Equal(message, loadedMessage);
         }
 
         [Fact]
@@ -225,8 +229,55 @@ namespace Tests
                 UseZLibCompression = 8u,
                 RequestDividendAdjustedStockData = 9u,
                 Flag1 = 10u,
-        };
+            };
             GenericTest(DTCMessageType.HistoricalPriceDataRequest, historicalPriceDataRequest);
+        }
+
+        [Fact]
+        public void HistoricalPriceDataResponseHeaderTest()
+        {
+            var historicalPriceDataResponseHeader = new HistoricalPriceDataResponseHeader()
+            {
+                RequestID = 1,
+                RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
+                UseZLibCompression = 8u,
+                NoRecordsToReturn = 4u,
+                IntToFloatPriceDivisor = 1,
+            };
+            GenericTest(DTCMessageType.HistoricalPriceDataResponseHeader, historicalPriceDataResponseHeader);
+        }
+
+        [Fact]
+        public void HistoricalPriceDataRejectTest()
+        {
+            var historicalPriceDataReject = new HistoricalPriceDataReject()
+            {
+                RequestID = 1,
+                RejectText = "shucks, no",
+                RejectReasonCode = HistoricalPriceDataRejectReasonCodeEnum.HpdrGeneralRejectError,
+                RetryTimeInSeconds = 4u,
+            };
+            GenericTest(DTCMessageType.HistoricalPriceDataReject, historicalPriceDataReject);
+        }
+
+        [Fact]
+        public void HistoricalPriceDataRecordResponseTest()
+        {
+            var historicalPriceDataRecordResponse = new HistoricalPriceDataRecordResponse()
+            {
+                RequestID = 1,
+                StartDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
+                OpenPrice = 3,
+                HighPrice = 4,
+                LowPrice = 5,
+                LastPrice = 6,
+                Volume = 7,
+                NumTrades = 8,
+                BidVolume = 9,
+                AskVolume = 10,
+                IsFinalRecord = 11,
+            };
+            GenericTest(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponse);
         }
     }
 }
