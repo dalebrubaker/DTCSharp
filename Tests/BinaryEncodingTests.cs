@@ -69,5 +69,81 @@ namespace Tests
             };
             GenericTest(DTCMessageType.EncodingRequest, encodingRequest);
         }
+
+        [Fact]
+        public void EncodingResponseTest()
+        {
+            var encodingResponse = new EncodingResponse()
+            {
+                ProtocolVersion = 1,
+                Encoding = EncodingEnum.ProtocolBuffers,
+                ProtocolType = "test"
+            };
+            GenericTest(DTCMessageType.EncodingResponse, encodingResponse);
+        }
+
+        [Fact]
+        public void LogonRequestTest()
+        {
+            var logonRequest = new LogonRequest
+            {
+                ProtocolVersion = 1,
+                Username = "username",
+                Password = "pw",
+                GeneralTextData = "gtd",
+                Integer1 = 1,
+                Integer2 = 2,
+                HeartbeatIntervalInSeconds = 10,
+                TradeMode = TradeModeEnum.TradeModeDemo,
+                TradeAccount = "demo",
+                HardwareIdentifier = "hwi",
+                ClientName = "testClient"
+
+            };
+            GenericTest(DTCMessageType.LogonRequest, logonRequest);
+        }
+
+        [Fact]
+        public void LogonResponseTest()
+        {
+            var logonResponse = new LogonResponse()
+            {
+                ProtocolVersion = 1,
+                Result = LogonStatusEnum.LogonSuccess,
+                ResultText = "success",
+                ReconnectAddress = "",
+                Integer1 = 1,
+                ServerName = "serverName",
+                MarketDepthUpdatesBestBidAndAsk = 7U,
+                TradingIsSupported = 8U,
+                OCOOrdersSupported = 9U,
+                OrderCancelReplaceSupported = 10U,
+                SymbolExchangeDelimiter = "|",
+                SecurityDefinitionsSupported = 12U,
+                HistoricalPriceDataSupported = 13U,
+                ResubscribeWhenMarketDataFeedAvailable = 14U,
+                MarketDepthIsSupported = 15U,
+                OneHistoricalPriceDataRequestPerConnection = 16U,
+                BracketOrdersSupported = 17U,
+                UseIntegerPriceOrderMessages = 18U,
+                UsesMultiplePositionsPerSymbolAndTradeAccount = 19U,
+                MarketDataSupported = 20U,
+            };
+            GenericTest(DTCMessageType.LogonResponse, logonResponse);
+        }
+
+        [Fact]
+        public void LogoffTest()
+        {
+            var logoff = new Logoff
+            {
+                Reason = "test",
+                DoNotReconnect = 1U
+            };
+            GenericTest(DTCMessageType.Logoff, logoff);
+        }
+
+
+
     }
 }
