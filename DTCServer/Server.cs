@@ -17,21 +17,21 @@ namespace DTCServer
         private readonly int _port;
         private readonly int _heartbeatIntervalInSeconds;
         private readonly bool _useHeartbeat;
-        private readonly IServerImpl _serverImpl;
+        private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
         private readonly IPAddress _ipAddress;
 
         /// <summary>
         /// Start a TCP Listener on port at ipAddress
         /// If not useHeartbeat, won't do a heartbeat. See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
         /// </summary>
-        /// <param name="serverImpl">the server implementation that provides responses to client requests</param>
+        /// <param name="callback">the callback for all client requests</param>
         /// <param name="ipAddress"></param>
         /// <param name="port"></param>
         /// <param name="heartbeatIntervalInSeconds">The initial interval in seconds that each side, the Client and the Server, needs to use to send HEARTBEAT messages to the other side. This should be a value from anywhere from 5 to 60 seconds.</param>
         /// <param name="useHeartbeat"><c>true</c>no heartbeat sent to server and none checked from server</param>
-        public Server(IServerImpl serverImpl, IPAddress ipAddress, int port, int heartbeatIntervalInSeconds, bool useHeartbeat)
+        public Server(Action<ClientHandler, DTCMessageType, IMessage> callback, IPAddress ipAddress, int port, int heartbeatIntervalInSeconds, bool useHeartbeat)
         {
-            _serverImpl = serverImpl;
+            _callback = callback;
             _ipAddress = ipAddress;
             _port = port;
             _heartbeatIntervalInSeconds = heartbeatIntervalInSeconds;
@@ -50,16 +50,12 @@ namespace DTCServer
             {
                 try
                 {
-                    using (var tcpClient = await listener.AcceptTcpClientAsync())
+                    var tcpClient = await listener.AcceptTcpClientAsync().ConfigureAwait(true);
+                    tcpClient.NoDelay = true;
+                    using (var clientHandler = new ClientHandler(_callback, tcpClient, _useHeartbeat))
                     {
-                        var stream = tcpClient.GetStream();
-                        var clientHandler = new ClientHandler(_serverImpl, tcpClient, _useHeartbeat);
-                        await clientHandler.Run(cancellationToken);
-//                        var temp = tcpClient;
-//#pragma warning disable 4014
-//                        Task.Run(() => Handle(temp, cancellationToken), cancellationToken);
-//#pragma warning restore 4014
-                    }
+                        await clientHandler.RunAsync(cancellationToken).ConfigureAwait(true);
+                    } // Dispose() also closes tcpClient
                 }
                 catch (Exception ex)
                 {
@@ -67,20 +63,6 @@ namespace DTCServer
                     throw;
                 }
             }
-            
-        }
-
-        private async Task Handle(TcpClient tcpClient, CancellationToken cancellationToken)
-        {
-            var stream = tcpClient.GetStream();
-            var clientHandler = new ClientHandler(_serverImpl, tcpClient, _useHeartbeat);
-            await clientHandler.Run(cancellationToken);
-        }
-
-        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
-        {
-            var temp = eventForMessage; // for thread safety
-            temp?.Invoke(this, new EventArgs<T>(message));
         }
 
         public override string ToString()

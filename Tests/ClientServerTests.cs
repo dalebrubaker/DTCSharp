@@ -22,7 +22,7 @@ namespace Tests
         [Fact]
         public void LogonTest()
         {
-            var serverImpl = new ExampleServerImpl();
+            var exampleServer = new ExampleServer();
         }
     }
 }

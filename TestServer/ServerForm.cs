@@ -19,7 +19,7 @@ namespace TestServer
         private Server _serverPrimary;
         private Server _serverHistorical;
         private IPAddress _ipAddress;
-        private readonly ExampleServerImpl _serverImpl;
+        private readonly ExampleServer _exampleServer;
         private CancellationTokenSource _ctsPrimary;
         private CancellationTokenSource _ctsHistorical;
 
@@ -33,11 +33,11 @@ namespace TestServer
             lblServerIPAddress.Text = $"Server IP Address: {ipAddress}";
             _ipAddress = txtServer.Text.Trim().ToLower() == "localhost" ? IPAddress.Loopback : ipAddress;
             lblUsingIpAddress.Text = $"Using IP Address: {_ipAddress}";
-            _serverImpl = new ExampleServerImpl();
-            _serverImpl.MessageEvent += ServerImplMessageEvent;
+            _exampleServer = new ExampleServer();
+            _exampleServer.MessageEvent += ExampleServerMessageEvent;
         }
 
-        private void ServerImplMessageEvent(object sender, string message)
+        private void ExampleServerMessageEvent(object sender, string message)
         {
             logControl1.LogMessage(message);
         }
@@ -68,7 +68,7 @@ namespace TestServer
             btnStopPrimary.Enabled = true;
             const int heartbeatIntervalInSeconds = 10;
             const bool useHeartbeat = true;
-            _serverPrimary = new Server(_serverImpl, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
+            _serverPrimary = new Server(_exampleServer.HandleRequest, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
             _ctsPrimary = new CancellationTokenSource();
             _serverPrimary.Run(_ctsPrimary.Token);
         }
@@ -86,7 +86,7 @@ namespace TestServer
             btnStopHistorical.Enabled = true;
             const int heartbeatIntervalInSeconds = 0;
             const bool useHeartbeat = false; // See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
-            _serverHistorical = new Server(_serverImpl, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
+            _serverHistorical = new Server(_exampleServer.HandleRequest, _ipAddress, PortListener, heartbeatIntervalInSeconds, useHeartbeat);
             _ctsHistorical = new CancellationTokenSource();
             _serverHistorical.Run(_ctsHistorical.Token);
         }

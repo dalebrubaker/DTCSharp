@@ -19,58 +19,31 @@ namespace DTCServer
 {
     public class ClientHandler : IDisposable
     {
-        private readonly IServerImpl _serverImpl;
+        private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
         private readonly TcpClient _tcpClient;
         private readonly bool _useHeartbeat;
         private bool _isDisposed;
         private Timer _heartbeatTimer;
-        private readonly string _remoteEndPoint;
         private readonly string _localEndPoint;
         private ICodecDTC _currentCodec;
-        private readonly NetworkStream _networkStream;
-        private readonly BinaryWriter _binaryWriter;
-        private readonly ConcurrentQueue<MessageWithType<IMessage>> _responsesQueue;
+        private NetworkStream _networkStream;
+        private BinaryWriter _binaryWriter;
         private DateTime _lastHeartbeatReceivedTime;
+        private TaskScheduler _taskSchedulerCurrContext;
+        private SynchronizationContext _synchronizationContext;
 
-        public ClientHandler(IServerImpl serverImpl, TcpClient tcpClient, bool useHeartbeat)
+        public ClientHandler(Action<ClientHandler, DTCMessageType, IMessage> callback, TcpClient tcpClient, bool useHeartbeat)
         {
-            _serverImpl = serverImpl;
+            _callback = callback;
             _tcpClient = tcpClient;
             _useHeartbeat = useHeartbeat;
-            _networkStream = _tcpClient.GetStream();
-            _binaryWriter = new BinaryWriter(_networkStream);
             _currentCodec = new CodecBinary();
-            _remoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
+            RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _localEndPoint = tcpClient.Client.LocalEndPoint.ToString();
-            _responsesQueue = new ConcurrentQueue<MessageWithType<IMessage>>();
-
         }
 
-        /// <summary>
-        /// This method runs "forever" on its own thread.
-        /// All responses are sent on this thread
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        private async Task ResponseLoop(CancellationToken cancellationToken)
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                MessageWithType<IMessage> messageWithType;
-                if (_responsesQueue.TryDequeue(out messageWithType))
-                {
-                    try
-                    {
-                        _currentCodec.Write(messageWithType.MessageType, messageWithType.Message, _binaryWriter);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new DTCSharpException(ex.Message);
-                    }
-                }
-                await Task.Delay(1, cancellationToken);
-            }
-        }
+
+        public string RemoteEndPoint { get; }
 
         private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
@@ -88,26 +61,27 @@ namespace DTCServer
 
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat();
-            _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.Heartbeat, heartbeat));
+            SendMessage(DTCMessageType.Heartbeat, heartbeat);
         }
 
         /// <summary>
         /// This method runs "forever".
-        /// All requests are received on this thread
+        /// All reads and writes are done on this thread.
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task Run(CancellationToken cancellationToken)
+        public async Task RunAsync(CancellationToken cancellationToken)
         {
-#pragma warning disable 4014
-            Task.Run(() => ResponseLoop(cancellationToken), cancellationToken);
-#pragma warning restore 4014
+            _taskSchedulerCurrContext = TaskScheduler.FromCurrentSynchronizationContext();
+            _synchronizationContext = SynchronizationContext.Current;
+            _networkStream = _tcpClient.GetStream();
+            _binaryWriter = new BinaryWriter(_networkStream);
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!cancellationToken.IsCancellationRequested)
             {
                 if (!_networkStream.DataAvailable)
                 {
-                    await Task.Delay(1, cancellationToken);
+                    await Task.Delay(1, cancellationToken).ConfigureAwait(true);
                     continue;
                 }
 
@@ -133,13 +107,12 @@ namespace DTCServer
                             _lastHeartbeatReceivedTime = DateTime.Now;
                             _heartbeatTimer.Start();
                         }
-                        var logonResponse = await _serverImpl.LogonRequestAsync(_remoteEndPoint, logonRequest);
-                        _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.LogonResponse, logonResponse));
+                        _callback(this, messageType, logonRequest);
                         break;
                     case DTCMessageType.Heartbeat:
                         _lastHeartbeatReceivedTime = DateTime.Now;
                         var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
-                        await _serverImpl.HeartbeatAsync(_remoteEndPoint, heartbeat);
+                        _callback(this, messageType, heartbeat);
                         break;
                     case DTCMessageType.Logoff:
                         if (_useHeartbeat && _heartbeatTimer != null)
@@ -149,32 +122,11 @@ namespace DTCServer
                             _heartbeatTimer.Stop();
                         }
                         var logoff = _currentCodec.Load<Logoff>(messageType, bytes);
-                        await _serverImpl.LogoffAsync(_remoteEndPoint, logoff);
+                        _callback(this, messageType, logoff);
                         break;
                     case DTCMessageType.EncodingRequest:
                         var encodingRequest = _currentCodec.Load<EncodingRequest>(messageType, bytes);
-                        var encodingResponse = await _serverImpl.EncodingRequestAsync(_remoteEndPoint, encodingRequest);
-                        _responsesQueue.Enqueue(new MessageWithType<IMessage>(DTCMessageType.EncodingResponse, encodingResponse));
-                        while (!_responsesQueue.IsEmpty)
-                        {
-                            // Wait until the encoding response has been sent before changing the _currentCodec
-                            await Task.Delay(1, cancellationToken);
-                        }
-                        switch (encodingResponse.Encoding)
-                        {
-                            case EncodingEnum.BinaryEncoding:
-                                _currentCodec = new CodecBinary();
-                                break;
-                            case EncodingEnum.BinaryWithVariableLengthStrings:
-                            case EncodingEnum.JsonEncoding:
-                            case EncodingEnum.JsonCompactEncoding:
-                                throw new NotImplementedException($"Not implemented in {nameof(Run)}: {nameof(encodingResponse.Encoding)}");
-                            case EncodingEnum.ProtocolBuffers:
-                                _currentCodec = new CodecProtobuf();
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
+                        _callback(this, messageType, encodingRequest);
                         break;
                     case DTCMessageType.MarketDataRequest:
                         break;
@@ -324,11 +276,28 @@ namespace DTCServer
                     case DTCMessageType.LogonResponse:
                     case DTCMessageType.EncodingResponse:
                     default:
-                        throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(Run)}.");
+                        throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(RunAsync)}.");
                 }
             }
         }
-        
+
+        /// <summary>
+        /// Send the message. It will always be posted to the current synchronization context
+        /// </summary>
+        /// <param name="messageType"></param>
+        /// <param name="message"></param>
+        public void SendMessage<T>(DTCMessageType messageType, T message) where T : IMessage
+        {
+            try
+            {
+                _synchronizationContext.Post(s => _currentCodec.Write(messageType, message, _binaryWriter), null);
+            }
+            catch (Exception ex)
+            {
+                throw new DTCSharpException(ex.Message);
+            }
+        }
+
         public void Dispose()
         {
             Dispose(true);
@@ -349,7 +318,30 @@ namespace DTCServer
 
         public override string ToString()
         {
-            return $"Local:{_localEndPoint} Remote:{_remoteEndPoint}";
+            return $"Local:{_localEndPoint} Remote:{RemoteEndPoint}";
+        }
+
+        /// <summary>
+        /// This must be called whenever the encoding changes, right AFTER the EncodingResponse is sent to the client
+        /// </summary>
+        /// <param name="encoding"></param>
+        public void SetCurrentCodec(EncodingEnum encoding)
+        {
+            switch (encoding)
+            {
+                case EncodingEnum.BinaryEncoding:
+                    _currentCodec = new CodecBinary();
+                    break;
+                case EncodingEnum.BinaryWithVariableLengthStrings:
+                case EncodingEnum.JsonEncoding:
+                case EncodingEnum.JsonCompactEncoding:
+                    throw new NotImplementedException($"Not implemented in {nameof(ClientHandler)}: {nameof(encoding)}");
+                case EncodingEnum.ProtocolBuffers:
+                    _currentCodec = new CodecProtobuf();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(encoding), encoding, null);
+            }
         }
     }
 }

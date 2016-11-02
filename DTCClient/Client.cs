@@ -201,7 +201,6 @@ namespace DTCClient
                 ProtocolType = "DTC",
                 ProtocolVersion = (int)DTCVersion.CurrentVersion
             };
-            await Task.Delay(1000, cancellationToken).ConfigureAwait(_callbackToMainThread); // give server a bit of time to respond to the connection
             try
             {
                 SendMessage(DTCMessageType.EncodingRequest, encodingRequest);
@@ -250,6 +249,11 @@ namespace DTCClient
             // Make a connection
             _cts = cancellationTokenSource ?? new CancellationTokenSource();
             var encodingResponse = await ConnectAsync(requestedEncoding, timeout, _cts.Token).ConfigureAwait(_callbackToMainThread);
+            if (encodingResponse == null)
+            {
+                // timed out
+                return null;
+            }
             if (_useHeartbeat)
             {
                 // start the heartbeat
@@ -614,7 +618,7 @@ namespace DTCClient
         }
 
         /// <summary>
-        /// Send the message
+        /// Send the message. It will always be posted to the current synchronization context
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
@@ -622,7 +626,7 @@ namespace DTCClient
         {
             try
             {
-                _currentCodec.Write(messageType, message, _binaryWriter);
+                _synchronizationContext.Post(s => _currentCodec.Write(messageType, message, _binaryWriter), null);
             }
             catch (Exception ex)
             {
