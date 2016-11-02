@@ -28,8 +28,9 @@ namespace DTCCommon.Codecs
         /// <typeparam name="T"></typeparam>
         /// <param name="messageType"></param>
         /// <param name="bytes"></param>
+        /// <param name="index">the starting index in bytes</param>
         /// <returns></returns>
-        T Load<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new();
+        T Load<T>(DTCMessageType messageType, byte[] bytes, int index = 0) where T : IMessage<T>, new();
 
         /// <summary>
         /// Load the message represented by bytes into the IMessage

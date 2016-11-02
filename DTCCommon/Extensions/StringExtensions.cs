@@ -32,7 +32,7 @@ namespace DTCCommon.Extensions
             var endIndex = Array.IndexOf(bytes, (byte)0, startIndex);
             if (endIndex < 0)
             {
-                return "";
+                endIndex = bytes.Length;
             }
             var length = endIndex - startIndex;
             var result = Encoding.UTF8.GetString(bytes, startIndex, length);

@@ -25,16 +25,13 @@ namespace DTCCommon
         /// <summary>
         /// Read a header at the beginning of bytes
         /// </summary>
-        /// <param name="bytes">the bytes that hold the header and . Will return with the header bytes removed</param>
+        /// <param name="bytes">the bytes that hold the header at the beginning</param>
         /// <param name="sizeExcludingHeader">the size EXCLUDING the header</param>
         /// <param name="messageType"></param>
-        public static void ReadHeader(ref byte[] bytes, out int sizeExcludingHeader, out DTCMessageType messageType)
+        public static void ReadHeader(byte[] bytes, out int sizeExcludingHeader, out DTCMessageType messageType)
         {
             sizeExcludingHeader = BitConverter.ToUInt16(bytes, 0) - 4;
             messageType = (DTCMessageType)BitConverter.ToUInt16(bytes, 2);
-            var newBytes = new byte[bytes.Length - 4];
-            Buffer.BlockCopy(bytes, 4, newBytes, 0, bytes.Length - 4);
-            bytes = newBytes;
         }
     }
 }

@@ -351,94 +351,99 @@ namespace DTCCommon.Codecs
             Write(messageType, message, binaryWriter);
         }
 
-        public T Load<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new()
+        public T Load<T>(DTCMessageType messageType, byte[] bytes, int index = 0) where T : IMessage<T>, new()
         {
+#if DEBUG
+            var startIndex = index;
+#endif
             var result = new T();
-            int startIndex;
             switch (messageType)
             {
                 case DTCMessageType.MessageTypeUnset:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.LogonRequest:
                     var logonRequest = result as LogonRequest;
-                    startIndex = 0;
-                    logonRequest.ProtocolVersion = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    logonRequest.Username =  bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += USERNAME_PASSWORD_LENGTH;
-                    logonRequest.Password =bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += USERNAME_PASSWORD_LENGTH;
-                    logonRequest.GeneralTextData =bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += GENERAL_IDENTIFIER_LENGTH;
-                    logonRequest.Integer1 = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    logonRequest.Integer2 = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    logonRequest.HeartbeatIntervalInSeconds = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    logonRequest.TradeMode = (TradeModeEnum)BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    logonRequest.TradeAccount =bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += TRADE_ACCOUNT_LENGTH;
-                    logonRequest.HardwareIdentifier =bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += GENERAL_IDENTIFIER_LENGTH;
-                    logonRequest.ClientName =bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += 32;
+                    logonRequest.ProtocolVersion = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    logonRequest.Username =  bytes.StringFromNullTerminatedBytes(index);
+                    index += USERNAME_PASSWORD_LENGTH;
+                    logonRequest.Password =bytes.StringFromNullTerminatedBytes(index);
+                    index += USERNAME_PASSWORD_LENGTH;
+                    logonRequest.GeneralTextData =bytes.StringFromNullTerminatedBytes(index);
+                    index += GENERAL_IDENTIFIER_LENGTH;
+                    logonRequest.Integer1 = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    logonRequest.Integer2 = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    logonRequest.HeartbeatIntervalInSeconds = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    logonRequest.TradeMode = (TradeModeEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    logonRequest.TradeAccount =bytes.StringFromNullTerminatedBytes(index);
+                    index += TRADE_ACCOUNT_LENGTH;
+                    logonRequest.HardwareIdentifier =bytes.StringFromNullTerminatedBytes(index);
+                    index += GENERAL_IDENTIFIER_LENGTH;
+                    logonRequest.ClientName =bytes.StringFromNullTerminatedBytes(index);
+                    index += 32;
                     return result;
                 case DTCMessageType.LogonResponse:
                     var logonResponse = result as LogonResponse;
-                    startIndex = 0;
-                    logonResponse.ProtocolVersion = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    logonResponse.Result = (LogonStatusEnum)BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    logonResponse.ResultText =bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += TEXT_DESCRIPTION_LENGTH;
-                    logonResponse.ReconnectAddress =bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += 64;
-                    logonResponse.Integer1 = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    logonResponse.ServerName =bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += 60;
-                    logonResponse.MarketDepthUpdatesBestBidAndAsk = bytes[startIndex++];
-                    logonResponse.TradingIsSupported = bytes[startIndex++];
-                    logonResponse.OCOOrdersSupported = bytes[startIndex++];
-                    logonResponse.OrderCancelReplaceSupported = bytes[startIndex++];
-                    logonResponse.SymbolExchangeDelimiter = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += SYMBOL_EXCHANGE_DELIMITER_LENGTH;
-                    logonResponse.SecurityDefinitionsSupported = bytes[startIndex++];
-                    logonResponse.HistoricalPriceDataSupported = bytes[startIndex++];
-                    logonResponse.ResubscribeWhenMarketDataFeedAvailable = bytes[startIndex++];
-                    logonResponse.MarketDepthIsSupported = bytes[startIndex++];
-                    logonResponse.OneHistoricalPriceDataRequestPerConnection = bytes[startIndex++];
-                    logonResponse.BracketOrdersSupported = bytes[startIndex++];
-                    logonResponse.UseIntegerPriceOrderMessages = bytes[startIndex++];
-                    logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount = bytes[startIndex++];
-                    logonResponse.MarketDataSupported = bytes[startIndex++];
+                    logonResponse.ProtocolVersion = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    logonResponse.Result = (LogonStatusEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    logonResponse.ResultText =bytes.StringFromNullTerminatedBytes(index);
+                    index += TEXT_DESCRIPTION_LENGTH;
+                    logonResponse.ReconnectAddress =bytes.StringFromNullTerminatedBytes(index);
+                    index += 64;
+                    logonResponse.Integer1 = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    logonResponse.ServerName =bytes.StringFromNullTerminatedBytes(index);
+                    index += 60;
+                    logonResponse.MarketDepthUpdatesBestBidAndAsk = bytes[index++];
+                    logonResponse.TradingIsSupported = bytes[index++];
+                    logonResponse.OCOOrdersSupported = bytes[index++];
+                    logonResponse.OrderCancelReplaceSupported = bytes[index++];
+                    logonResponse.SymbolExchangeDelimiter = bytes.StringFromNullTerminatedBytes(index);
+                    index += SYMBOL_EXCHANGE_DELIMITER_LENGTH;
+                    logonResponse.SecurityDefinitionsSupported = bytes[index++];
+                    logonResponse.HistoricalPriceDataSupported = bytes[index++];
+                    logonResponse.ResubscribeWhenMarketDataFeedAvailable = bytes[index++];
+                    logonResponse.MarketDepthIsSupported = bytes[index++];
+                    logonResponse.OneHistoricalPriceDataRequestPerConnection = bytes[index++];
+                    logonResponse.BracketOrdersSupported = bytes[index++];
+                    logonResponse.UseIntegerPriceOrderMessages = bytes[index++];
+                    logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount = bytes[index++];
+                    logonResponse.MarketDataSupported = bytes[index++];
                     return result;
                 case DTCMessageType.Heartbeat:
                     var heartbeat = result as Heartbeat;
-                    heartbeat.NumDroppedMessages = BitConverter.ToUInt32(bytes, 0);
-                    heartbeat.CurrentDateTime = BitConverter.ToInt64(bytes, 4);
+                    heartbeat.NumDroppedMessages = BitConverter.ToUInt32(bytes, index);
+                    index += 4;
+                    heartbeat.CurrentDateTime = BitConverter.ToInt64(bytes, index);
                     return result;
                 case DTCMessageType.Logoff:
                     var logoff = result as Logoff;
-                    startIndex = 0;
-                    logoff.Reason = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += TEXT_DESCRIPTION_LENGTH;
-                    logoff.DoNotReconnect = bytes[startIndex++];
+                    logoff.Reason = bytes.StringFromNullTerminatedBytes(index);
+                    index += TEXT_DESCRIPTION_LENGTH;
+                    logoff.DoNotReconnect = bytes[index++];
                     return result;
                 case DTCMessageType.EncodingRequest:
                     var encodingRequest = result as EncodingRequest;
-                    encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, 0);
-                    encodingRequest.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4);
-                    encodingRequest.ProtocolType = bytes.StringFromNullTerminatedBytes(8);
+                    encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    encodingRequest.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    encodingRequest.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
+                    index += 4;
                     return result;
                 case DTCMessageType.EncodingResponse:
                     var encodingResponse = result as EncodingResponse;
-                    encodingResponse.ProtocolVersion = BitConverter.ToInt32(bytes, 0);
-                    encodingResponse.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, 4);
-                    encodingResponse.ProtocolType = bytes.StringFromNullTerminatedBytes(8);
+                    encodingResponse.ProtocolVersion = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    encodingResponse.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    encodingResponse.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
                     return result;
                 case DTCMessageType.MarketDataRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
@@ -544,18 +549,18 @@ namespace DTCCommon.Codecs
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.ExchangeListRequest:
                     var exchangeListRequest = result as ExchangeListRequest;
-                    exchangeListRequest.RequestID = BitConverter.ToInt32(bytes, 0);
+                    exchangeListRequest.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
                     return result;
                 case DTCMessageType.ExchangeListResponse:
                     var exchangeListResponse = result as ExchangeListResponse;
-                    startIndex = 0;
-                    exchangeListResponse.RequestID = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    exchangeListResponse.Exchange = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += EXCHANGE_LENGTH;
-                    exchangeListResponse.IsFinalMessage = bytes[startIndex++];
-                    exchangeListResponse.Description = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += EXCHANGE_DESCRIPTION_LENGTH;
+                    exchangeListResponse.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    exchangeListResponse.Exchange = bytes.StringFromNullTerminatedBytes(index);
+                    index += EXCHANGE_LENGTH;
+                    exchangeListResponse.IsFinalMessage = bytes[index++];
+                    exchangeListResponse.Description = bytes.StringFromNullTerminatedBytes(index);
+                    index += EXCHANGE_DESCRIPTION_LENGTH;
                     return result;
                 case DTCMessageType.SymbolsForExchangeRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
@@ -565,77 +570,74 @@ namespace DTCCommon.Codecs
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
                     var securityDefinitionForSymbolRequest = result as SecurityDefinitionForSymbolRequest;
-                    startIndex = 0;
-                    securityDefinitionForSymbolRequest.RequestID = BitConverter.ToInt32(bytes, 0);
-                    startIndex += 4;
-                    securityDefinitionForSymbolRequest.Symbol = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += SYMBOL_LENGTH;
-                    securityDefinitionForSymbolRequest.Exchange = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += EXCHANGE_LENGTH;
+                    securityDefinitionForSymbolRequest.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionForSymbolRequest.Symbol = bytes.StringFromNullTerminatedBytes(index);
+                    index += SYMBOL_LENGTH;
+                    securityDefinitionForSymbolRequest.Exchange = bytes.StringFromNullTerminatedBytes(index);
+                    index += EXCHANGE_LENGTH;
                     return result;
                 case DTCMessageType.SecurityDefinitionResponse:
                     var securityDefinitionResponse = result as SecurityDefinitionResponse;
-                    startIndex = 0;
-                    securityDefinitionResponse.RequestID = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.Symbol = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += SYMBOL_LENGTH;
-                    securityDefinitionResponse.Exchange = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += EXCHANGE_LENGTH;
-                    securityDefinitionResponse.SecurityType = (SecurityTypeEnum)BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.Description = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += SYMBOL_DESCRIPTION_LENGTH;
-                    securityDefinitionResponse.MinPriceIncrement = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.PriceDisplayFormat = (PriceDisplayFormatEnum)BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.CurrencyValuePerIncrement = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.IsFinalMessage = BitConverter.ToUInt32(bytes, startIndex); // aligned on 8-byte boundaries
-                    startIndex += 4;
-                    securityDefinitionResponse.FloatToIntPriceMultiplier = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.UnderlyingSymbol = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += UNDERLYING_SYMBOL_LENGTH;
-                    securityDefinitionResponse.UpdatesBidAskOnly = BitConverter.ToUInt32(bytes, startIndex); // aligned on 8-byte boundaries
-                    startIndex += 4;
-                    securityDefinitionResponse.StrikePrice = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.PutOrCall = (PutCallEnum)BitConverter.ToUInt32(bytes, startIndex); // aligned on 8-byte boundaries
-                    startIndex += 4;
-                    securityDefinitionResponse.ShortInterest = BitConverter.ToUInt32(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.SecurityExpirationDate = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.BuyRolloverInterest = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.SellRolloverInterest = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.EarningsPerShare = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.SharesOutstanding = BitConverter.ToUInt32(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.IntToFloatQuantityDivisor = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.HasMarketDepthData = BitConverter.ToUInt32(bytes, startIndex); // aligned on 8-byte boundaries
-                    startIndex += 4;
-                    securityDefinitionResponse.DisplayPriceMultiplier = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionResponse.ExchangeSymbol = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += SYMBOL_LENGTH;
+                    securityDefinitionResponse.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.Symbol = bytes.StringFromNullTerminatedBytes(index);
+                    index += SYMBOL_LENGTH;
+                    securityDefinitionResponse.Exchange = bytes.StringFromNullTerminatedBytes(index);
+                    index += EXCHANGE_LENGTH;
+                    securityDefinitionResponse.SecurityType = (SecurityTypeEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.Description = bytes.StringFromNullTerminatedBytes(index);
+                    index += SYMBOL_DESCRIPTION_LENGTH;
+                    securityDefinitionResponse.MinPriceIncrement = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.PriceDisplayFormat = (PriceDisplayFormatEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.CurrencyValuePerIncrement = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.IsFinalMessage = BitConverter.ToUInt32(bytes, index); // aligned on 8-byte boundaries
+                    index += 4;
+                    securityDefinitionResponse.FloatToIntPriceMultiplier = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.UnderlyingSymbol = bytes.StringFromNullTerminatedBytes(index);
+                    index += UNDERLYING_SYMBOL_LENGTH;
+                    securityDefinitionResponse.UpdatesBidAskOnly = BitConverter.ToUInt32(bytes, index); // aligned on 8-byte boundaries
+                    index += 4;
+                    securityDefinitionResponse.StrikePrice = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.PutOrCall = (PutCallEnum)BitConverter.ToUInt32(bytes, index); // aligned on 8-byte boundaries
+                    index += 4;
+                    securityDefinitionResponse.ShortInterest = BitConverter.ToUInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.SecurityExpirationDate = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.BuyRolloverInterest = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.SellRolloverInterest = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.EarningsPerShare = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.SharesOutstanding = BitConverter.ToUInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.IntToFloatQuantityDivisor = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.HasMarketDepthData = BitConverter.ToUInt32(bytes, index); // aligned on 8-byte boundaries
+                    index += 4;
+                    securityDefinitionResponse.DisplayPriceMultiplier = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.ExchangeSymbol = bytes.StringFromNullTerminatedBytes(index);
+                    index += SYMBOL_LENGTH;
                     return result;
                 case DTCMessageType.SymbolSearchRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SecurityDefinitionReject:
                     var securityDefinitionReject = result as SecurityDefinitionReject;
-                    startIndex = 0;
-                    securityDefinitionReject.RequestID = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    securityDefinitionReject.RejectText = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += TEXT_DESCRIPTION_LENGTH;
+                    securityDefinitionReject.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionReject.RejectText = bytes.StringFromNullTerminatedBytes(index);
+                    index += TEXT_DESCRIPTION_LENGTH;
                     return result;
                 case DTCMessageType.AccountBalanceRequest:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
@@ -645,105 +647,99 @@ namespace DTCCommon.Codecs
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.UserMessage:
                     var userMessage = result as UserMessage;
-                    startIndex = 0;
-                    userMessage.UserMessage_ = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += TEXT_MESSAGE_LENGTH;
+                    index = 0;
+                    userMessage.UserMessage_ = bytes.StringFromNullTerminatedBytes(index);
+                    index += TEXT_MESSAGE_LENGTH;
                     return result;
                 case DTCMessageType.GeneralLogMessage:
                     var generalLogMessage = result as GeneralLogMessage;
-                    startIndex = 0;
-                    generalLogMessage.MessageText = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += 128;
+                    generalLogMessage.MessageText = bytes.StringFromNullTerminatedBytes(index);
+                    index += 128;
                     return result;
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = result as HistoricalPriceDataRequest;
-                    startIndex = 0;
-                    historicalPriceDataRequest.RequestID = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    historicalPriceDataRequest.Symbol = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += SYMBOL_LENGTH;
-                    historicalPriceDataRequest.Exchange = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += EXCHANGE_LENGTH;
-                    historicalPriceDataRequest.RecordInterval = (HistoricalDataIntervalEnum)BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    historicalPriceDataRequest.StartDateTime = BitConverter.ToInt64(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataRequest.EndDateTime = BitConverter.ToInt64(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataRequest.MaxDaysToReturn = BitConverter.ToUInt32(bytes, startIndex);
-                    startIndex += 4;
-                    historicalPriceDataRequest.UseZLibCompression = bytes[startIndex++];
-                    historicalPriceDataRequest.RequestDividendAdjustedStockData = bytes[startIndex++];
-                    historicalPriceDataRequest.Flag1 = bytes[startIndex++];
+                    historicalPriceDataRequest.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    historicalPriceDataRequest.Symbol = bytes.StringFromNullTerminatedBytes(index);
+                    index += SYMBOL_LENGTH;
+                    historicalPriceDataRequest.Exchange = bytes.StringFromNullTerminatedBytes(index);
+                    index += EXCHANGE_LENGTH;
+                    historicalPriceDataRequest.RecordInterval = (HistoricalDataIntervalEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    historicalPriceDataRequest.StartDateTime = BitConverter.ToInt64(bytes, index);
+                    index += 8;
+                    historicalPriceDataRequest.EndDateTime = BitConverter.ToInt64(bytes, index);
+                    index += 8;
+                    historicalPriceDataRequest.MaxDaysToReturn = BitConverter.ToUInt32(bytes, index);
+                    index += 4;
+                    historicalPriceDataRequest.UseZLibCompression = bytes[index++];
+                    historicalPriceDataRequest.RequestDividendAdjustedStockData = bytes[index++];
+                    historicalPriceDataRequest.Flag1 = bytes[index++];
                     return result;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
                     var historicalPriceDataResponseHeader = result as HistoricalPriceDataResponseHeader;
-                    startIndex = 0;
-                    historicalPriceDataResponseHeader.RequestID = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    historicalPriceDataResponseHeader.RecordInterval = (HistoricalDataIntervalEnum)BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    historicalPriceDataResponseHeader.UseZLibCompression = bytes[startIndex++];
-                    historicalPriceDataResponseHeader.NoRecordsToReturn = bytes[startIndex++];
-                    startIndex += 2; // align for packing
-                    historicalPriceDataResponseHeader.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, startIndex);
-                    startIndex += 4;
+                    historicalPriceDataResponseHeader.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    historicalPriceDataResponseHeader.RecordInterval = (HistoricalDataIntervalEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    historicalPriceDataResponseHeader.UseZLibCompression = bytes[index++];
+                    historicalPriceDataResponseHeader.NoRecordsToReturn = bytes[index++];
+                    index += 2; // align for packing
+                    historicalPriceDataResponseHeader.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, index);
+                    index += 4;
                     return result;
                 case DTCMessageType.HistoricalPriceDataReject:
                     var historicalPriceDataReject = result as HistoricalPriceDataReject;
-                    startIndex = 0;
-                    historicalPriceDataReject.RequestID = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    historicalPriceDataReject.RejectText = bytes.StringFromNullTerminatedBytes(startIndex);
-                    startIndex += TEXT_DESCRIPTION_LENGTH;
-                    historicalPriceDataReject.RejectReasonCode = (HistoricalPriceDataRejectReasonCodeEnum)BitConverter.ToInt16(bytes, startIndex);
-                    startIndex += 2;
-                    historicalPriceDataReject.RetryTimeInSeconds = BitConverter.ToUInt16(bytes, startIndex);
-                    startIndex += 2;
+                    historicalPriceDataReject.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    historicalPriceDataReject.RejectText = bytes.StringFromNullTerminatedBytes(index);
+                    index += TEXT_DESCRIPTION_LENGTH;
+                    historicalPriceDataReject.RejectReasonCode = (HistoricalPriceDataRejectReasonCodeEnum)BitConverter.ToInt16(bytes, index);
+                    index += 2;
+                    historicalPriceDataReject.RetryTimeInSeconds = BitConverter.ToUInt16(bytes, index);
+                    index += 2;
                     return result;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
                     var historicalPriceDataRecordResponse = result as HistoricalPriceDataRecordResponse;
-                    startIndex = 0;
-                    historicalPriceDataRecordResponse.RequestID = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    historicalPriceDataRecordResponse.StartDateTime = BitConverter.ToInt64(bytes, startIndex);
+                    historicalPriceDataRecordResponse.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    historicalPriceDataRecordResponse.StartDateTime = BitConverter.ToInt64(bytes, index);
                     var debug = $"{historicalPriceDataRecordResponse.StartDateTime.DtcDateTimeToUtc().ToLocalTime():yyyyMMdd.HHmmss.fff} (local).";
-                    startIndex += 8;
-                    historicalPriceDataRecordResponse.OpenPrice = BitConverter.ToDouble(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataRecordResponse.HighPrice = BitConverter.ToDouble(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataRecordResponse.LowPrice = BitConverter.ToDouble(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataRecordResponse.LastPrice = BitConverter.ToDouble(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataRecordResponse.Volume = BitConverter.ToDouble(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataRecordResponse.NumTrades = BitConverter.ToUInt32(bytes, startIndex); // union, also could be OpenInterest
-                    startIndex += 4;
-                    startIndex += 4; // for 8-byte packing boundary
-                    historicalPriceDataRecordResponse.BidVolume = BitConverter.ToDouble(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataRecordResponse.AskVolume = BitConverter.ToDouble(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataRecordResponse.IsFinalRecord = bytes[startIndex++];
+                    index += 8;
+                    historicalPriceDataRecordResponse.OpenPrice = BitConverter.ToDouble(bytes, index);
+                    index += 8;
+                    historicalPriceDataRecordResponse.HighPrice = BitConverter.ToDouble(bytes, index);
+                    index += 8;
+                    historicalPriceDataRecordResponse.LowPrice = BitConverter.ToDouble(bytes, index);
+                    index += 8;
+                    historicalPriceDataRecordResponse.LastPrice = BitConverter.ToDouble(bytes, index);
+                    index += 8;
+                    historicalPriceDataRecordResponse.Volume = BitConverter.ToDouble(bytes, index);
+                    index += 8;
+                    historicalPriceDataRecordResponse.NumTrades = BitConverter.ToUInt32(bytes, index); // union, also could be OpenInterest
+                    index += 4;
+                    index += 4; // for 8-byte packing boundary
+                    historicalPriceDataRecordResponse.BidVolume = BitConverter.ToDouble(bytes, index);
+                    index += 8;
+                    historicalPriceDataRecordResponse.AskVolume = BitConverter.ToDouble(bytes, index);
+                    index += 8;
+                    historicalPriceDataRecordResponse.IsFinalRecord = bytes[index++];
                     return result;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     // Probably no longer used after version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
                     var historicalPriceDataTickRecordResponse = result as HistoricalPriceDataTickRecordResponse;
-                    startIndex = 0;
-                    historicalPriceDataTickRecordResponse.RequestID = BitConverter.ToInt32(bytes, startIndex);
-                    startIndex += 4;
-                    historicalPriceDataTickRecordResponse.DateTime = BitConverter.ToInt64(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataTickRecordResponse.AtBidOrAsk = (AtBidOrAskEnum)BitConverter.ToInt32(bytes, startIndex);
+                    historicalPriceDataTickRecordResponse.RequestID = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    historicalPriceDataTickRecordResponse.DateTime = BitConverter.ToInt64(bytes, index);
+                    index += 8;
+                    historicalPriceDataTickRecordResponse.AtBidOrAsk = (AtBidOrAskEnum)BitConverter.ToInt32(bytes, index);
                     // TODO is this 2-byte enum padded to 4?
-                    startIndex += 4;
-                    historicalPriceDataTickRecordResponse.Price = BitConverter.ToDouble(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataTickRecordResponse.Volume = BitConverter.ToDouble(bytes, startIndex);
-                    startIndex += 8;
-                    historicalPriceDataTickRecordResponse.IsFinalRecord = bytes[startIndex++];
+                    index += 4;
+                    historicalPriceDataTickRecordResponse.Price = BitConverter.ToDouble(bytes, index);
+                    index += 8;
+                    historicalPriceDataTickRecordResponse.Volume = BitConverter.ToDouble(bytes, index);
+                    index += 8;
+                    historicalPriceDataTickRecordResponse.IsFinalRecord = bytes[index++];
                     return result;
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;

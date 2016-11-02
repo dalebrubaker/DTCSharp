@@ -36,7 +36,7 @@ namespace DTCCommon.Codecs
             Write(messageType, message, binaryWriter);
         }
 
-        public T Load<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new()
+        public T Load<T>(DTCMessageType messageType, byte[] bytes, int index = 0) where T : IMessage<T>, new()
         {
             // For protobuf we don't need the messageType
             return Load<T>(bytes);
