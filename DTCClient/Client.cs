@@ -18,7 +18,6 @@ namespace DTCClient
 {
     public class Client : IDisposable
     {
-        private readonly string _server;
         private readonly bool _callbackToMainThread;
         private Timer _heartbeatTimer;
         private bool _isDisposed;
@@ -37,14 +36,14 @@ namespace DTCClient
         /// <summary>
         /// Constructor for a client
         /// </summary>
-        /// <param name="server">the machine name an IP address</param>
-        /// <param name="port">the port for this client</param>
+        /// <param name="serverAddress">the machine name or an IP address for the server to which we want to connect</param>
+        /// <param name="serverPort">the port for the server to which we want to connect</param>
         /// <param name="callbackToMainThread">true means to marshal event and callbacks and returns from async methods to the current thread (current synchronization context))</param>
-        public Client(string server, int port, bool callbackToMainThread)
+        public Client(string serverAddress, int serverPort, bool callbackToMainThread)
         {
-            _server = server;
+            ServerAddress = serverAddress;
             _callbackToMainThread = callbackToMainThread;
-            Port = port;
+            ServerPort = serverPort;
             SymbolIdBySymbolExchangeCombo = new ConcurrentDictionary<string, uint>();
             SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
             _currentCodec = new CodecBinary();
@@ -77,9 +76,9 @@ namespace DTCClient
 
         public ConcurrentDictionary<uint, string> SymbolExchangeComboBySymbolId { get; set; }
 
-        public string Server => _server;
+        public string ServerAddress { get; }
 
-        public int Port { get; }
+        public int ServerPort { get; }
 
         public string ClientName { get; private set; }
 
@@ -175,7 +174,7 @@ namespace DTCClient
         private async Task<EncodingResponse> ConnectAsync(EncodingEnum requestedEncoding, int timeout = 1000, CancellationToken cancellationToken = default(CancellationToken))
         {
             _tcpClient = new TcpClient {NoDelay = true};
-            await _tcpClient.ConnectAsync(_server, Port).ConfigureAwait(_callbackToMainThread); // connect to the server
+            await _tcpClient.ConnectAsync(ServerAddress, ServerPort).ConfigureAwait(_callbackToMainThread); // connect to the server
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
             _currentCodec = new CodecBinary();
@@ -975,7 +974,7 @@ namespace DTCClient
 
         public override string ToString()
         {
-            return $"{ClientName} {_server} {Port}";
+            return $"{ClientName} {ServerAddress} {ServerPort}";
         }
 
     }
