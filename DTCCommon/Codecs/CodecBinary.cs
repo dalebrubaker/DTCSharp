@@ -666,6 +666,7 @@ namespace DTCCommon.Codecs
                     index += EXCHANGE_LENGTH;
                     historicalPriceDataRequest.RecordInterval = (HistoricalDataIntervalEnum)BitConverter.ToInt32(bytes, index);
                     index += 4;
+                    index += 4; // 4 bytes for alignment on 8-byte boundary
                     historicalPriceDataRequest.StartDateTime = BitConverter.ToInt64(bytes, index);
                     index += 8;
                     historicalPriceDataRequest.EndDateTime = BitConverter.ToInt64(bytes, index);
