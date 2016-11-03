@@ -19,39 +19,69 @@ namespace DTCServer
 {
     public class ClientHandler : IDisposable
     {
-        private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
-        private readonly TcpClient _tcpClient;
-        private readonly bool _useHeartbeat;
+        private readonly Func<ClientHandler, DTCMessageType, IMessage, Task> _callback;
+        private TcpClient _tcpClient;
+        private bool _useHeartbeat;
+        private readonly int _timeoutNoActivity;
         private bool _isDisposed;
-        private Timer _heartbeatTimer;
+        private Timer _timerHeartbeat;
+        private readonly Timer _timerNoActivity;
         private readonly string _localEndPoint;
         private ICodecDTC _currentCodec;
         private NetworkStream _networkStream;
         private BinaryWriter _binaryWriter;
         private DateTime _lastHeartbeatReceivedTime;
+        private DateTime _lastActivityTime;
         private TaskScheduler _taskSchedulerCurrContext;
-        private SynchronizationContext _synchronizationContext;
 
-        public ClientHandler(Action<ClientHandler, DTCMessageType, IMessage> callback, TcpClient tcpClient, bool useHeartbeat)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="callback">The callback to the DTC service implementation. Every request will be sent to the callback</param>
+        /// <param name="tcpClient"></param>
+        /// <param name="timeoutNoActivity">milliseconds timeout to assume disconnected if no activity</param>
+        public ClientHandler(Func<ClientHandler, DTCMessageType, IMessage, Task> callback, TcpClient tcpClient, int timeoutNoActivity)
         {
             _callback = callback;
             _tcpClient = tcpClient;
-            _useHeartbeat = useHeartbeat;
+            _timeoutNoActivity = timeoutNoActivity;
             _currentCodec = new CodecBinary();
             RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _localEndPoint = tcpClient.Client.LocalEndPoint.ToString();
+            _timerNoActivity = new Timer(timeoutNoActivity);
+            _timerNoActivity.Elapsed += TimerNoActivity_Elapsed;
+            _timerNoActivity.Start();
+
+            if (SynchronizationContext.Current != null)
+            {
+                _taskSchedulerCurrContext = TaskScheduler.FromCurrentSynchronizationContext();
+            }
+            else
+            {
+                // If there is no SyncContext for this thread (e.g. we are in a unit test
+                // or console scenario instead of running in an app), then just use the
+                // default scheduler because there is no UI thread to sync with.
+                _taskSchedulerCurrContext = TaskScheduler.Current;
+            }
         }
 
+        private void TimerNoActivity_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            if ((DateTime.Now - _lastActivityTime).TotalMilliseconds > _timeoutNoActivity)
+            {
+                Dispose();
+            }
+        }
 
         public string RemoteEndPoint { get; }
 
-        private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
             if (!_useHeartbeat)
             {
                 return;
             }
-            var maxWaitForHeartbeatTime = TimeSpan.FromMilliseconds(Math.Max(_heartbeatTimer.Interval * 2, 5000));
+            var maxWaitForHeartbeatTime = TimeSpan.FromMilliseconds(Math.Max(_timerHeartbeat.Interval * 2, 5000));
             var timeSinceHeartbeat = (DateTime.Now - _lastHeartbeatReceivedTime);
             if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
             {
@@ -61,11 +91,11 @@ namespace DTCServer
 
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat();
-            SendMessage(DTCMessageType.Heartbeat, heartbeat);
+            SendResponseAsync(DTCMessageType.Heartbeat, heartbeat);
         }
 
         /// <summary>
-        /// This method runs "forever".
+        /// This method runs "forever", reading requests and making callbacks to the _callback service.
         /// All reads and writes are done on this thread.
         /// </summary>
         /// <param name="cancellationToken"></param>
@@ -73,11 +103,10 @@ namespace DTCServer
         public async Task RunAsync(CancellationToken cancellationToken)
         {
             _taskSchedulerCurrContext = TaskScheduler.FromCurrentSynchronizationContext();
-            _synchronizationContext = SynchronizationContext.Current;
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
-            while (!cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested && _networkStream != null)
             {
                 if (!_networkStream.DataAvailable)
                 {
@@ -86,6 +115,7 @@ namespace DTCServer
                 }
 
                 // Read the header
+                _lastActivityTime = DateTime.Now;
                 var size = binaryReader.ReadUInt16();
                 var messageType = (DTCMessageType)binaryReader.ReadUInt16();
 #if DEBUG
@@ -102,31 +132,61 @@ namespace DTCServer
                         if (_useHeartbeat)
                         {
                             // start the heartbeat
-                            _heartbeatTimer = new Timer(logonRequest.HeartbeatIntervalInSeconds * 1000);
-                            _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
+                            _timerHeartbeat = new Timer(logonRequest.HeartbeatIntervalInSeconds * 1000);
+                            _timerHeartbeat.Elapsed += TimerHeartbeatElapsed;
                             _lastHeartbeatReceivedTime = DateTime.Now;
-                            _heartbeatTimer.Start();
+                            _timerHeartbeat.Start();
                         }
-                        _callback(this, messageType, logonRequest);
+                        await _callback(this, messageType, logonRequest).ConfigureAwait(true);
                         break;
                     case DTCMessageType.Heartbeat:
                         _lastHeartbeatReceivedTime = DateTime.Now;
                         var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
-                        _callback(this, messageType, heartbeat);
+                        await _callback(this, messageType, heartbeat).ConfigureAwait(true);
                         break;
                     case DTCMessageType.Logoff:
-                        if (_useHeartbeat && _heartbeatTimer != null)
+                        if (_useHeartbeat && _timerHeartbeat != null)
                         {
                             // stop the heartbeat
-                            _heartbeatTimer.Elapsed -= HeartbeatTimer_Elapsed;
-                            _heartbeatTimer.Stop();
+                            _timerHeartbeat.Elapsed -= TimerHeartbeatElapsed;
+                            _timerHeartbeat.Stop();
                         }
                         var logoff = _currentCodec.Load<Logoff>(messageType, bytes);
-                        _callback(this, messageType, logoff);
+                        await _callback(this, messageType, logoff).ConfigureAwait(true);
                         break;
                     case DTCMessageType.EncodingRequest:
+                        // This is an exception where we don't make a callback. 
+                        //     This requires an immediate response using BinaryEncoding then set the _currentCodec before another message can be processed
                         var encodingRequest = _currentCodec.Load<EncodingRequest>(messageType, bytes);
-                        _callback(this, messageType, encodingRequest);
+                        var newEncoding = EncodingEnum.BinaryEncoding;
+                        switch (encodingRequest.Encoding)
+                        {
+                            case EncodingEnum.BinaryEncoding:
+                                break;
+                            case EncodingEnum.BinaryWithVariableLengthStrings:
+                            case EncodingEnum.JsonEncoding:
+                            case EncodingEnum.JsonCompactEncoding:
+                                // not supported. Ignore
+                                break;
+                            case EncodingEnum.ProtocolBuffers:
+                                newEncoding = EncodingEnum.ProtocolBuffers;
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                        var encodingResponse = new EncodingResponse
+                        {
+                            ProtocolType = encodingRequest.ProtocolType,
+                            ProtocolVersion = encodingRequest.ProtocolVersion,
+                            Encoding = newEncoding
+                        };
+                        await SendResponseAsync(DTCMessageType.EncodingResponse, encodingResponse).ConfigureAwait(true);
+
+                        // BE SURE to set this immediately AFTER the SendResponse line above
+                        SetCurrentCodec(encodingResponse.Encoding);
+
+                        // send this to the callback for informational purposes
+                        await _callback(this, DTCMessageType.EncodingRequest, encodingRequest).ConfigureAwait(true);
                         break;
                     case DTCMessageType.MarketDataRequest:
                         break;
@@ -281,21 +341,23 @@ namespace DTCServer
             }
         }
 
+
         /// <summary>
-        /// Send the message. It will always be posted to the current synchronization context
+        /// Send the message on the _taskSchedulerCurrContext.
+        /// So you can call this from any thread, and the message will be marshalled to the thread for this class for writing.
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        public void SendMessage<T>(DTCMessageType messageType, T message) where T : IMessage
+        public Task SendResponseAsync<T>(DTCMessageType messageType, T message) where T : IMessage
         {
-            try
-            {
-                _synchronizationContext.Post(s => _currentCodec.Write(messageType, message, _binaryWriter), null);
-            }
-            catch (Exception ex)
-            {
-                throw new DTCSharpException(ex.Message);
-            }
+            var task = new Task(() => SendResponse(messageType, message));
+            task.RunSynchronously(_taskSchedulerCurrContext);
+            return Task.WhenAll(); // return completed task
+        }
+
+        public void SendResponse<T>(DTCMessageType messageType, T message) where T : IMessage
+        {
+            _currentCodec.Write(messageType, message, _binaryWriter);
         }
 
         public void Dispose()
@@ -308,10 +370,15 @@ namespace DTCServer
         {
             if (disposing && !_isDisposed)
             {
-                _heartbeatTimer?.Dispose();
+                _timerHeartbeat?.Dispose();
+                _timerNoActivity.Dispose();
+                _networkStream?.Close();
                 _networkStream?.Dispose();
+                _networkStream = null;
                 _binaryWriter?.Dispose();
+                _binaryWriter = null;
                 _tcpClient.Close();
+                _tcpClient = null;
                 _isDisposed = true;
             }
         }
@@ -322,10 +389,10 @@ namespace DTCServer
         }
 
         /// <summary>
-        /// This must be called whenever the encoding changes, right AFTER the EncodingResponse is sent to the client
+        /// This must be called whenever the encoding changes, immediately AFTER the EncodingResponse is sent to the client
         /// </summary>
         /// <param name="encoding"></param>
-        public void SetCurrentCodec(EncodingEnum encoding)
+        private void SetCurrentCodec(EncodingEnum encoding)
         {
             switch (encoding)
             {

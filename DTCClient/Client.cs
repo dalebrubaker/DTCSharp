@@ -19,19 +19,21 @@ namespace DTCClient
     public class Client : IDisposable
     {
         private readonly bool _callbackToMainThread;
-        private Timer _heartbeatTimer;
+        private readonly int _timeoutNoActivity;
+        private Timer _timerHeartbeat;
+        private readonly Timer _timerNoActivity;
         private bool _isDisposed;
         private BinaryWriter _binaryWriter;
         private TcpClient _tcpClient;
         private DateTime _lastHeartbeatReceivedTime;
+        private DateTime _lastActivityTime;
         private NetworkStream _networkStream;
         private ICodecDTC _currentCodec;
-        private CancellationTokenSource _cts;
+        private readonly CancellationTokenSource _cts;
         private int _nextRequestId;
         private uint _nextSymbolId;
         private bool _useHeartbeat;
         private readonly TaskScheduler _taskSchedulerCurrContext;
-        private readonly SynchronizationContext _synchronizationContext;
 
         /// <summary>
         /// Constructor for a client
@@ -39,17 +41,42 @@ namespace DTCClient
         /// <param name="serverAddress">the machine name or an IP address for the server to which we want to connect</param>
         /// <param name="serverPort">the port for the server to which we want to connect</param>
         /// <param name="callbackToMainThread">true means to marshal event and callbacks and returns from async methods to the current thread (current synchronization context))</param>
-        public Client(string serverAddress, int serverPort, bool callbackToMainThread)
+        /// <param name="timeoutNoActivity">milliseconds timeout to assume disconnected if no activity</param>
+        public Client(string serverAddress, int serverPort, bool callbackToMainThread, int timeoutNoActivity)
         {
             ServerAddress = serverAddress;
             _callbackToMainThread = callbackToMainThread;
+            _timeoutNoActivity = timeoutNoActivity;
             ServerPort = serverPort;
             SymbolIdBySymbolExchangeCombo = new ConcurrentDictionary<string, uint>();
             SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
             _currentCodec = new CodecBinary();
-            _taskSchedulerCurrContext = TaskScheduler.FromCurrentSynchronizationContext();
-            _synchronizationContext = SynchronizationContext.Current;
+            _cts = new CancellationTokenSource();
+            _timerNoActivity = new Timer(timeoutNoActivity);
+            _timerNoActivity.Elapsed += TimerNoActivity_Elapsed;
+
+            if (SynchronizationContext.Current != null)
+            {
+                _taskSchedulerCurrContext = TaskScheduler.FromCurrentSynchronizationContext();
+            }
+            else
+            {
+                // If there is no SyncContext for this thread (e.g. we are in a unit test
+                // or console scenario instead of running in an app), then just use the
+                // default scheduler because there is no UI thread to sync with.
+                _taskSchedulerCurrContext = TaskScheduler.Current;
+            }
         }
+
+        private void TimerNoActivity_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            if ((DateTime.Now - _lastActivityTime).TotalMilliseconds > _timeoutNoActivity)
+            {
+                Dispose();
+            }
+        }
+
+        public bool IsConnected => _tcpClient?.Connected ?? false;
 
         /// <summary>
         /// The most recent _logonResponse.
@@ -82,13 +109,13 @@ namespace DTCClient
 
         public string ClientName { get; private set; }
 
-        private void HeartbeatTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
             if (!_useHeartbeat)
             {
                 return;
             }
-            var maxWaitForHeartbeatTime = TimeSpan.FromMilliseconds(Math.Max(_heartbeatTimer.Interval * 2, 5000));
+            var maxWaitForHeartbeatTime = TimeSpan.FromMilliseconds(Math.Max(_timerHeartbeat.Interval * 2, 5000));
             var timeSinceHeartbeat = (DateTime.Now - _lastHeartbeatReceivedTime);
             if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
             {
@@ -98,7 +125,7 @@ namespace DTCClient
 
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat();
-            SendMessage(DTCMessageType.Heartbeat, heartbeat);
+            SendRequest(DTCMessageType.Heartbeat, heartbeat);
         }
 
         #region events
@@ -169,9 +196,8 @@ namespace DTCClient
         /// </summary>
         /// <param name="requestedEncoding"></param>
         /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
-        /// <param name="cancellationToken">optional token to stop receiving messages</param>
         /// <returns><c>true</c> if successful. <c>false</c> means protocol buffers are not supported by server</returns>
-        private async Task<EncodingResponse> ConnectAsync(EncodingEnum requestedEncoding, int timeout = 1000, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<EncodingResponse> ConnectAsync(EncodingEnum requestedEncoding, int timeout = 1000)
         {
             _tcpClient = new TcpClient {NoDelay = true};
             await _tcpClient.ConnectAsync(ServerAddress, ServerPort).ConfigureAwait(_callbackToMainThread); // connect to the server
@@ -182,6 +208,12 @@ namespace DTCClient
             // Fire and forget
             Task.Run(MessageReaderAsync, _cts.Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+
+            if (!_timerNoActivity.Enabled)
+            {
+                // Now we are connected, so start this timer so we can detect a stopped server even when we aren't using a heartbeat (e.g. getting historical data)
+                _timerNoActivity.Start();
+            }
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
@@ -200,9 +232,12 @@ namespace DTCClient
                 ProtocolType = "DTC",
                 ProtocolVersion = (int)DTCVersion.CurrentVersion
             };
+
+            // Give the server a bit to be able to respond
+            //await Task.Delay(100).ConfigureAwait(true);
             try
             {
-                SendMessage(DTCMessageType.EncodingRequest, encodingRequest);
+                SendRequest(DTCMessageType.EncodingRequest, encodingRequest);
             }
             catch (Exception ex)
             {
@@ -213,16 +248,16 @@ namespace DTCClient
             var startTime = DateTime.Now;
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
             {
-                await Task.Delay(1, cancellationToken).ConfigureAwait(_callbackToMainThread);
+                await Task.Delay(1).ConfigureAwait(_callbackToMainThread);
             }
             return result;
         }
 
         /// <summary>
-        /// Start a TCP connection and send a Logon request to the server. 
+        /// Call this method AFTER calling ConnectAsync() to make the connection
+        /// Send a Logon request to the server. 
         /// If not useHeartbeat, won't do a heartbeat. See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
         /// </summary>
-        /// <param name="requestedEncoding"></param>
         /// <param name="heartbeatIntervalInSeconds">The interval in seconds that each side, the Client and the Server, needs to use to send HEARTBEAT messages to the other side. This should be a value from anywhere from 5 to 60 seconds.</param>
         /// <param name="useHeartbeat"><c>true</c>no heartbeat sent to server and none checked from server</param>
         /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
@@ -235,31 +270,20 @@ namespace DTCClient
         /// <param name="tradeMode">optional to indicate to the Server that the requested trading mode to be one of the following: Demo, Simulated, Live.</param>
         /// <param name="tradeAccount">optional identifier if that is required to login</param>
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
-        /// <param name="cancellationTokenSource"></param>
         /// <returns>The LogonResponse, or null if not received before timeout</returns>
-        public async Task<LogonResponse> LogonAsync(EncodingEnum requestedEncoding, int heartbeatIntervalInSeconds, bool useHeartbeat = true,
+        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, bool useHeartbeat = true,
             int timeout = 1000, string clientName = "", string userName = "", string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0,
-            TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", string hardwareIdentifier = "",
-            CancellationTokenSource cancellationTokenSource = null)
+            TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", string hardwareIdentifier = "")
         {
             _useHeartbeat = useHeartbeat;
             ClientName = clientName;
-
-            // Make a connection
-            _cts = cancellationTokenSource ?? new CancellationTokenSource();
-            var encodingResponse = await ConnectAsync(requestedEncoding, timeout, _cts.Token).ConfigureAwait(_callbackToMainThread);
-            if (encodingResponse == null)
-            {
-                // timed out
-                return null;
-            }
             if (_useHeartbeat)
             {
                 // start the heartbeat
-                _heartbeatTimer = new Timer(heartbeatIntervalInSeconds * 1000);
-                _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
+                _timerHeartbeat = new Timer(heartbeatIntervalInSeconds * 1000);
+                _timerHeartbeat.Elapsed += TimerHeartbeatElapsed;
                 _lastHeartbeatReceivedTime = DateTime.Now;
-                _heartbeatTimer.Start();
+                _timerHeartbeat.Start();
             }
 
             // Set up the handler to capture the event
@@ -287,7 +311,7 @@ namespace DTCClient
                 TradeAccount = tradeAccount,
                 TradeMode = tradeMode
             };
-            SendMessage(DTCMessageType.LogonRequest, logonRequest);
+            SendRequest(DTCMessageType.LogonRequest, logonRequest);
 
             // Wait until the response is received or until timeout
             var startTime = DateTime.Now;
@@ -375,7 +399,7 @@ namespace DTCClient
                 RequestDividendAdjustedStockData = requestDividendAdjustedStockData ? 1U : 0,
                 Flag1 = flag1 ? 1U : 0,
             };
-            SendMessage(DTCMessageType.HistoricalPriceDataRequest, request);
+            SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
 
             // Wait until timeout or reject or response is received
             var startTime = DateTime.Now; // for checking timeout
@@ -411,7 +435,7 @@ namespace DTCClient
                 RequestID = NextRequestId,
                 Symbol = symbol
             };
-            SendMessage(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
+            SendRequest(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
 
             // Wait until the response is received or until timeout
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
@@ -505,7 +529,7 @@ namespace DTCClient
                 Symbol = symbol,
                 Exchange = exchange
             };
-            SendMessage(DTCMessageType.MarketDataRequest, request);
+            SendRequest(DTCMessageType.MarketDataRequest, request);
             return symbolId;
         }
 
@@ -516,7 +540,7 @@ namespace DTCClient
                 RequestAction = RequestActionEnum.Unsubscribe,
                 SymbolID = symbolId,
             };
-            SendMessage(DTCMessageType.MarketDataRequest, request);
+            SendRequest(DTCMessageType.MarketDataRequest, request);
         }
 
         /// <summary>
@@ -598,7 +622,7 @@ namespace DTCClient
                     Symbol = symbol,
                     Exchange = exchange
                 };
-                SendMessage(DTCMessageType.MarketDataRequest, request);
+                SendRequest(DTCMessageType.MarketDataRequest, request);
 
                 // Wait until timeout or cancellation
                 var startTime = DateTime.Now; // for checking timeout
@@ -616,21 +640,22 @@ namespace DTCClient
             }
         }
 
-        /// <summary>
-        /// Send the message. It will always be posted to the current synchronization context
-        /// </summary>
-        /// <param name="messageType"></param>
-        /// <param name="message"></param>
-        public void SendMessage<T>(DTCMessageType messageType, T message) where T : IMessage
+        ///// <summary>
+        ///// Send the message on the _taskSchedulerCurrContext.
+        ///// So you can call this from any thread, and the message will be marshalled to the thread for this class for writing.
+        ///// </summary>
+        ///// <param name="messageType"></param>
+        ///// <param name="message"></param>
+        //public Task SendRequestAsync<T>(DTCMessageType messageType, T message) where T : IMessage
+        //{
+        //    var task = new Task(() => SendRequest(messageType, message));
+        //    task.RunSynchronously(_taskSchedulerCurrContext);
+        //    return Task.WhenAll(); // return completed task
+        //}
+
+        public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
-            try
-            {
-                _synchronizationContext.Post(s => _currentCodec.Write(messageType, message, _binaryWriter), null);
-            }
-            catch (Exception ex)
-            {
-                throw new DTCSharpException(ex.Message);
-            }
+            _currentCodec.Write(messageType, message, _binaryWriter);
         }
 
         private void ThrowEventImpl<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
@@ -643,7 +668,8 @@ namespace DTCClient
         {
             if (_callbackToMainThread)
             {
-                _synchronizationContext.Post(s => ThrowEventImpl(message, eventForMessage), null);
+                var task = new Task(() => ThrowEventImpl(message, eventForMessage));
+                task.RunSynchronously(_taskSchedulerCurrContext);
             }
             else
             {
@@ -657,7 +683,7 @@ namespace DTCClient
         private async Task MessageReaderAsync()
         {
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
-            while (!_cts.Token.IsCancellationRequested)
+            while (!_cts.Token.IsCancellationRequested && _networkStream != null)
             {
                 if (!_networkStream.DataAvailable)
                 {
@@ -666,6 +692,7 @@ namespace DTCClient
                 }
 
                 // Read the header
+                _lastActivityTime = DateTime.Now;
                 var size = binaryReader.ReadUInt16(); 
                 var messageType = (DTCMessageType)binaryReader.ReadUInt16();
 #if DEBUG
@@ -963,11 +990,16 @@ namespace DTCClient
         {
             if (disposing && !_isDisposed)
             {
-                _heartbeatTimer?.Dispose();
+                _timerHeartbeat?.Dispose();
+                _timerNoActivity.Dispose();
                 _cts?.Cancel();
+                _networkStream.Close();
                 _networkStream?.Dispose();
+                _networkStream = null;
                 _binaryWriter?.Dispose();
+                _binaryWriter = null;
                 _tcpClient.Close();
+                _tcpClient = null;
                 _isDisposed = true;
             }
         }

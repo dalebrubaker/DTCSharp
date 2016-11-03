@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DTCClient;
-using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
 
@@ -34,13 +33,15 @@ namespace TestClient
 
         private void Form1_Disposed(object sender, EventArgs e)
         {
-            DisposeClient();
+            DisposeClientAsync();
         }
 
-        private void DisposeClient()
+        private async Task DisposeClientAsync()
         {
             if (_client != null)
             {
+                // Wait for pending message to finish
+                await Task.Delay(100).ConfigureAwait(false);
                 UnregisterClientEvents(_client);
                 _client.Dispose();
                 _client = null;
@@ -70,8 +71,8 @@ namespace TestClient
 
         private async void btnConnect_Click(object sender, EventArgs e)
         {
-            DisposeClient(); // remove the old client just in case it was missed elsewhere
-            _client = new Client(txtServer.Text, PortListener, callbackToMainThread:true);
+            await DisposeClientAsync().ConfigureAwait(true); // remove the old client just in case it was missed elsewhere
+            _client = new Client(txtServer.Text, PortListener, callbackToMainThread:true, timeoutNoActivity:30000);
             RegisterClientEvents(_client);
             var clientName = "TestClient";
             try
@@ -79,8 +80,16 @@ namespace TestClient
                 const int heartbeatIntervalInSeconds = 10;
                 const int timeout = 5000;
                 const bool useHeartbeat = true;
-                var response = await _client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, useHeartbeat, timeout, 
-                    clientName, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
+
+                // Make a connection
+                var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, timeout).ConfigureAwait(true);
+                if (encodingResponse == null)
+                {
+                    // timed out
+                    MessageBox.Show("Timed out trying to connect.");
+                    return;
+                }
+                var response = await _client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, clientName, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
                 if (response == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
@@ -97,15 +106,15 @@ namespace TestClient
                         break;
                     case LogonStatusEnum.LogonErrorNoReconnect:
                         logControlConnect.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
-                        DisposeClient();
+                        await DisposeClientAsync().ConfigureAwait(false);
                         break;
                     case LogonStatusEnum.LogonError:
                         logControlConnect.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}.");
-                        DisposeClient();
+                        await DisposeClientAsync().ConfigureAwait(false);
                         break;
                     case LogonStatusEnum.LogonReconnectNewAddress:
                         logControlConnect.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
-                        DisposeClient();
+                        await DisposeClientAsync().ConfigureAwait(false);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -378,9 +387,11 @@ namespace TestClient
                 DoNotReconnect = 1,
                 Reason = "User disconnected"
             };
-            _client?.SendMessage(DTCMessageType.Logoff, logoffRequest);
-            await Task.Delay(100);
-            DisposeClient();
+            if (_client != null)
+            {
+                _client.SendRequest(DTCMessageType.Logoff, logoffRequest);
+                await DisposeClientAsync().ConfigureAwait(false);
+            }
         }
 
         private void btnExchanges_Click(object sender, EventArgs e)
@@ -391,7 +402,7 @@ namespace TestClient
                 RequestID = _client.NextRequestId
             };
             logControlSymbols.LogMessage($"Sent exchangeListRequest, RequestID={exchangeListRequest.RequestID}");
-            _client.SendMessage(DTCMessageType.ExchangeListRequest, exchangeListRequest);
+            _client.SendRequest(DTCMessageType.ExchangeListRequest, exchangeListRequest);
             if (string.IsNullOrEmpty(_client.LogonResponse.SymbolExchangeDelimiter))
             {
                 logControlSymbols.LogMessage("The LogonResponse.SymbolExchangeDelimiter is empty, so Exchanges probably aren't supported.");
@@ -435,18 +446,18 @@ namespace TestClient
 
         private async void btnGetHistoricalTicks_Click(object sender, EventArgs e)
         {
-            await RequestHistoricalDataAsync(HistoricalDataIntervalEnum.IntervalTick);
+            await RequestHistoricalDataAsync(HistoricalDataIntervalEnum.IntervalTick).ConfigureAwait(false);
         }
 
         private async void btnGetHistoricalMinutes_Click(object sender, EventArgs e)
         {
-            await RequestHistoricalDataAsync(HistoricalDataIntervalEnum.Interval1Minute);
+            await RequestHistoricalDataAsync(HistoricalDataIntervalEnum.Interval1Minute).ConfigureAwait(false);
         }
 
         private async Task RequestHistoricalDataAsync(HistoricalDataIntervalEnum recordInterval)
         {
             _historicalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>();
-            using (var client = new Client(txtServer.Text, PortHistorical, callbackToMainThread:false))
+            using (var client = new Client(txtServer.Text, PortHistorical, callbackToMainThread:false, timeoutNoActivity:30000))
             {
                 const int timeout = 5000;
                 try
@@ -454,8 +465,16 @@ namespace TestClient
                     const int heartbeatIntervalInSeconds = 10;
                     const bool useHeartbeat = false;
                     var clientName = $"HistoricalClient|{txtSymbolHistorical.Text}";
-                    var response = await client.LogonAsync(EncodingEnum.ProtocolBuffers, heartbeatIntervalInSeconds, useHeartbeat, timeout, clientName, 
-                        txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
+
+                    // Make a connection
+                    var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, timeout).ConfigureAwait(true);
+                    if (encodingResponse == null)
+                    {
+                        // timed out
+                        MessageBox.Show("Timed out trying to connect.");
+                        return;
+                    }
+                    var response = await client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, clientName, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
                     if (response == null)
                     {
                         logControlHistorical.LogMessage("Null logon response from logon attempt to " + clientName);
@@ -578,7 +597,7 @@ namespace TestClient
             try
             {
                 var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol1.Token, 5000, symbol, "", MarketDataSnapshotCallback,
-                            MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback);
+                    MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
                 if (reject != null)
                 {
                     var message = $"Subscription to {symbol} rejected: {reject.RejectText}";
@@ -601,7 +620,7 @@ namespace TestClient
             try
             {
                 var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol2.Token, 5000, symbol, "", MarketDataSnapshotCallback,
-                            MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback);
+                    MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
                 if (reject != null)
                 {
                     var message = $"Subscription to {symbol} rejected: {reject.RejectText}";

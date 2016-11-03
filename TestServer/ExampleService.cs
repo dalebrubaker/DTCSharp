@@ -7,9 +7,9 @@ using Google.Protobuf;
 namespace TestServer
 {
     /// <summary>
-    /// The server implementation that provides responses to client requests
+    /// The service implementation that provides responses to client requests.
     /// </summary>
-    public class ExampleServer
+    public class ExampleService
     {
         public event EventHandler<string> MessageEvent;
 
@@ -20,14 +20,15 @@ namespace TestServer
         }
 
         /// <summary>
-        /// This method is called for every request received by a client connected to this server
+        /// This method is called for every request received by a client connected to this server.
+        /// You must not block this thread for long, as further requests can't be received until you return from this method.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="clientHandler">The handler for a particular client connected to this server</param>
         /// <param name="messageType">the message type</param>
         /// <param name="message">the message (a Google.Protobuf message)</param>
         /// <returns></returns>
-        public void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage
+        public async Task HandleRequestAsync<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage
         {
             var clientHandlerId = clientHandler.RemoteEndPoint;
             OnMessage($"Received {messageType} from client {clientHandlerId}");
@@ -45,7 +46,7 @@ namespace TestServer
                         HistoricalPriceDataSupported = 1,
                         MarketDataSupported = 1,
                     };
-                    clientHandler.SendMessage(DTCMessageType.LogonResponse, logonResponse);
+                    clientHandler.SendResponseAsync(DTCMessageType.LogonResponse, logonResponse);
                     break;
                 case DTCMessageType.Heartbeat:
                     // do nothing
@@ -54,33 +55,9 @@ namespace TestServer
                     // do nothing
                     break;
                 case DTCMessageType.EncodingRequest:
+                    // In this SPECIAL CASE the response has already been sent to the client.
+                    // The request is then sent here for informational purposes
                     var encodingRequest = message as EncodingRequest;
-                    var newEncoding = EncodingEnum.BinaryEncoding;
-                    switch (encodingRequest.Encoding)
-                    {
-                        case EncodingEnum.BinaryEncoding:
-                            break;
-                        case EncodingEnum.BinaryWithVariableLengthStrings:
-                        case EncodingEnum.JsonEncoding:
-                        case EncodingEnum.JsonCompactEncoding:
-                            // not supported. Ignore
-                            break;
-                        case EncodingEnum.ProtocolBuffers:
-                            newEncoding = EncodingEnum.ProtocolBuffers;
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                    var encodingResponse = new EncodingResponse
-                    {
-                        ProtocolType = encodingRequest.ProtocolType,
-                        ProtocolVersion = encodingRequest.ProtocolVersion,
-                        Encoding = newEncoding
-                    };
-                    clientHandler.SendMessage(DTCMessageType.EncodingResponse, encodingResponse);
-
-                    // BE SURE to set this AFTER the SendMessage line above
-                    clientHandler.SetCurrentCodec(encodingResponse.Encoding);
                     break;
                 case DTCMessageType.MarketDataRequest:
                     break;
@@ -230,10 +207,9 @@ namespace TestServer
                 case DTCMessageType.LogonResponse:
                 case DTCMessageType.EncodingResponse:
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(HandleRequest)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(HandleRequestAsync)}.");
             }
         }
-
 
     }
 }

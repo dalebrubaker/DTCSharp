@@ -9,66 +9,176 @@ using System.Threading.Tasks;
 using DTCCommon;
 using DTCPB;
 using Google.Protobuf;
+using Timer = System.Timers.Timer;
 
 namespace DTCServer
 {
-    public class Server
+    public class Server : IDisposable
     {
         private readonly int _port;
-        private readonly int _heartbeatIntervalInSeconds;
-        private readonly bool _useHeartbeat;
-        private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
+        private readonly int _timeoutNoActivity;
+        private readonly Func<ClientHandler, DTCMessageType, IMessage, Task> _callback;
         private readonly IPAddress _ipAddress;
+        private TcpListener _tcpListener;
+        private readonly List<Task> _clientHandlerTasks;
+        private readonly List<ClientHandler> _clientHandlers; // parallel list to _clientHandlerTasks
+        private readonly Timer _timerCheckForDisconnects;
+        private bool _isDisposed;
+
 
         /// <summary>
         /// Start a TCP Listener on port at ipAddress
-        /// If not useHeartbeat, won't do a heartbeat. See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
         /// </summary>
         /// <param name="callback">the callback for all client requests</param>
         /// <param name="ipAddress"></param>
         /// <param name="port"></param>
-        /// <param name="heartbeatIntervalInSeconds">The initial interval in seconds that each side, the Client and the Server, needs to use to send HEARTBEAT messages to the other side. This should be a value from anywhere from 5 to 60 seconds.</param>
-        /// <param name="useHeartbeat"><c>true</c>no heartbeat sent to server and none checked from server</param>
-        public Server(Action<ClientHandler, DTCMessageType, IMessage> callback, IPAddress ipAddress, int port, int heartbeatIntervalInSeconds, bool useHeartbeat)
+        /// <param name="timeoutNoActivity"></param>
+        public Server(Func<ClientHandler, DTCMessageType, IMessage, Task> callback, IPAddress ipAddress, int port, int timeoutNoActivity)
         {
             _callback = callback;
             _ipAddress = ipAddress;
             _port = port;
-            _heartbeatIntervalInSeconds = heartbeatIntervalInSeconds;
-            _useHeartbeat = useHeartbeat;
+            _timeoutNoActivity = timeoutNoActivity;
+            _clientHandlerTasks = new List<Task>();
+            _clientHandlers = new List<ClientHandler>();
+            _timerCheckForDisconnects = new Timer(1000);
+            _timerCheckForDisconnects.Elapsed += TimerCheckForDisconnects_Elapsed;
+        }
+
+        private void TimerCheckForDisconnects_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            RemoveDisconnectedClientHandlers();
+        }
+
+        private void RemoveDisconnectedClientHandlers()
+        {
+            for (int i = 0; i < _clientHandlerTasks.Count; i++)
+            {
+                var task = _clientHandlerTasks[i];
+                if (task.IsCompleted)
+                {
+                    var clientHandler = _clientHandlers[i];
+                    clientHandler.Dispose(); // ClientHandler.Dispose() also closes tcpClient
+                    OnClientHandlerDisconnected(clientHandler);
+                    _clientHandlerTasks.RemoveAt(i);
+                    _clientHandlers.RemoveAt(i);
+                    i--;
+                }
+            }
+        }
+
+        public event EventHandler<EventArgs<ClientHandler>> ClientHandlerConnected;
+
+        private void OnClientHandlerConnected(ClientHandler clientHandler)
+        {
+            var temp = ClientHandlerConnected;
+            temp?.Invoke(this, new EventArgs<ClientHandler>(clientHandler));
+        }
+
+        public event EventHandler<EventArgs<ClientHandler>> ClientHandlerDisconnected;
+
+        private void OnClientHandlerDisconnected(ClientHandler clientHandler)
+        {
+            var temp = ClientHandlerDisconnected;
+            temp?.Invoke(this, new EventArgs<ClientHandler>(clientHandler));
+        }
+
+        public int NumberOfClientHandlers
+        {
+            get
+            {
+                RemoveDisconnectedClientHandlers();
+                return _clientHandlerTasks.Count;
+            }
         }
 
         /// <summary>
         /// Run until cancelled  by CancellationTokenSource.Cancel()
         /// </summary>
         /// <param name="cancellationToken"></param>
-        public async void Run(CancellationToken cancellationToken)
+        public async Task RunAsync(CancellationToken cancellationToken)
         {
-            var listener = new TcpListener(_ipAddress, _port);
-            listener.Start();
+            try
+            {
+                _tcpListener = new TcpListener(_ipAddress, _port);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            try
+            {
+                _tcpListener.Start();
+            }
+            catch (ThreadAbortException)
+            {
+                // ignore this. It means Stop() was called
+            }
+            catch (Exception ex)
+            {
+                // A SocketException might be thrown from here
+                throw;
+            }
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    var tcpClient = await listener.AcceptTcpClientAsync().ConfigureAwait(true);
+                    var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(true);
                     tcpClient.NoDelay = true;
-                    using (var clientHandler = new ClientHandler(_callback, tcpClient, _useHeartbeat))
+                    var clientHandler = new ClientHandler(_callback, tcpClient, _timeoutNoActivity);
+                    try
                     {
-                        await clientHandler.RunAsync(cancellationToken).ConfigureAwait(true);
-                    } // Dispose() also closes tcpClient
+                        var task = clientHandler.RunAsync(cancellationToken);
+                        _clientHandlerTasks.Add(task);
+                        _clientHandlers.Add(clientHandler);
+                        OnClientHandlerConnected(clientHandler);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw;
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // ignore this. It means Stop() was called
+                }
+                catch (ThreadAbortException)
+                {
+                    // ignore this. It means Stop() was called
                 }
                 catch (Exception ex)
                 {
-                    
+
                     throw;
                 }
             }
+            await Task.WhenAll(_clientHandlerTasks).ConfigureAwait(false);
         }
+
+        public void Stop()
+        {
+            _tcpListener?.Stop();
+        }
+
 
         public override string ToString()
         {
             return $"{_ipAddress}:{_port}";
         }
 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing && !_isDisposed)
+            {
+                _timerCheckForDisconnects?.Dispose();
+                _isDisposed = true;
+            }
+        }
     }
 }
