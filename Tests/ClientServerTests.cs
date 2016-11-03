@@ -44,7 +44,7 @@ namespace Tests
         private static Server StartExampleServer(int timeoutNoActivity)
         {
             var exampleService = new ExampleService();
-            var server = new Server(exampleService.HandleRequestAsync, IPAddress.Loopback, port: 54321, timeoutNoActivity: timeoutNoActivity);
+            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: timeoutNoActivity, useHeartbeat: true);
             var ctsServer = new CancellationTokenSource();
 #pragma warning disable 4014
             server.RunAsync(ctsServer.Token);
@@ -65,13 +65,13 @@ namespace Tests
         {
             var ctsServer = new CancellationTokenSource();
             var exampleService = new ExampleService();
-            using (var server = new Server(exampleService.HandleRequestAsync, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000))
+            using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000, useHeartbeat: true))
             {
 #pragma warning disable 4014
                 server.RunAsync(ctsServer.Token);
 #pragma warning restore 4014
                 await Task.Delay(100, ctsServer.Token).ConfigureAwait(false);
-                using (var server2 = new Server(exampleService.HandleRequestAsync, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000))
+                using (var server2 = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000, useHeartbeat: true))
                 {
                     await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync(ctsServer.Token)).ConfigureAwait(false);
                     await Task.Delay(100, ctsServer.Token).ConfigureAwait(false);
@@ -92,7 +92,6 @@ namespace Tests
                 EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = null;
                 clientHandlerConnected = (s, e) =>
                 {
-                    server.ClientHandlerConnected -= clientHandlerConnected; // unregister to avoid a potential memory leak
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
                     numConnects++;
@@ -103,7 +102,6 @@ namespace Tests
                 EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = null;
                 clientHandlerDisconnected = (s, e) =>
                 {
-                    server.ClientHandlerDisconnected -= clientHandlerDisconnected; // unregister to avoid a potential memory leak
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
                     numDisconnects++;
@@ -145,7 +143,6 @@ namespace Tests
                 EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = null;
                 clientHandlerConnected = (s, e) =>
                 {
-                    server.ClientHandlerConnected -= clientHandlerConnected; // unregister to avoid a potential memory leak
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
                     numConnects++;
@@ -156,7 +153,6 @@ namespace Tests
                 EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = null;
                 clientHandlerDisconnected = (s, e) =>
                 {
-                    server.ClientHandlerDisconnected -= clientHandlerDisconnected; // unregister to avoid a potential memory leak
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
                     numDisconnects++;
@@ -185,6 +181,69 @@ namespace Tests
                 _output.WriteLine($"Elapsed msecs:{elapsed2}");
                 Assert.Equal(numDisconnects, numConnects);
                 Assert.Equal(0, server.NumberOfClientHandlers);
+            }
+        }
+
+
+        [Fact]
+        public async Task ClientLogonTest()
+        {
+            int numConnects = 0;
+            int numDisconnects = 0;
+            const int timeoutNoActivity = 10000;
+            using (var server = StartExampleServer(timeoutNoActivity))
+            {
+                // Set up the handler to capture the ClientHandlerConnected event
+                EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = null;
+                clientHandlerConnected = (s, e) =>
+                {
+                    var clientHandler = e.Data;
+                    _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
+                    numConnects++;
+                };
+                server.ClientHandlerConnected += clientHandlerConnected;
+
+                // Set up the handler to capture the ClientHandlerDisconnected event
+                EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = null;
+                clientHandlerDisconnected = (s, e) =>
+                {
+                    var clientHandler = e.Data;
+                    _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
+                    numDisconnects++;
+                };
+                server.ClientHandlerDisconnected += clientHandlerDisconnected;
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity: timeoutNoActivity).ConfigureAwait(false))
+                {
+                    var sw = Stopwatch.StartNew();
+                    while (numConnects != 1 && sw.ElapsedMilliseconds < 1000)
+                    {
+                        // Wait for the client to connect
+                        await Task.Delay(1).ConfigureAwait(false);
+                    }
+                    Assert.Equal(1, server.NumberOfClientHandlers);
+
+                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 10, useHeartbeat: true, timeout: 1000, clientName: "TestClient1").ConfigureAwait(true);
+                    Assert.NotNull(loginResponse);
+
+                    // Set up the handler to capture the HeartBeat event
+                    var numHeartbeats = 0;
+                    EventHandler<EventArgs<Heartbeat>> heartbeatEvent = null;
+                    heartbeatEvent = (s, e) =>
+                    {
+                        var heartbeat = e.Data;
+                        _output.WriteLine($"Client1 received a {heartbeat}");
+                        numHeartbeats++;
+                    };
+                    client1.HeartbeatEvent += heartbeatEvent;
+                    sw.Restart();
+                    while (numHeartbeats == 0)
+                    {
+                        // Wait for the first heartbeat
+                        await Task.Delay(1).ConfigureAwait(false);
+                    }
+                    var elapsed = sw.ElapsedMilliseconds;
+                    _output.WriteLine($"Client1 received first heartbeat in {elapsed} msecs");
+                }
             }
         }
 

@@ -640,19 +640,6 @@ namespace DTCClient
             }
         }
 
-        ///// <summary>
-        ///// Send the message on the _taskSchedulerCurrContext.
-        ///// So you can call this from any thread, and the message will be marshalled to the thread for this class for writing.
-        ///// </summary>
-        ///// <param name="messageType"></param>
-        ///// <param name="message"></param>
-        //public Task SendRequestAsync<T>(DTCMessageType messageType, T message) where T : IMessage
-        //{
-        //    var task = new Task(() => SendRequest(messageType, message));
-        //    task.RunSynchronously(_taskSchedulerCurrContext);
-        //    return Task.WhenAll(); // return completed task
-        //}
-
         public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
             _currentCodec.Write(messageType, message, _binaryWriter);

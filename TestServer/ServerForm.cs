@@ -66,7 +66,7 @@ namespace TestServer
         {
             btnStartPrimary.Enabled = false;
             btnStopPrimary.Enabled = true;
-            _serverPrimary = new Server(_exampleServer.HandleRequestAsync, _ipAddress, PortListener, timeoutNoActivity:30000);
+            _serverPrimary = new Server(_exampleServer.HandleRequest, _ipAddress, PortListener, timeoutNoActivity:30000, useHeartbeat:true);
             _ctsPrimary = new CancellationTokenSource();
             await _serverPrimary.RunAsync(_ctsPrimary.Token).ConfigureAwait(false);
         }
@@ -84,7 +84,7 @@ namespace TestServer
             btnStopHistorical.Enabled = true;
             
             // useHeartbeat = false See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
-            _serverHistorical = new Server(_exampleServer.HandleRequestAsync, _ipAddress, PortListener, timeoutNoActivity: 30000);
+            _serverHistorical = new Server(_exampleServer.HandleRequest, _ipAddress, PortListener, timeoutNoActivity: 30000, useHeartbeat: true);
             _ctsHistorical = new CancellationTokenSource();
             await _serverHistorical.RunAsync(_ctsHistorical.Token).ConfigureAwait(false);
         }

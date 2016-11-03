@@ -19,7 +19,7 @@ namespace DTCServer
 {
     public class ClientHandler : IDisposable
     {
-        private readonly Func<ClientHandler, DTCMessageType, IMessage, Task> _callback;
+        private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
         private TcpClient _tcpClient;
         private bool _useHeartbeat;
         private readonly int _timeoutNoActivity;
@@ -41,11 +41,13 @@ namespace DTCServer
         /// <param name="callback">The callback to the DTC service implementation. Every request will be sent to the callback</param>
         /// <param name="tcpClient"></param>
         /// <param name="timeoutNoActivity">milliseconds timeout to assume disconnected if no activity</param>
-        public ClientHandler(Func<ClientHandler, DTCMessageType, IMessage, Task> callback, TcpClient tcpClient, int timeoutNoActivity)
+        /// <param name="useHeartbeat">Don't send heartbeats. Used for sending zipped historical data</param>
+        public ClientHandler(Action<ClientHandler, DTCMessageType, IMessage> callback, TcpClient tcpClient, int timeoutNoActivity, bool useHeartbeat)
         {
             _callback = callback;
             _tcpClient = tcpClient;
             _timeoutNoActivity = timeoutNoActivity;
+            _useHeartbeat = useHeartbeat;
             _currentCodec = new CodecBinary();
             RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _localEndPoint = tcpClient.Client.LocalEndPoint.ToString();
@@ -93,7 +95,7 @@ namespace DTCServer
 
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat();
-            SendResponseAsync(DTCMessageType.Heartbeat, heartbeat);
+            SendResponse(DTCMessageType.Heartbeat, heartbeat);
         }
 
         /// <summary>
@@ -147,12 +149,12 @@ namespace DTCServer
                             _lastHeartbeatReceivedTime = DateTime.Now;
                             _timerHeartbeat.Start();
                         }
-                        await _callback(this, messageType, logonRequest).ConfigureAwait(true);
+                        _callback(this, messageType, logonRequest);
                         break;
                     case DTCMessageType.Heartbeat:
                         _lastHeartbeatReceivedTime = DateTime.Now;
                         var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
-                        await _callback(this, messageType, heartbeat).ConfigureAwait(true);
+                        _callback(this, messageType, heartbeat);
                         break;
                     case DTCMessageType.Logoff:
                         if (_useHeartbeat && _timerHeartbeat != null)
@@ -162,7 +164,7 @@ namespace DTCServer
                             _timerHeartbeat.Stop();
                         }
                         var logoff = _currentCodec.Load<Logoff>(messageType, bytes);
-                        await _callback(this, messageType, logoff).ConfigureAwait(true);
+                        _callback(this, messageType, logoff);
                         break;
                     case DTCMessageType.EncodingRequest:
                         // This is an exception where we don't make a callback. 
@@ -190,13 +192,13 @@ namespace DTCServer
                             ProtocolVersion = encodingRequest.ProtocolVersion,
                             Encoding = newEncoding
                         };
-                        await SendResponseAsync(DTCMessageType.EncodingResponse, encodingResponse).ConfigureAwait(true);
+                        SendResponse(DTCMessageType.EncodingResponse, encodingResponse);
 
                         // BE SURE to set this immediately AFTER the SendResponse line above
                         SetCurrentCodec(encodingResponse.Encoding);
 
                         // send this to the callback for informational purposes
-                        await _callback(this, DTCMessageType.EncodingRequest, encodingRequest).ConfigureAwait(true);
+                        _callback(this, DTCMessageType.EncodingRequest, encodingRequest);
                         break;
                     case DTCMessageType.MarketDataRequest:
                         break;
@@ -349,20 +351,6 @@ namespace DTCServer
                         throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(RunAsync)}.");
                 }
             }
-        }
-
-
-        /// <summary>
-        /// Send the message on the _taskSchedulerCurrContext.
-        /// So you can call this from any thread, and the message will be marshalled to the thread for this class for writing.
-        /// </summary>
-        /// <param name="messageType"></param>
-        /// <param name="message"></param>
-        public Task SendResponseAsync<T>(DTCMessageType messageType, T message) where T : IMessage
-        {
-            var task = new Task(() => SendResponse(messageType, message));
-            task.RunSynchronously(_taskSchedulerCurrContext);
-            return Task.WhenAll(); // return completed task
         }
 
         public void SendResponse<T>(DTCMessageType messageType, T message) where T : IMessage

@@ -28,7 +28,7 @@ namespace TestServer
         /// <param name="messageType">the message type</param>
         /// <param name="message">the message (a Google.Protobuf message)</param>
         /// <returns></returns>
-        public async Task HandleRequestAsync<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage
+        public void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage
         {
             var clientHandlerId = clientHandler.RemoteEndPoint;
             OnMessage($"Received {messageType} from client {clientHandlerId}");
@@ -46,7 +46,7 @@ namespace TestServer
                         HistoricalPriceDataSupported = 1,
                         MarketDataSupported = 1,
                     };
-                    clientHandler.SendResponseAsync(DTCMessageType.LogonResponse, logonResponse);
+                    clientHandler.SendResponse(DTCMessageType.LogonResponse, logonResponse);
                     break;
                 case DTCMessageType.Heartbeat:
                     // do nothing
@@ -207,7 +207,7 @@ namespace TestServer
                 case DTCMessageType.LogonResponse:
                 case DTCMessageType.EncodingResponse:
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(HandleRequestAsync)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(HandleRequest)}.");
             }
         }
 
