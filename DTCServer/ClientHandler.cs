@@ -33,6 +33,7 @@ namespace DTCServer
         private DateTime _lastHeartbeatReceivedTime;
         private DateTime _lastActivityTime;
         private TaskScheduler _taskSchedulerCurrContext;
+        private readonly CancellationTokenSource _cts;
 
         /// <summary>
         /// 
@@ -51,6 +52,7 @@ namespace DTCServer
             _timerNoActivity = new Timer(timeoutNoActivity);
             _timerNoActivity.Elapsed += TimerNoActivity_Elapsed;
             _timerNoActivity.Start();
+            _cts = new CancellationTokenSource();
 
             if (SynchronizationContext.Current != null)
             {
@@ -106,12 +108,20 @@ namespace DTCServer
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
-            while (!cancellationToken.IsCancellationRequested && _networkStream != null)
+            while (!cancellationToken.IsCancellationRequested && !_cts.Token.IsCancellationRequested)
             {
-                if (!_networkStream.DataAvailable)
+                try
                 {
-                    await Task.Delay(1, cancellationToken).ConfigureAwait(true);
-                    continue;
+                    if (!_networkStream.DataAvailable)
+                    {
+                        await Task.Delay(1, cancellationToken).ConfigureAwait(true);
+                        continue;
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Client closed the connection
+                    return;
                 }
 
                 // Read the header
@@ -370,6 +380,7 @@ namespace DTCServer
         {
             if (disposing && !_isDisposed)
             {
+                _cts.Cancel();
                 _timerHeartbeat?.Dispose();
                 _timerNoActivity.Dispose();
                 _networkStream?.Close();
@@ -377,7 +388,7 @@ namespace DTCServer
                 _networkStream = null;
                 _binaryWriter?.Dispose();
                 _binaryWriter = null;
-                _tcpClient.Close();
+                _tcpClient?.Close();
                 _tcpClient = null;
                 _isDisposed = true;
             }

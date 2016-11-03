@@ -20,10 +20,13 @@ namespace DTCServer
         private readonly Func<ClientHandler, DTCMessageType, IMessage, Task> _callback;
         private readonly IPAddress _ipAddress;
         private TcpListener _tcpListener;
-        private readonly List<Task> _clientHandlerTasks;
-        private readonly List<ClientHandler> _clientHandlers; // parallel list to _clientHandlerTasks
         private readonly Timer _timerCheckForDisconnects;
         private bool _isDisposed;
+        private readonly CancellationTokenSource _cts;
+
+        private readonly object _lock;
+        private readonly List<Task> _clientHandlerTasks;
+        private readonly List<ClientHandler> _clientHandlers; // parallel list to _clientHandlerTasks
 
 
         /// <summary>
@@ -41,8 +44,10 @@ namespace DTCServer
             _timeoutNoActivity = timeoutNoActivity;
             _clientHandlerTasks = new List<Task>();
             _clientHandlers = new List<ClientHandler>();
+            _lock = new object();
             _timerCheckForDisconnects = new Timer(1000);
             _timerCheckForDisconnects.Elapsed += TimerCheckForDisconnects_Elapsed;
+            _cts = new CancellationTokenSource();
         }
 
         private void TimerCheckForDisconnects_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -52,11 +57,15 @@ namespace DTCServer
 
         private void RemoveDisconnectedClientHandlers()
         {
-            for (int i = 0; i < _clientHandlerTasks.Count; i++)
+            lock (_lock)
             {
-                var task = _clientHandlerTasks[i];
-                if (task.IsCompleted)
+                for (int i = 0; i < _clientHandlerTasks.Count; i++)
                 {
+                    var task = _clientHandlerTasks[i];
+                    if (!task.IsCompleted)
+                    {
+                        continue;
+                    }
                     var clientHandler = _clientHandlers[i];
                     clientHandler.Dispose(); // ClientHandler.Dispose() also closes tcpClient
                     OnClientHandlerDisconnected(clientHandler);
@@ -93,7 +102,7 @@ namespace DTCServer
         }
 
         /// <summary>
-        /// Run until cancelled  by CancellationTokenSource.Cancel()
+        /// Run until cancelled  by CancellationTokenSource.Cancel() or by Dispose()
         /// </summary>
         /// <param name="cancellationToken"></param>
         public async Task RunAsync(CancellationToken cancellationToken)
@@ -119,7 +128,7 @@ namespace DTCServer
                 // A SocketException might be thrown from here
                 throw;
             }
-            while (!cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested && !_cts.Token.IsCancellationRequested)
             {
                 try
                 {
@@ -129,8 +138,11 @@ namespace DTCServer
                     try
                     {
                         var task = clientHandler.RunAsync(cancellationToken);
-                        _clientHandlerTasks.Add(task);
-                        _clientHandlers.Add(clientHandler);
+                        lock (_lock)
+                        {
+                            _clientHandlerTasks.Add(task);
+                            _clientHandlers.Add(clientHandler);
+                        }
                         OnClientHandlerConnected(clientHandler);
                     }
                     catch (Exception ex)
@@ -155,12 +167,6 @@ namespace DTCServer
             await Task.WhenAll(_clientHandlerTasks).ConfigureAwait(false);
         }
 
-        public void Stop()
-        {
-            _tcpListener?.Stop();
-        }
-
-
         public override string ToString()
         {
             return $"{_ipAddress}:{_port}";
@@ -176,6 +182,8 @@ namespace DTCServer
         {
             if (disposing && !_isDisposed)
             {
+                _tcpListener.Stop();
+                _cts.Cancel();
                 _timerCheckForDisconnects?.Dispose();
                 _isDisposed = true;
             }

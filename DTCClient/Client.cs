@@ -998,7 +998,7 @@ namespace DTCClient
                 _networkStream = null;
                 _binaryWriter?.Dispose();
                 _binaryWriter = null;
-                _tcpClient.Close();
+                _tcpClient?.Close();
                 _tcpClient = null;
                 _isDisposed = true;
             }
