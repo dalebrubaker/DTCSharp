@@ -145,9 +145,10 @@ namespace DTCClient
             temp?.Invoke(this, new EventArgs<Error>(error));
         }
 
-        public event EventHandler<EventArgs<EncodingResponse>> EncodingResponseEvent;
         public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent;
         public event EventHandler<EventArgs<Logoff>> LogoffEvent;
+
+        public event EventHandler<EventArgs<EncodingResponse>> EncodingResponseEvent;
         public event EventHandler<EventArgs<LogonResponse>> LogonResponseEvent;
         public event EventHandler<EventArgs<MarketDataReject>> MarketDataRejectEvent;
         public event EventHandler<EventArgs<MarketDataSnapshot>> MarketDataSnapshotEvent;

@@ -11,6 +11,11 @@ namespace TestServer
     /// </summary>
     public class ExampleService
     {
+        public ExampleService()
+        {
+            
+        }
+
         public event EventHandler<string> MessageEvent;
 
         private void OnMessage(string message)
@@ -18,6 +23,8 @@ namespace TestServer
             var temp = MessageEvent;
             temp?.Invoke(this, message);
         }
+
+
 
         /// <summary>
         /// This method is called for every request received by a client connected to this server.

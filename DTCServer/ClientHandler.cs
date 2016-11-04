@@ -83,6 +83,49 @@ namespace DTCServer
 
         public string RemoteEndPoint { get; }
 
+        #region events
+        public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent;
+        public event EventHandler<EventArgs<Logoff>> LogoffEvent;
+
+        /// <summary>
+        /// This event is only thrown for informational purposes. 
+        /// HandleMessage() takes care of changing the current encoding and responding.
+        /// So do NOT respond to this event.
+        /// </summary>
+        public event EventHandler<EventArgs<EncodingRequest>> EncodingRequestEvent;
+
+
+        public event EventHandler<EventArgs<LogonRequest>> LogonRequestEvent;
+        public event EventHandler<EventArgs<MarketDataRequest>> MarketDataRequestEvent;
+        public event EventHandler<EventArgs<MarketDepthRequest>> MarketDepthRequestEvent;
+        public event EventHandler<EventArgs<SubmitNewSingleOrder>> SubmitNewSingleOrderEvent;
+        public event EventHandler<EventArgs<SubmitNewSingleOrderInt>> SubmitNewSingleOrderIntEvent;
+        public event EventHandler<EventArgs<SubmitNewOCOOrder>> SubmitNewOcoOrderEvent;
+        public event EventHandler<EventArgs<SubmitNewOCOOrderInt>> SubmitNewOcoOrderIntEvent;
+        public event EventHandler<EventArgs<CancelOrder>> CancelOrderEvent;
+        public event EventHandler<EventArgs<CancelReplaceOrder>> CancelReplaceOrderEvent;
+        public event EventHandler<EventArgs<CancelReplaceOrderInt>> CancelReplaceOrderIntEvent;
+        public event EventHandler<EventArgs<OpenOrdersRequest>> OpenOrdersRequestEvent;
+        public event EventHandler<EventArgs<HistoricalOrderFillsRequest>> HistoricalOrderFillsRequestEvent;
+        public event EventHandler<EventArgs<CurrentPositionsRequest>> CurrentPositionsRequestEvent;
+        public event EventHandler<EventArgs<TradeAccountsRequest>> TradeAccountsRequestEvent;
+        public event EventHandler<EventArgs<ExchangeListRequest>> ExchangeListRequestEvent;
+        public event EventHandler<EventArgs<SymbolsForExchangeRequest>> SymbolsForExchangeRequestEvent;
+        public event EventHandler<EventArgs<UnderlyingSymbolsForExchangeRequest>> UnderlyingSymbolsForExchangeRequestEvent;
+        public event EventHandler<EventArgs<SymbolsForUnderlyingRequest>> SymbolsForUnderlyingRequestEvent;
+        public event EventHandler<EventArgs<SecurityDefinitionForSymbolRequest>> SecurityDefinitionForSymbolRequestEvent;
+        public event EventHandler<EventArgs<SymbolSearchRequest>> SymbolSearchRequestEvent;
+        public event EventHandler<EventArgs<AccountBalanceRequest>> AccountBalanceRequestEvent;
+        public event EventHandler<EventArgs<HistoricalPriceDataRequest>> HistoricalPriceDataRequestEvent;
+
+        #endregion events
+
+        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
+        {
+            var temp = eventForMessage; // for thread safety
+            temp?.Invoke(this, new EventArgs<T>(message));
+        }
+
         private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
             if (!_useHeartbeat)
@@ -204,12 +247,12 @@ namespace DTCServer
                         _lastHeartbeatReceivedTime = DateTime.Now;
                         _timerHeartbeat.Start();
                     }
-                    _callback(this, messageType, logonRequest);
+                    ThrowEvent(logonRequest, LogonRequestEvent);
                     break;
                 case DTCMessageType.Heartbeat:
                     _lastHeartbeatReceivedTime = DateTime.Now;
                     var heartbeat = _currentCodec.Load<Heartbeat>(messageType, messageBytes);
-                    _callback(this, messageType, heartbeat);
+                    ThrowEvent(heartbeat, HeartbeatEvent);
                     break;
                 case DTCMessageType.Logoff:
                     if (_useHeartbeat && _timerHeartbeat != null)
@@ -221,7 +264,7 @@ namespace DTCServer
                         _timerHeartbeat = null;
                     }
                     var logoff = _currentCodec.Load<Logoff>(messageType, messageBytes);
-                    _callback(this, messageType, logoff);
+                    ThrowEvent(logoff, LogoffEvent);
                     break;
                 case DTCMessageType.EncodingRequest:
                     // This is an exception where we don't make a callback. 
@@ -255,157 +298,148 @@ namespace DTCServer
                     SetCurrentCodec(encodingResponse.Encoding);
 
                     // send this to the callback for informational purposes
-                    _callback(this, DTCMessageType.EncodingRequest, encodingRequest);
+                    ThrowEvent(encodingRequest, EncodingRequestEvent);
                     break;
                 case DTCMessageType.MarketDataRequest:
-                    break;
-                case DTCMessageType.MarketDataReject:
-                    break;
-                case DTCMessageType.MarketDataSnapshot:
-                    break;
-                case DTCMessageType.MarketDataSnapshotInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateTrade:
-                    break;
-                case DTCMessageType.MarketDataUpdateTradeCompact:
-                    break;
-                case DTCMessageType.MarketDataUpdateTradeInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
-                    break;
-                case DTCMessageType.MarketDataUpdateBidAsk:
-                    break;
-                case DTCMessageType.MarketDataUpdateBidAskCompact:
-                    break;
-                case DTCMessageType.MarketDataUpdateBidAskInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionOpen:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionOpenInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionHigh:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionHighInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionLow:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionLowInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionVolume:
-                    break;
-                case DTCMessageType.MarketDataUpdateOpenInterest:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionSettlement:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionSettlementInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionNumTrades:
-                    break;
-                case DTCMessageType.MarketDataUpdateTradingSessionDate:
+                    var marketDataRequest = _currentCodec.Load<MarketDataRequest>(messageType, messageBytes);
+                    ThrowEvent(marketDataRequest, MarketDataRequestEvent);
                     break;
                 case DTCMessageType.MarketDepthRequest:
-                    break;
-                case DTCMessageType.MarketDepthReject:
-                    break;
-                case DTCMessageType.MarketDepthSnapshotLevel:
-                    break;
-                case DTCMessageType.MarketDepthSnapshotLevelInt:
-                    break;
-                case DTCMessageType.MarketDepthUpdateLevel:
-                    break;
-                case DTCMessageType.MarketDepthUpdateLevelCompact:
-                    break;
-                case DTCMessageType.MarketDepthUpdateLevelInt:
-                    break;
-                case DTCMessageType.MarketDepthFullUpdate10:
-                    break;
-                case DTCMessageType.MarketDepthFullUpdate20:
-                    break;
-                case DTCMessageType.MarketDataFeedStatus:
-                    break;
-                case DTCMessageType.MarketDataFeedSymbolStatus:
+                    var marketDepthRequest = _currentCodec.Load<MarketDepthRequest>(messageType, messageBytes);
+                    ThrowEvent(marketDepthRequest, MarketDepthRequestEvent);
                     break;
                 case DTCMessageType.SubmitNewSingleOrder:
+                    var submitNewSingleOrder = _currentCodec.Load<SubmitNewSingleOrder>(messageType, messageBytes);
+                    ThrowEvent(submitNewSingleOrder, SubmitNewSingleOrderEvent);
                     break;
                 case DTCMessageType.SubmitNewSingleOrderInt:
+                    var submitNewSingleOrderInt = _currentCodec.Load<SubmitNewSingleOrderInt>(messageType, messageBytes);
+                    ThrowEvent(submitNewSingleOrderInt, SubmitNewSingleOrderIntEvent);
                     break;
                 case DTCMessageType.SubmitNewOcoOrder:
+                    var submitNewOcoOrder = _currentCodec.Load<SubmitNewOCOOrder>(messageType, messageBytes);
+                    ThrowEvent(submitNewOcoOrder, SubmitNewOcoOrderEvent);
                     break;
                 case DTCMessageType.SubmitNewOcoOrderInt:
+                    var submitNewOcoOrderInt = _currentCodec.Load<SubmitNewOCOOrderInt>(messageType, messageBytes);
+                    ThrowEvent(submitNewOcoOrderInt, SubmitNewOcoOrderIntEvent);
                     break;
                 case DTCMessageType.CancelOrder:
+                    var cancelOrder = _currentCodec.Load<CancelOrder>(messageType, messageBytes);
+                    ThrowEvent(cancelOrder, CancelOrderEvent);
                     break;
                 case DTCMessageType.CancelReplaceOrder:
+                    var cancelReplaceOrder = _currentCodec.Load<CancelReplaceOrder>(messageType, messageBytes);
+                    ThrowEvent(cancelReplaceOrder, CancelReplaceOrderEvent);
                     break;
                 case DTCMessageType.CancelReplaceOrderInt:
+                    var cancelReplaceOrderInt = _currentCodec.Load<CancelReplaceOrderInt>(messageType, messageBytes);
+                    ThrowEvent(cancelReplaceOrderInt, CancelReplaceOrderIntEvent);
                     break;
                 case DTCMessageType.OpenOrdersRequest:
-                    break;
-                case DTCMessageType.OpenOrdersReject:
-                    break;
-                case DTCMessageType.OrderUpdate:
+                    var openOrdersRequest = _currentCodec.Load<OpenOrdersRequest>(messageType, messageBytes);
+                    ThrowEvent(openOrdersRequest, OpenOrdersRequestEvent);
                     break;
                 case DTCMessageType.HistoricalOrderFillsRequest:
-                    break;
-                case DTCMessageType.HistoricalOrderFillResponse:
+                    var historicalOrderFillsRequest = _currentCodec.Load<HistoricalOrderFillsRequest>(messageType, messageBytes);
+                    ThrowEvent(historicalOrderFillsRequest, HistoricalOrderFillsRequestEvent);
                     break;
                 case DTCMessageType.CurrentPositionsRequest:
-                    break;
-                case DTCMessageType.CurrentPositionsReject:
-                    break;
-                case DTCMessageType.PositionUpdate:
+                    var currentPositionsRequest = _currentCodec.Load<CurrentPositionsRequest>(messageType, messageBytes);
+                    ThrowEvent(currentPositionsRequest, CurrentPositionsRequestEvent);
                     break;
                 case DTCMessageType.TradeAccountsRequest:
-                    break;
-                case DTCMessageType.TradeAccountResponse:
+                    var tradeAccountsRequest = _currentCodec.Load<TradeAccountsRequest>(messageType, messageBytes);
+                    ThrowEvent(tradeAccountsRequest, TradeAccountsRequestEvent);
                     break;
                 case DTCMessageType.ExchangeListRequest:
-                    break;
-                case DTCMessageType.ExchangeListResponse:
+                    var exchangeListRequest = _currentCodec.Load<ExchangeListRequest>(messageType, messageBytes);
+                    ThrowEvent(exchangeListRequest, ExchangeListRequestEvent);
                     break;
                 case DTCMessageType.SymbolsForExchangeRequest:
+                    var symbolsForExchangeRequest = _currentCodec.Load<SymbolsForExchangeRequest>(messageType, messageBytes);
+                    ThrowEvent(symbolsForExchangeRequest, SymbolsForExchangeRequestEvent);
                     break;
                 case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
+                    var underlyingSymbolsForExchangeRequest = _currentCodec.Load<UnderlyingSymbolsForExchangeRequest>(messageType, messageBytes);
+                    ThrowEvent(underlyingSymbolsForExchangeRequest, UnderlyingSymbolsForExchangeRequestEvent);
                     break;
                 case DTCMessageType.SymbolsForUnderlyingRequest:
+                    var symbolsForUnderlyingRequest = _currentCodec.Load<SymbolsForUnderlyingRequest>(messageType, messageBytes);
+                    ThrowEvent(symbolsForUnderlyingRequest, SymbolsForUnderlyingRequestEvent);
                     break;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    break;
-                case DTCMessageType.SecurityDefinitionResponse:
+                    var securityDefinitionForSymbolRequest = _currentCodec.Load<SecurityDefinitionForSymbolRequest>(messageType, messageBytes);
+                    ThrowEvent(securityDefinitionForSymbolRequest, SecurityDefinitionForSymbolRequestEvent);
                     break;
                 case DTCMessageType.SymbolSearchRequest:
-                    break;
-                case DTCMessageType.SecurityDefinitionReject:
+                    var symbolSearchRequest = _currentCodec.Load<SymbolSearchRequest>(messageType, messageBytes);
+                    ThrowEvent(symbolSearchRequest, SymbolSearchRequestEvent);
                     break;
                 case DTCMessageType.AccountBalanceRequest:
-                    break;
-                case DTCMessageType.AccountBalanceReject:
-                    break;
-                case DTCMessageType.AccountBalanceUpdate:
-                    break;
-                case DTCMessageType.UserMessage:
-                    break;
-                case DTCMessageType.GeneralLogMessage:
+                    var accountBalanceRequest = _currentCodec.Load<AccountBalanceRequest>(messageType, messageBytes);
+                    ThrowEvent(accountBalanceRequest, AccountBalanceRequestEvent);
                     break;
                 case DTCMessageType.HistoricalPriceDataRequest:
-                    break;
-                case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    break;
-                case DTCMessageType.HistoricalPriceDataReject:
-                    break;
-                case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    break;
-                case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                    break;
-                case DTCMessageType.HistoricalPriceDataRecordResponseInt:
-                    break;
-                case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
+                    var historicalPriceDataRequest = _currentCodec.Load<HistoricalPriceDataRequest>(messageType, messageBytes);
+                    ThrowEvent(historicalPriceDataRequest, HistoricalPriceDataRequestEvent);
                     break;
                 case DTCMessageType.MessageTypeUnset:
                 case DTCMessageType.LogonResponse:
                 case DTCMessageType.EncodingResponse:
+                case DTCMessageType.MarketDataReject:
+                case DTCMessageType.MarketDataSnapshot:
+                case DTCMessageType.MarketDataSnapshotInt:
+                case DTCMessageType.MarketDataUpdateTrade:
+                case DTCMessageType.MarketDataUpdateTradeCompact:
+                case DTCMessageType.MarketDataUpdateTradeInt:
+                case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
+                case DTCMessageType.MarketDataUpdateBidAsk:
+                case DTCMessageType.MarketDataUpdateBidAskCompact:
+                case DTCMessageType.MarketDataUpdateBidAskInt:
+                case DTCMessageType.MarketDataUpdateSessionOpen:
+                case DTCMessageType.MarketDataUpdateSessionOpenInt:
+                case DTCMessageType.MarketDataUpdateSessionHigh:
+                case DTCMessageType.MarketDataUpdateSessionHighInt:
+                case DTCMessageType.MarketDataUpdateSessionLow:
+                case DTCMessageType.MarketDataUpdateSessionLowInt:
+                case DTCMessageType.MarketDataUpdateSessionVolume:
+                case DTCMessageType.MarketDataUpdateOpenInterest:
+                case DTCMessageType.MarketDataUpdateSessionSettlement:
+                case DTCMessageType.MarketDataUpdateSessionSettlementInt:
+                case DTCMessageType.MarketDataUpdateSessionNumTrades:
+                case DTCMessageType.MarketDataUpdateTradingSessionDate:
+                case DTCMessageType.MarketDepthReject:
+                case DTCMessageType.MarketDepthSnapshotLevel:
+                case DTCMessageType.MarketDepthSnapshotLevelInt:
+                case DTCMessageType.MarketDepthUpdateLevel:
+                case DTCMessageType.MarketDepthUpdateLevelCompact:
+                case DTCMessageType.MarketDepthUpdateLevelInt:
+                case DTCMessageType.MarketDepthFullUpdate10:
+                case DTCMessageType.MarketDepthFullUpdate20:
+                case DTCMessageType.MarketDataFeedStatus:
+                case DTCMessageType.MarketDataFeedSymbolStatus:
+                case DTCMessageType.OpenOrdersReject:
+                case DTCMessageType.OrderUpdate:
+                case DTCMessageType.HistoricalOrderFillResponse:
+                case DTCMessageType.CurrentPositionsReject:
+                case DTCMessageType.PositionUpdate:
+                case DTCMessageType.TradeAccountResponse:
+                case DTCMessageType.ExchangeListResponse:
+                case DTCMessageType.SecurityDefinitionResponse:
+                case DTCMessageType.SecurityDefinitionReject:
+                case DTCMessageType.AccountBalanceReject:
+                case DTCMessageType.AccountBalanceUpdate:
+                case DTCMessageType.UserMessage:
+                case DTCMessageType.GeneralLogMessage:
+                case DTCMessageType.HistoricalPriceDataResponseHeader:
+                case DTCMessageType.HistoricalPriceDataReject:
+                case DTCMessageType.HistoricalPriceDataRecordResponse:
+                case DTCMessageType.HistoricalPriceDataTickRecordResponse:
+                case DTCMessageType.HistoricalPriceDataRecordResponseInt:
+                case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(RunAsync)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(HandleMessage)}.");
             }
         }
 
