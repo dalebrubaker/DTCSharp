@@ -52,10 +52,10 @@ namespace Tests
             return server;
         }
 
-        private static async Task<Client> ConnectClientAsync(int timeoutNoActivity)
+        private static async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect)
         {
             var client = new Client(IPAddress.Loopback.ToString(), serverPort: 54321, stayOnCallingThread: true, timeoutNoActivity: timeoutNoActivity);
-            var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers).ConfigureAwait(false);
+            var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers, timeoutForConnect).ConfigureAwait(false);
             Assert.Equal(EncodingEnum.ProtocolBuffers, encodingResponse.Encoding);
             return client;
         }
@@ -86,6 +86,7 @@ namespace Tests
             int numConnects = 0;
             int numDisconnects = 0;
             const int timeoutNoActivity = 100;
+            const int timeoutForConnect = 100;
             using (var server = StartExampleServer(timeoutNoActivity))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
@@ -106,9 +107,9 @@ namespace Tests
                 };
                 server.ClientDisconnected += clientHandlerDisconnected;
                 var sw = Stopwatch.StartNew();
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity: 1000).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
                 {
-                    while (numConnects != 1 && sw.ElapsedMilliseconds < 1000)
+                    while (numConnects != 1 && sw.ElapsedMilliseconds < 10000)
                     {
                         // Wait for the client to connect
                         await Task.Delay(1).ConfigureAwait(false);
@@ -135,6 +136,7 @@ namespace Tests
             int numConnects = 0;
             int numDisconnects = 0;
             const int timeoutNoActivity = 100;
+            const int timeoutForConnect = 1000;
             using (var server = StartExampleServer(timeoutNoActivity))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
@@ -155,8 +157,8 @@ namespace Tests
                 };
                 server.ClientDisconnected += clientHandlerDisconnected;
                 var sw = Stopwatch.StartNew();
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity: 1000).ConfigureAwait(false))
-                using (var client2 = await ConnectClientAsync(timeoutNoActivity: 1000).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
+                using (var client2 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
                 {
                     //while (numConnects != 2 && sw.ElapsedMilliseconds < 1000)
                     while (server.NumberOfClientHandlers != 2) // && sw.ElapsedMilliseconds < 1000)
@@ -187,6 +189,7 @@ namespace Tests
             int numConnects = 0;
             int numDisconnects = 0;
             const int timeoutNoActivity = 2000;
+            const int timeoutForConnect = 2000;
             using (var server = StartExampleServer(timeoutNoActivity))
             {
                 // Set up the handler to capture the ClientConnected event
@@ -207,7 +210,7 @@ namespace Tests
                 };
                 server.ClientDisconnected += clientDisconnected;
 
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity: timeoutNoActivity).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
                     while (numConnects != 1 && sw.ElapsedMilliseconds < 1000)
@@ -246,8 +249,9 @@ namespace Tests
         public async Task ClientDisconnectedServerDownTest()
         {
             const int timeoutNoActivity = 10000;
+            const int timeoutForConnect = 10000;
             var server = StartExampleServer(timeoutNoActivity);
-            using (var client1 = await ConnectClientAsync(timeoutNoActivity: timeoutNoActivity).ConfigureAwait(false))
+            using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
             {
                 bool isConnected = false;
                 var sw = Stopwatch.StartNew();

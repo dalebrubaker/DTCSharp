@@ -221,7 +221,7 @@ namespace DTCClient
             _currentCodec = new CodecBinary();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             // Fire and forget
-            Task.Run(() => MessageReaderAsync(), _cts.Token);
+            Task.Run(() => MessageReaderAsync(_cts.Token), _cts.Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             if (!_timerNoActivity.Enabled)
@@ -690,13 +690,18 @@ namespace DTCClient
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
         /// </summary>
-        private void MessageReaderAsync()
+        private async Task MessageReaderAsync(CancellationToken cancellationToken)
         {
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!_cts.Token.IsCancellationRequested && _networkStream != null)
             {
-                // Read the header. Blocks, because this method is running on its own thread.
-                _lastActivityTime = DateTime.Now;
+                // Read the header.
+                if (!_networkStream.DataAvailable)
+                {
+                    await Task.Delay(1, cancellationToken).ConfigureAwait(true);
+                    continue;
+                }
+
                 try
                 {
                     var size = binaryReader.ReadUInt16();
@@ -707,8 +712,8 @@ namespace DTCClient
                         var debug = 1;
                     }
 #endif
-                    var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
-                    HandleMessage(messageType, bytes, ref binaryReader);
+                    var messageBytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
+                    HandleMessage(messageType, messageBytes, ref binaryReader);
                 }
                 catch (IOException ex)
                 {
@@ -726,29 +731,30 @@ namespace DTCClient
         /// binaryReader may be changed to use a new DeflateStream if we change to zipped
         /// </summary>
         /// <param name="messageType"></param>
-        /// <param name="bytes"></param>
+        /// <param name="messageBytes"></param>
         /// <param name="binaryReader"></param>
-        private void HandleMessage(DTCMessageType messageType, byte[] bytes, ref BinaryReader binaryReader)
+        private void HandleMessage(DTCMessageType messageType, byte[] messageBytes, ref BinaryReader binaryReader)
         {
+            _lastActivityTime = DateTime.Now;
             switch (messageType)
             {
                 case DTCMessageType.LogonResponse:
-                    LogonResponse = _currentCodec.Load<LogonResponse>(messageType, bytes);
+                    LogonResponse = _currentCodec.Load<LogonResponse>(messageType, messageBytes);
                     ThrowEvent(LogonResponse, LogonResponseEvent);
                     break;
                 case DTCMessageType.Heartbeat:
                     _lastHeartbeatReceivedTime = DateTime.Now;
-                    var heartbeat = _currentCodec.Load<Heartbeat>(messageType, bytes);
+                    var heartbeat = _currentCodec.Load<Heartbeat>(messageType, messageBytes);
                     ThrowEvent(heartbeat, HeartbeatEvent);
                     break;
                 case DTCMessageType.Logoff:
-                    var logoff = _currentCodec.Load<Logoff>(messageType, bytes);
+                    var logoff = _currentCodec.Load<Logoff>(messageType, messageBytes);
                     ThrowEvent(logoff, LogoffEvent);
                     break;
                 case DTCMessageType.EncodingResponse:
                     // Note that we must use binary encoding here on the first usage after connect, 
                     //    per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
-                    var encodingResponse = _currentCodec.Load<EncodingResponse>(messageType, bytes);
+                    var encodingResponse = _currentCodec.Load<EncodingResponse>(messageType, messageBytes);
                     switch (encodingResponse.Encoding)
                     {
                         case EncodingEnum.BinaryEncoding:
@@ -767,187 +773,187 @@ namespace DTCClient
                     ThrowEvent(encodingResponse, EncodingResponseEvent);
                     break;
                 case DTCMessageType.MarketDataReject:
-                    var marketDataReject = _currentCodec.Load<MarketDataReject>(messageType, bytes);
+                    var marketDataReject = _currentCodec.Load<MarketDataReject>(messageType, messageBytes);
                     ThrowEvent(marketDataReject, MarketDataRejectEvent);
                     break;
                 case DTCMessageType.MarketDataSnapshot:
-                    var marketDataSnapshot = _currentCodec.Load<MarketDataSnapshot>(messageType, bytes);
+                    var marketDataSnapshot = _currentCodec.Load<MarketDataSnapshot>(messageType, messageBytes);
                     ThrowEvent(marketDataSnapshot, MarketDataSnapshotEvent);
                     break;
                 case DTCMessageType.MarketDataSnapshotInt:
-                    var marketDataSnapshotInt = _currentCodec.Load<MarketDataSnapshot_Int>(messageType, bytes);
+                    var marketDataSnapshotInt = _currentCodec.Load<MarketDataSnapshot_Int>(messageType, messageBytes);
                     ThrowEvent(marketDataSnapshotInt, MarketDataSnapshotIntEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateTrade:
-                    var marketDataUpdateTrade = _currentCodec.Load<MarketDataUpdateTrade>(messageType, bytes);
+                    var marketDataUpdateTrade = _currentCodec.Load<MarketDataUpdateTrade>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateTrade, MarketDataUpdateTradeEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateTradeCompact:
-                    var marketDataUpdateTradeCompact = _currentCodec.Load<MarketDataUpdateTradeCompact>(messageType, bytes);
+                    var marketDataUpdateTradeCompact = _currentCodec.Load<MarketDataUpdateTradeCompact>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateTradeCompact, MarketDataUpdateTradeCompactEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateTradeInt:
-                    var marketDataUpdateTradeInt = _currentCodec.Load<MarketDataUpdateTrade_Int>(messageType, bytes);
+                    var marketDataUpdateTradeInt = _currentCodec.Load<MarketDataUpdateTrade_Int>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateTradeInt, MarketDataUpdateTradeIntEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
-                    var marketDataUpdateLastTradeSnapshot = _currentCodec.Load<MarketDataUpdateLastTradeSnapshot>(messageType, bytes);
+                    var marketDataUpdateLastTradeSnapshot = _currentCodec.Load<MarketDataUpdateLastTradeSnapshot>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateLastTradeSnapshot, MarketDataUpdateLastTradeSnapshotEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateBidAsk:
-                    var marketDataUpdateBidAsk = _currentCodec.Load<MarketDataUpdateBidAsk>(messageType, bytes);
+                    var marketDataUpdateBidAsk = _currentCodec.Load<MarketDataUpdateBidAsk>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateBidAsk, MarketDataUpdateBidAskEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateBidAskCompact:
-                    var marketDataUpdateBidAskCompact = _currentCodec.Load<MarketDataUpdateBidAskCompact>(messageType, bytes);
+                    var marketDataUpdateBidAskCompact = _currentCodec.Load<MarketDataUpdateBidAskCompact>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateBidAskCompact, MarketDataUpdateBidAskCompactEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateBidAskInt:
-                    var marketDataUpdateBidAskInt = _currentCodec.Load<MarketDataUpdateBidAsk_Int>(messageType, bytes);
+                    var marketDataUpdateBidAskInt = _currentCodec.Load<MarketDataUpdateBidAsk_Int>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateBidAskInt, MarketDataUpdateBidAskIntEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionOpen:
-                    var marketDataUpdateSessionOpen = _currentCodec.Load<MarketDataUpdateSessionOpen>(messageType, bytes);
+                    var marketDataUpdateSessionOpen = _currentCodec.Load<MarketDataUpdateSessionOpen>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionOpen, MarketDataUpdateSessionOpenEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionOpenInt:
-                    var marketDataUpdateSessionOpenInt = _currentCodec.Load<MarketDataUpdateSessionOpen_Int>(messageType, bytes);
+                    var marketDataUpdateSessionOpenInt = _currentCodec.Load<MarketDataUpdateSessionOpen_Int>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionOpenInt, MarketDataUpdateSessionOpenIntEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionHigh:
-                    var marketDataUpdateSessionHigh = _currentCodec.Load<MarketDataUpdateSessionHigh>(messageType, bytes);
+                    var marketDataUpdateSessionHigh = _currentCodec.Load<MarketDataUpdateSessionHigh>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionHigh, MarketDataUpdateSessionHighEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionHighInt:
-                    var marketDataUpdateSessionHighInt = _currentCodec.Load<MarketDataUpdateSessionHigh_Int>(messageType, bytes);
+                    var marketDataUpdateSessionHighInt = _currentCodec.Load<MarketDataUpdateSessionHigh_Int>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionHighInt, MarketDataUpdateSessionHighIntEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionLow:
-                    var marketDataUpdateSessionLow = _currentCodec.Load<MarketDataUpdateSessionLow>(messageType, bytes);
+                    var marketDataUpdateSessionLow = _currentCodec.Load<MarketDataUpdateSessionLow>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionLow, MarketDataUpdateSessionLowEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionLowInt:
-                    var marketDataUpdateSessionLowInt = _currentCodec.Load<MarketDataUpdateSessionLow_Int>(messageType, bytes);
+                    var marketDataUpdateSessionLowInt = _currentCodec.Load<MarketDataUpdateSessionLow_Int>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionLowInt, MarketDataUpdateSessionLowIntEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionVolume:
-                    var marketDataUpdateSessionVolume = _currentCodec.Load<MarketDataUpdateSessionVolume>(messageType, bytes);
+                    var marketDataUpdateSessionVolume = _currentCodec.Load<MarketDataUpdateSessionVolume>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionVolume, MarketDataUpdateSessionVolumeEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateOpenInterest:
-                    var marketDataUpdateOpenInterest = _currentCodec.Load<MarketDataUpdateOpenInterest>(messageType, bytes);
+                    var marketDataUpdateOpenInterest = _currentCodec.Load<MarketDataUpdateOpenInterest>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateOpenInterest, MarketDataUpdateOpenInterestEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionSettlement:
-                    var marketDataUpdateSessionSettlement = _currentCodec.Load<MarketDataUpdateSessionSettlement>(messageType, bytes);
+                    var marketDataUpdateSessionSettlement = _currentCodec.Load<MarketDataUpdateSessionSettlement>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionSettlement, MarketDataUpdateSessionSettlementEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionSettlementInt:
-                    var marketDataUpdateSessionSettlementInt = _currentCodec.Load<MarketDataUpdateSessionSettlement_Int>(messageType, bytes);
+                    var marketDataUpdateSessionSettlementInt = _currentCodec.Load<MarketDataUpdateSessionSettlement_Int>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionSettlementInt, MarketDataUpdateSessionSettlementIntEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateSessionNumTrades:
-                    var marketDataUpdateSessionNumTrades = _currentCodec.Load<MarketDataUpdateSessionNumTrades>(messageType, bytes);
+                    var marketDataUpdateSessionNumTrades = _currentCodec.Load<MarketDataUpdateSessionNumTrades>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateSessionNumTrades, MarketDataUpdateSessionNumTradesEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateTradingSessionDate:
-                    var marketDataUpdateTradingSessionDate = _currentCodec.Load<MarketDataUpdateTradingSessionDate>(messageType, bytes);
+                    var marketDataUpdateTradingSessionDate = _currentCodec.Load<MarketDataUpdateTradingSessionDate>(messageType, messageBytes);
                     ThrowEvent(marketDataUpdateTradingSessionDate, MarketDataUpdateTradingSessionDateEvent);
                     break;
                 case DTCMessageType.MarketDepthReject:
-                    var marketDepthReject = _currentCodec.Load<MarketDepthReject>(messageType, bytes);
+                    var marketDepthReject = _currentCodec.Load<MarketDepthReject>(messageType, messageBytes);
                     ThrowEvent(marketDepthReject, MarketDepthRejectEvent);
                     break;
                 case DTCMessageType.MarketDepthSnapshotLevel:
-                    var marketDepthSnapshotLevel = _currentCodec.Load<MarketDepthSnapshotLevel>(messageType, bytes);
+                    var marketDepthSnapshotLevel = _currentCodec.Load<MarketDepthSnapshotLevel>(messageType, messageBytes);
                     ThrowEvent(marketDepthSnapshotLevel, MarketDepthSnapshotLevelEvent);
                     break;
                 case DTCMessageType.MarketDepthSnapshotLevelInt:
-                    var marketDepthSnapshotLevelInt = _currentCodec.Load<MarketDepthSnapshotLevel_Int>(messageType, bytes);
+                    var marketDepthSnapshotLevelInt = _currentCodec.Load<MarketDepthSnapshotLevel_Int>(messageType, messageBytes);
                     ThrowEvent(marketDepthSnapshotLevelInt, MarketDepthSnapshotLevelIntEvent);
                     break;
                 case DTCMessageType.MarketDepthUpdateLevel:
-                    var marketDepthUpdateLevel = _currentCodec.Load<MarketDepthUpdateLevel>(messageType, bytes);
+                    var marketDepthUpdateLevel = _currentCodec.Load<MarketDepthUpdateLevel>(messageType, messageBytes);
                     ThrowEvent(marketDepthUpdateLevel, MarketDepthUpdateLevelEvent);
                     break;
                 case DTCMessageType.MarketDepthUpdateLevelCompact:
-                    var marketDepthUpdateLevelCompact = _currentCodec.Load<MarketDepthUpdateLevelCompact>(messageType, bytes);
+                    var marketDepthUpdateLevelCompact = _currentCodec.Load<MarketDepthUpdateLevelCompact>(messageType, messageBytes);
                     ThrowEvent(marketDepthUpdateLevelCompact, MarketDepthUpdateLevelCompactEvent);
                     break;
                 case DTCMessageType.MarketDepthUpdateLevelInt:
-                    var marketDepthUpdateLevelInt = _currentCodec.Load<MarketDepthUpdateLevel_Int>(messageType, bytes);
+                    var marketDepthUpdateLevelInt = _currentCodec.Load<MarketDepthUpdateLevel_Int>(messageType, messageBytes);
                     ThrowEvent(marketDepthUpdateLevelInt, MarketDepthUpdateLevelIntEvent);
                     break;
                 case DTCMessageType.MarketDepthFullUpdate10:
-                    var marketDepthFullUpdate10 = _currentCodec.Load<MarketDepthFullUpdate10>(messageType, bytes);
+                    var marketDepthFullUpdate10 = _currentCodec.Load<MarketDepthFullUpdate10>(messageType, messageBytes);
                     ThrowEvent(marketDepthFullUpdate10, MarketDepthFullUpdate10Event);
                     break;
                 case DTCMessageType.MarketDepthFullUpdate20:
-                    var marketDepthFullUpdate20 = _currentCodec.Load<MarketDepthFullUpdate20>(messageType, bytes);
+                    var marketDepthFullUpdate20 = _currentCodec.Load<MarketDepthFullUpdate20>(messageType, messageBytes);
                     ThrowEvent(marketDepthFullUpdate20, MarketDepthFullUpdate20Event);
                     break;
                 case DTCMessageType.MarketDataFeedStatus:
-                    var marketDataFeedStatus = _currentCodec.Load<MarketDataFeedStatus>(messageType, bytes);
+                    var marketDataFeedStatus = _currentCodec.Load<MarketDataFeedStatus>(messageType, messageBytes);
                     ThrowEvent(marketDataFeedStatus, MarketDataFeedStatusEvent);
                     break;
                 case DTCMessageType.MarketDataFeedSymbolStatus:
-                    var marketDataFeedSymbolStatus = _currentCodec.Load<MarketDataFeedSymbolStatus>(messageType, bytes);
+                    var marketDataFeedSymbolStatus = _currentCodec.Load<MarketDataFeedSymbolStatus>(messageType, messageBytes);
                     ThrowEvent(marketDataFeedSymbolStatus, MarketDataFeedSymbolStatusEvent);
                     break;
                 case DTCMessageType.OpenOrdersReject:
-                    var openOrdersReject = _currentCodec.Load<OpenOrdersReject>(messageType, bytes);
+                    var openOrdersReject = _currentCodec.Load<OpenOrdersReject>(messageType, messageBytes);
                     ThrowEvent(openOrdersReject, OpenOrdersRejectEvent);
                     break;
                 case DTCMessageType.OrderUpdate:
-                    var orderUpdate = _currentCodec.Load<OrderUpdate>(messageType, bytes);
+                    var orderUpdate = _currentCodec.Load<OrderUpdate>(messageType, messageBytes);
                     ThrowEvent(orderUpdate, OrderUpdateEvent);
                     break;
                 case DTCMessageType.HistoricalOrderFillResponse:
-                    var historicalOrderFillResponse = _currentCodec.Load<HistoricalOrderFillResponse>(messageType, bytes);
+                    var historicalOrderFillResponse = _currentCodec.Load<HistoricalOrderFillResponse>(messageType, messageBytes);
                     ThrowEvent(historicalOrderFillResponse, HistoricalOrderFillResponseEvent);
                     break;
                 case DTCMessageType.CurrentPositionsReject:
-                    var currentPositionsReject = _currentCodec.Load<CurrentPositionsReject>(messageType, bytes);
+                    var currentPositionsReject = _currentCodec.Load<CurrentPositionsReject>(messageType, messageBytes);
                     ThrowEvent(currentPositionsReject, CurrentPositionsRejectEvent);
                     break;
                 case DTCMessageType.PositionUpdate:
-                    var positionUpdate = _currentCodec.Load<PositionUpdate>(messageType, bytes);
+                    var positionUpdate = _currentCodec.Load<PositionUpdate>(messageType, messageBytes);
                     ThrowEvent(positionUpdate, PositionUpdateEvent);
                     break;
                 case DTCMessageType.TradeAccountResponse:
-                    var tradeAccountResponse = _currentCodec.Load<TradeAccountResponse>(messageType, bytes);
+                    var tradeAccountResponse = _currentCodec.Load<TradeAccountResponse>(messageType, messageBytes);
                     ThrowEvent(tradeAccountResponse, TradeAccountResponseEvent);
                     break;
                 case DTCMessageType.ExchangeListResponse:
-                    var exchangeListResponse = _currentCodec.Load<ExchangeListResponse>(messageType, bytes);
+                    var exchangeListResponse = _currentCodec.Load<ExchangeListResponse>(messageType, messageBytes);
                     ThrowEvent(exchangeListResponse, ExchangeListResponseEvent);
                     break;
                 case DTCMessageType.SecurityDefinitionResponse:
-                    var securityDefinitionResponse = _currentCodec.Load<SecurityDefinitionResponse>(messageType, bytes);
+                    var securityDefinitionResponse = _currentCodec.Load<SecurityDefinitionResponse>(messageType, messageBytes);
                     ThrowEvent(securityDefinitionResponse, SecurityDefinitionResponseEvent);
                     break;
                 case DTCMessageType.SecurityDefinitionReject:
-                    var securityDefinitionReject = _currentCodec.Load<SecurityDefinitionReject>(messageType, bytes);
+                    var securityDefinitionReject = _currentCodec.Load<SecurityDefinitionReject>(messageType, messageBytes);
                     ThrowEvent(securityDefinitionReject, SecurityDefinitionRejectEvent);
                     break;
                 case DTCMessageType.AccountBalanceReject:
-                    var accountBalanceReject = _currentCodec.Load<AccountBalanceReject>(messageType, bytes);
+                    var accountBalanceReject = _currentCodec.Load<AccountBalanceReject>(messageType, messageBytes);
                     ThrowEvent(accountBalanceReject, AccountBalanceRejectEvent);
                     break;
                 case DTCMessageType.AccountBalanceUpdate:
-                    var accountBalanceUpdate = _currentCodec.Load<AccountBalanceUpdate>(messageType, bytes);
+                    var accountBalanceUpdate = _currentCodec.Load<AccountBalanceUpdate>(messageType, messageBytes);
                     ThrowEvent(accountBalanceUpdate, AccountBalanceUpdateEvent);
                     break;
                 case DTCMessageType.UserMessage:
-                    var userMessage = _currentCodec.Load<UserMessage>(messageType, bytes);
+                    var userMessage = _currentCodec.Load<UserMessage>(messageType, messageBytes);
                     ThrowEvent(userMessage, UserMessageEvent);
                     break;
                 case DTCMessageType.GeneralLogMessage:
-                    var generalLogMessage = _currentCodec.Load<GeneralLogMessage>(messageType, bytes);
+                    var generalLogMessage = _currentCodec.Load<GeneralLogMessage>(messageType, messageBytes);
                     ThrowEvent(generalLogMessage, GeneralLogMessageEvent);
                     break;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    var historicalPriceDataResponseHeader = _currentCodec.Load<HistoricalPriceDataResponseHeader>(messageType, bytes);
+                    var historicalPriceDataResponseHeader = _currentCodec.Load<HistoricalPriceDataResponseHeader>(messageType, messageBytes);
                     if (historicalPriceDataResponseHeader.UseZLibCompression == 1)
                     {
                         // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
@@ -959,23 +965,23 @@ namespace DTCClient
                     ThrowEvent(historicalPriceDataResponseHeader, HistoricalPriceDataResponseHeaderEvent);
                     break;
                 case DTCMessageType.HistoricalPriceDataReject:
-                    var historicalPriceDataReject = _currentCodec.Load<HistoricalPriceDataReject>(messageType, bytes);
+                    var historicalPriceDataReject = _currentCodec.Load<HistoricalPriceDataReject>(messageType, messageBytes);
                     ThrowEvent(historicalPriceDataReject, HistoricalPriceDataRejectEvent);
                     break;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    var historicalPriceDataRecordResponse = _currentCodec.Load<HistoricalPriceDataRecordResponse>(messageType, bytes);
+                    var historicalPriceDataRecordResponse = _currentCodec.Load<HistoricalPriceDataRecordResponse>(messageType, messageBytes);
                     ThrowEvent(historicalPriceDataRecordResponse, HistoricalPriceDataRecordResponseEvent);
                     break;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                    var historicalPriceDataTickRecordResponse = _currentCodec.Load<HistoricalPriceDataTickRecordResponse>(messageType, bytes);
+                    var historicalPriceDataTickRecordResponse = _currentCodec.Load<HistoricalPriceDataTickRecordResponse>(messageType, messageBytes);
                     ThrowEvent(historicalPriceDataTickRecordResponse, HistoricalPriceDataTickRecordResponseEvent);
                     break;
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
-                    var historicalPriceDataRecordResponseInt = _currentCodec.Load<HistoricalPriceDataRecordResponse_Int>(messageType, bytes);
+                    var historicalPriceDataRecordResponseInt = _currentCodec.Load<HistoricalPriceDataRecordResponse_Int>(messageType, messageBytes);
                     ThrowEvent(historicalPriceDataRecordResponseInt, HistoricalPriceDataRecordResponseIntEvent);
                     break;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
-                    var historicalPriceDataTickRecordResponseInt = _currentCodec.Load<HistoricalPriceDataTickRecordResponse_Int>(messageType, bytes);
+                    var historicalPriceDataTickRecordResponseInt = _currentCodec.Load<HistoricalPriceDataTickRecordResponse_Int>(messageType, messageBytes);
                     ThrowEvent(historicalPriceDataTickRecordResponseInt, HistoricalPriceDataTickRecordResponseIntEvent);
                     break;
                 case DTCMessageType.MessageTypeUnset:

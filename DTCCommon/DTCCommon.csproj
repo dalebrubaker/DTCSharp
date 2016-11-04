@@ -60,6 +60,7 @@
     <Compile Include="EventToCallbackForSymbol.cs" />
     <Compile Include="Exceptions\DTCSharpException.cs" />
     <Compile Include="Extensions\DateTimeExtensions.cs" />
+    <Compile Include="Extensions\StreamExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Generated\DTCProtocol3.cs" />
     <Compile Include="MessageTypes.cs" />
