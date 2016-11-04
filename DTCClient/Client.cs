@@ -72,7 +72,7 @@ namespace DTCClient
         {
             if ((DateTime.Now - _lastActivityTime).TotalMilliseconds > _timeoutNoActivity)
             {
-                Dispose();
+                Disconnect(new Error("Too long since Server sent us anything."));
             }
         }
 
@@ -119,8 +119,7 @@ namespace DTCClient
             var timeSinceHeartbeat = (DateTime.Now - _lastHeartbeatReceivedTime);
             if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
             {
-                Dispose(true);
-                throw new DTCSharpException("Too long since Server sent us a heartbeat. Closing client: " + ClientName);
+                Disconnect(new Error("Too long since Server sent us a heartbeat."));
             }
 
             // Send a heartbeat to the server
@@ -140,7 +139,7 @@ namespace DTCClient
 
         public event EventHandler<EventArgs<Error>> Disconnected;
 
-        private void OnClientDisconnected(Error error)
+        private void OnDisconnected(Error error)
         {
             var temp = Disconnected;
             temp?.Invoke(this, new EventArgs<Error>(error));
@@ -664,8 +663,8 @@ namespace DTCClient
             }
             catch (Exception ex)
             {
-                
-                throw;
+                var error = new Error("Unable to send request", ex);
+                Disconnect(error);
             }
         }
 
@@ -1013,18 +1012,29 @@ namespace DTCClient
         {
             if (disposing && !_isDisposed)
             {
-                _timerHeartbeat?.Dispose();
-                _timerNoActivity.Dispose();
-                _cts?.Cancel();
-                _networkStream.Close();
-                _networkStream?.Dispose();
-                _networkStream = null;
-                _binaryWriter?.Dispose();
-                _binaryWriter = null;
-                _tcpClient?.Close();
-                _tcpClient = null;
+                Disconnect(new Error("Disposing"));
                 _isDisposed = true;
             }
+        }
+
+        /// <summary>
+        /// Throw the Disconnect event and close down the connection (if any) to the server
+        /// </summary>
+        /// <param name="error"></param>
+        private void Disconnect(Error error)
+        {
+            OnDisconnected(error);
+
+            _timerHeartbeat?.Dispose();
+            _timerNoActivity?.Dispose();
+            _cts?.Cancel();
+            _networkStream?.Close();
+            _networkStream?.Dispose();
+            _networkStream = null;
+            _binaryWriter?.Dispose();
+            _binaryWriter = null;
+            _tcpClient?.Close();
+            _tcpClient = null;
         }
 
         public override string ToString()

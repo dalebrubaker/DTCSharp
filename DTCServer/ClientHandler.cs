@@ -89,8 +89,7 @@ namespace DTCServer
             var timeSinceHeartbeat = (DateTime.Now - _lastHeartbeatReceivedTime);
             if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
             {
-                Dispose(true);
-                throw new DTCSharpException($"Too long since Server sent us a heartbeat. Closing clientHandler: {this}");
+                Dispose();
             }
 
             // Send a heartbeat to the server

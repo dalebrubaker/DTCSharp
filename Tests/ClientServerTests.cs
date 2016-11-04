@@ -242,7 +242,6 @@ namespace Tests
             }
         }
 
-
         [Fact]
         public async Task ClientDisconnectedServerDownTest()
         {
@@ -250,6 +249,7 @@ namespace Tests
             var server = StartExampleServer(timeoutNoActivity);
             using (var client1 = await ConnectClientAsync(timeoutNoActivity: timeoutNoActivity).ConfigureAwait(false))
             {
+                bool isConnected = false;
                 var sw = Stopwatch.StartNew();
                 while (!client1.IsConnected && sw.ElapsedMilliseconds < 1000)
                 {
@@ -261,22 +261,18 @@ namespace Tests
                 EventHandler  connected = (s, e) =>
                 {
                     _output.WriteLine($"Client is connected to {server.Address}");
+                    isConnected = true;
                 };
                 client1.Connected += connected;
 
-                // Set up the handler to capture the Connected event
+                // Set up the handler to capture the Disconnected event
                 EventHandler<EventArgs<Error>> disconnected = (s, e) =>
                 {
                     var error = e.Data;
-                    _output.WriteLine($"Client is disconnected from {server.Address}");
+                    _output.WriteLine($"Client is disconnected from {server.Address} due to {error}");
+                    isConnected = false;
                 };
                 client1.Disconnected += disconnected;
-
-                // Now kill the server
-                server.Dispose();
-
-                var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
-                Assert.NotNull(loginResponse);
 
                 // Set up the handler to capture the HeartBeat event
                 var numHeartbeats = 0;
@@ -288,16 +284,29 @@ namespace Tests
                     numHeartbeats++;
                 };
                 client1.HeartbeatEvent += heartbeatEvent;
+
+                // Now kill the server
                 sw.Restart();
-                while (numHeartbeats < 2)
+                server.Dispose();
+
+                while (server.IsConnected)
                 {
-                    // Wait for the first two heartbeats
-                    await Task.Delay(1).ConfigureAwait(false);
+                    await Task.Delay(1).ConfigureAwait(true);
                 }
-                var elapsed = sw.ElapsedMilliseconds;
-                _output.WriteLine($"Client1 received first two heartbeats in {elapsed} msecs");
+                _output.WriteLine($"server shutdown took {sw.ElapsedMilliseconds} msecs");
+
+                var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
+                Assert.NotNull(loginResponse);
+
+                while (isConnected)
+                {
+                    // wait for a client write failure
+                    await Task.Delay(1).ConfigureAwait(true);
+                }
+                _output.WriteLine($"client disconnect took {sw.ElapsedMilliseconds} msecs");
             }
         }
+
 
 
     }

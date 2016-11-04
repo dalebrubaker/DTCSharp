@@ -1,27 +1,35 @@
-﻿namespace DTCCommon
+﻿using System;
+
+namespace DTCCommon
 {
     /// <summary>
     /// This class is for returning errors
     /// </summary>
     public class Error
     {
-        /// <summary>
-        /// Optional arbitrary message
-        /// </summary>
-        public string ErrorType { get; }
-
-        public string ResultText { get; }
+        private readonly string _resultText;
+        private readonly Exception _exception;
+        private readonly string _errorType;
+        private readonly object _resultObject;
 
         /// <summary>
-        /// Optional arbitrary object
+        /// ctor
         /// </summary>
-        public object ResultObject { get; }
-
-        public Error(string errorType, string resultText, object resultObject)
+        /// <param name="resultText">The result description</param>
+        /// <param name="exception">optional exception</param>
+        /// <param name="errorType">optional error name</param>
+        /// <param name="resultObject">optional object</param>
+        public Error(string resultText, Exception exception = null, string errorType = null, object resultObject = null)
         {
-            ErrorType = errorType;
-            ResultText = resultText;
-            ResultObject = resultObject;
+            _resultText = resultText;
+            _exception = exception;
+            _errorType = errorType;
+            _resultObject = resultObject;
+        }
+
+        public override string ToString()
+        {
+            return $"{_resultText} {_exception?.Message} {_errorType}";
         }
     }
 }

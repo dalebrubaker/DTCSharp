@@ -106,6 +106,8 @@ namespace DTCServer
             }
         }
 
+        public bool IsConnected { get; private set; }
+
         /// <summary>
         /// Run until cancelled  by CancellationTokenSource.Cancel() or by Dispose()
         /// </summary>
@@ -133,6 +135,7 @@ namespace DTCServer
                 // A SocketException might be thrown from here
                 throw;
             }
+            IsConnected = true;
             while (!cancellationToken.IsCancellationRequested && !_cts.Token.IsCancellationRequested)
             {
                 try
@@ -188,6 +191,7 @@ namespace DTCServer
             if (disposing && !_isDisposed)
             {
                 _tcpListener.Stop();
+                IsConnected = false;
                 _cts.Cancel();
                 _timerCheckForDisconnects?.Dispose();
                 _isDisposed = true;
