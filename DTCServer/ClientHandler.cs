@@ -83,49 +83,6 @@ namespace DTCServer
 
         public string RemoteEndPoint { get; }
 
-        #region events
-        public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent;
-        public event EventHandler<EventArgs<Logoff>> LogoffEvent;
-
-        /// <summary>
-        /// This event is only thrown for informational purposes. 
-        /// HandleMessage() takes care of changing the current encoding and responding.
-        /// So do NOT respond to this event.
-        /// </summary>
-        public event EventHandler<EventArgs<EncodingRequest>> EncodingRequestEvent;
-
-
-        public event EventHandler<EventArgs<LogonRequest>> LogonRequestEvent;
-        public event EventHandler<EventArgs<MarketDataRequest>> MarketDataRequestEvent;
-        public event EventHandler<EventArgs<MarketDepthRequest>> MarketDepthRequestEvent;
-        public event EventHandler<EventArgs<SubmitNewSingleOrder>> SubmitNewSingleOrderEvent;
-        public event EventHandler<EventArgs<SubmitNewSingleOrderInt>> SubmitNewSingleOrderIntEvent;
-        public event EventHandler<EventArgs<SubmitNewOCOOrder>> SubmitNewOcoOrderEvent;
-        public event EventHandler<EventArgs<SubmitNewOCOOrderInt>> SubmitNewOcoOrderIntEvent;
-        public event EventHandler<EventArgs<CancelOrder>> CancelOrderEvent;
-        public event EventHandler<EventArgs<CancelReplaceOrder>> CancelReplaceOrderEvent;
-        public event EventHandler<EventArgs<CancelReplaceOrderInt>> CancelReplaceOrderIntEvent;
-        public event EventHandler<EventArgs<OpenOrdersRequest>> OpenOrdersRequestEvent;
-        public event EventHandler<EventArgs<HistoricalOrderFillsRequest>> HistoricalOrderFillsRequestEvent;
-        public event EventHandler<EventArgs<CurrentPositionsRequest>> CurrentPositionsRequestEvent;
-        public event EventHandler<EventArgs<TradeAccountsRequest>> TradeAccountsRequestEvent;
-        public event EventHandler<EventArgs<ExchangeListRequest>> ExchangeListRequestEvent;
-        public event EventHandler<EventArgs<SymbolsForExchangeRequest>> SymbolsForExchangeRequestEvent;
-        public event EventHandler<EventArgs<UnderlyingSymbolsForExchangeRequest>> UnderlyingSymbolsForExchangeRequestEvent;
-        public event EventHandler<EventArgs<SymbolsForUnderlyingRequest>> SymbolsForUnderlyingRequestEvent;
-        public event EventHandler<EventArgs<SecurityDefinitionForSymbolRequest>> SecurityDefinitionForSymbolRequestEvent;
-        public event EventHandler<EventArgs<SymbolSearchRequest>> SymbolSearchRequestEvent;
-        public event EventHandler<EventArgs<AccountBalanceRequest>> AccountBalanceRequestEvent;
-        public event EventHandler<EventArgs<HistoricalPriceDataRequest>> HistoricalPriceDataRequestEvent;
-
-        #endregion events
-
-        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
-        {
-            var temp = eventForMessage; // for thread safety
-            temp?.Invoke(this, new EventArgs<T>(message));
-        }
-
         private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
             if (!_useHeartbeat)
@@ -247,12 +204,12 @@ namespace DTCServer
                         _lastHeartbeatReceivedTime = DateTime.Now;
                         _timerHeartbeat.Start();
                     }
-                    ThrowEvent(logonRequest, LogonRequestEvent);
+                    _callback(this, messageType, logonRequest);
                     break;
                 case DTCMessageType.Heartbeat:
                     _lastHeartbeatReceivedTime = DateTime.Now;
                     var heartbeat = _currentCodec.Load<Heartbeat>(messageType, messageBytes);
-                    ThrowEvent(heartbeat, HeartbeatEvent);
+                    _callback(this, messageType, heartbeat);
                     break;
                 case DTCMessageType.Logoff:
                     if (_useHeartbeat && _timerHeartbeat != null)
@@ -264,7 +221,7 @@ namespace DTCServer
                         _timerHeartbeat = null;
                     }
                     var logoff = _currentCodec.Load<Logoff>(messageType, messageBytes);
-                    ThrowEvent(logoff, LogoffEvent);
+                    _callback(this, messageType, logoff);
                     break;
                 case DTCMessageType.EncodingRequest:
                     // This is an exception where we don't make a callback. 
@@ -298,91 +255,91 @@ namespace DTCServer
                     SetCurrentCodec(encodingResponse.Encoding);
 
                     // send this to the callback for informational purposes
-                    ThrowEvent(encodingRequest, EncodingRequestEvent);
+                    _callback(this, messageType, encodingResponse);
                     break;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = _currentCodec.Load<MarketDataRequest>(messageType, messageBytes);
-                    ThrowEvent(marketDataRequest, MarketDataRequestEvent);
+                    _callback(this, messageType, marketDataRequest);
                     break;
                 case DTCMessageType.MarketDepthRequest:
                     var marketDepthRequest = _currentCodec.Load<MarketDepthRequest>(messageType, messageBytes);
-                    ThrowEvent(marketDepthRequest, MarketDepthRequestEvent);
+                    _callback(this, messageType, marketDepthRequest);
                     break;
                 case DTCMessageType.SubmitNewSingleOrder:
                     var submitNewSingleOrder = _currentCodec.Load<SubmitNewSingleOrder>(messageType, messageBytes);
-                    ThrowEvent(submitNewSingleOrder, SubmitNewSingleOrderEvent);
+                    _callback(this, messageType, submitNewSingleOrder);
                     break;
                 case DTCMessageType.SubmitNewSingleOrderInt:
                     var submitNewSingleOrderInt = _currentCodec.Load<SubmitNewSingleOrderInt>(messageType, messageBytes);
-                    ThrowEvent(submitNewSingleOrderInt, SubmitNewSingleOrderIntEvent);
+                    _callback(this, messageType, submitNewSingleOrderInt);
                     break;
                 case DTCMessageType.SubmitNewOcoOrder:
                     var submitNewOcoOrder = _currentCodec.Load<SubmitNewOCOOrder>(messageType, messageBytes);
-                    ThrowEvent(submitNewOcoOrder, SubmitNewOcoOrderEvent);
+                    _callback(this, messageType, submitNewOcoOrder);
                     break;
                 case DTCMessageType.SubmitNewOcoOrderInt:
                     var submitNewOcoOrderInt = _currentCodec.Load<SubmitNewOCOOrderInt>(messageType, messageBytes);
-                    ThrowEvent(submitNewOcoOrderInt, SubmitNewOcoOrderIntEvent);
+                    _callback(this, messageType, submitNewOcoOrderInt);
                     break;
                 case DTCMessageType.CancelOrder:
                     var cancelOrder = _currentCodec.Load<CancelOrder>(messageType, messageBytes);
-                    ThrowEvent(cancelOrder, CancelOrderEvent);
+                    _callback(this, messageType, cancelOrder);
                     break;
                 case DTCMessageType.CancelReplaceOrder:
                     var cancelReplaceOrder = _currentCodec.Load<CancelReplaceOrder>(messageType, messageBytes);
-                    ThrowEvent(cancelReplaceOrder, CancelReplaceOrderEvent);
+                    _callback(this, messageType, cancelReplaceOrder);
                     break;
                 case DTCMessageType.CancelReplaceOrderInt:
                     var cancelReplaceOrderInt = _currentCodec.Load<CancelReplaceOrderInt>(messageType, messageBytes);
-                    ThrowEvent(cancelReplaceOrderInt, CancelReplaceOrderIntEvent);
+                    _callback(this, messageType, cancelReplaceOrderInt);
                     break;
                 case DTCMessageType.OpenOrdersRequest:
                     var openOrdersRequest = _currentCodec.Load<OpenOrdersRequest>(messageType, messageBytes);
-                    ThrowEvent(openOrdersRequest, OpenOrdersRequestEvent);
+                    _callback(this, messageType, openOrdersRequest);
                     break;
                 case DTCMessageType.HistoricalOrderFillsRequest:
                     var historicalOrderFillsRequest = _currentCodec.Load<HistoricalOrderFillsRequest>(messageType, messageBytes);
-                    ThrowEvent(historicalOrderFillsRequest, HistoricalOrderFillsRequestEvent);
+                    _callback(this, messageType, historicalOrderFillsRequest);
                     break;
                 case DTCMessageType.CurrentPositionsRequest:
                     var currentPositionsRequest = _currentCodec.Load<CurrentPositionsRequest>(messageType, messageBytes);
-                    ThrowEvent(currentPositionsRequest, CurrentPositionsRequestEvent);
+                    _callback(this, messageType, currentPositionsRequest);
                     break;
                 case DTCMessageType.TradeAccountsRequest:
                     var tradeAccountsRequest = _currentCodec.Load<TradeAccountsRequest>(messageType, messageBytes);
-                    ThrowEvent(tradeAccountsRequest, TradeAccountsRequestEvent);
+                    _callback(this, messageType, tradeAccountsRequest);
                     break;
                 case DTCMessageType.ExchangeListRequest:
                     var exchangeListRequest = _currentCodec.Load<ExchangeListRequest>(messageType, messageBytes);
-                    ThrowEvent(exchangeListRequest, ExchangeListRequestEvent);
+                    _callback(this, messageType, exchangeListRequest);
                     break;
                 case DTCMessageType.SymbolsForExchangeRequest:
                     var symbolsForExchangeRequest = _currentCodec.Load<SymbolsForExchangeRequest>(messageType, messageBytes);
-                    ThrowEvent(symbolsForExchangeRequest, SymbolsForExchangeRequestEvent);
+                    _callback(this, messageType, symbolsForExchangeRequest);
                     break;
                 case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
                     var underlyingSymbolsForExchangeRequest = _currentCodec.Load<UnderlyingSymbolsForExchangeRequest>(messageType, messageBytes);
-                    ThrowEvent(underlyingSymbolsForExchangeRequest, UnderlyingSymbolsForExchangeRequestEvent);
+                    _callback(this, messageType, underlyingSymbolsForExchangeRequest);
                     break;
                 case DTCMessageType.SymbolsForUnderlyingRequest:
                     var symbolsForUnderlyingRequest = _currentCodec.Load<SymbolsForUnderlyingRequest>(messageType, messageBytes);
-                    ThrowEvent(symbolsForUnderlyingRequest, SymbolsForUnderlyingRequestEvent);
+                    _callback(this, messageType, symbolsForUnderlyingRequest);
                     break;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
                     var securityDefinitionForSymbolRequest = _currentCodec.Load<SecurityDefinitionForSymbolRequest>(messageType, messageBytes);
-                    ThrowEvent(securityDefinitionForSymbolRequest, SecurityDefinitionForSymbolRequestEvent);
+                    _callback(this, messageType, securityDefinitionForSymbolRequest);
                     break;
                 case DTCMessageType.SymbolSearchRequest:
                     var symbolSearchRequest = _currentCodec.Load<SymbolSearchRequest>(messageType, messageBytes);
-                    ThrowEvent(symbolSearchRequest, SymbolSearchRequestEvent);
+                    _callback(this, messageType, symbolSearchRequest);
                     break;
                 case DTCMessageType.AccountBalanceRequest:
                     var accountBalanceRequest = _currentCodec.Load<AccountBalanceRequest>(messageType, messageBytes);
-                    ThrowEvent(accountBalanceRequest, AccountBalanceRequestEvent);
+                    _callback(this, messageType, accountBalanceRequest);
                     break;
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = _currentCodec.Load<HistoricalPriceDataRequest>(messageType, messageBytes);
-                    ThrowEvent(historicalPriceDataRequest, HistoricalPriceDataRequestEvent);
+                    _callback(this, messageType, historicalPriceDataRequest);
                     break;
                 case DTCMessageType.MessageTypeUnset:
                 case DTCMessageType.LogonResponse:
