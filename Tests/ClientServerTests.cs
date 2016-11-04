@@ -54,7 +54,7 @@ namespace Tests
 
         private static async Task<Client> ConnectClientAsync(int timeoutNoActivity)
         {
-            var client = new Client(IPAddress.Loopback.ToString(), serverPort: 54321, callbackToMainThread: true, timeoutNoActivity: timeoutNoActivity);
+            var client = new Client(IPAddress.Loopback.ToString(), serverPort: 54321, stayOnCallingThread: true, timeoutNoActivity: timeoutNoActivity);
             var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers).ConfigureAwait(false);
             Assert.Equal(EncodingEnum.ProtocolBuffers, encodingResponse.Encoding);
             return client;
@@ -96,7 +96,7 @@ namespace Tests
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
                     numConnects++;
                 };
-                server.ClientHandlerConnected += clientHandlerConnected;
+                server.ClientConnected += clientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
                 EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = null;
@@ -106,7 +106,7 @@ namespace Tests
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
                     numDisconnects++;
                 };
-                server.ClientHandlerDisconnected += clientHandlerDisconnected;
+                server.ClientDisconnected += clientHandlerDisconnected;
                 var sw = Stopwatch.StartNew();
                 using (var client1 = await ConnectClientAsync(timeoutNoActivity: 1000).ConfigureAwait(false))
                 {
@@ -147,7 +147,7 @@ namespace Tests
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
                     numConnects++;
                 };
-                server.ClientHandlerConnected += clientHandlerConnected;
+                server.ClientConnected += clientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
                 EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = null;
@@ -157,13 +157,13 @@ namespace Tests
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
                     numDisconnects++;
                 };
-                server.ClientHandlerDisconnected += clientHandlerDisconnected;
+                server.ClientDisconnected += clientHandlerDisconnected;
                 var sw = Stopwatch.StartNew();
                 using (var client1 = await ConnectClientAsync(timeoutNoActivity: 1000).ConfigureAwait(false))
                 using (var client2 = await ConnectClientAsync(timeoutNoActivity: 1000).ConfigureAwait(false))
                 {
                     //while (numConnects != 2 && sw.ElapsedMilliseconds < 1000)
-                    while (server.NumberOfClientHandlers != 2)// && sw.ElapsedMilliseconds < 1000)
+                    while (server.NumberOfClientHandlers != 2) // && sw.ElapsedMilliseconds < 1000)
                     {
                         // Wait for the clients to connect
                         await Task.Delay(1).ConfigureAwait(false);
@@ -186,11 +186,11 @@ namespace Tests
 
 
         [Fact]
-        public async Task ClientLogonTest()
+        public async Task ClientLogonAndHeartbeatTest()
         {
             int numConnects = 0;
             int numDisconnects = 0;
-            const int timeoutNoActivity = 10000;
+            const int timeoutNoActivity = 2000;
             using (var server = StartExampleServer(timeoutNoActivity))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
@@ -201,7 +201,7 @@ namespace Tests
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
                     numConnects++;
                 };
-                server.ClientHandlerConnected += clientHandlerConnected;
+                server.ClientConnected += clientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
                 EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = null;
@@ -211,7 +211,7 @@ namespace Tests
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
                     numDisconnects++;
                 };
-                server.ClientHandlerDisconnected += clientHandlerDisconnected;
+                server.ClientDisconnected += clientHandlerDisconnected;
                 using (var client1 = await ConnectClientAsync(timeoutNoActivity: timeoutNoActivity).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
@@ -222,7 +222,7 @@ namespace Tests
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
-                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 10, useHeartbeat: true, timeout: 1000, clientName: "TestClient1").ConfigureAwait(true);
+                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     // Set up the handler to capture the HeartBeat event
@@ -231,19 +231,30 @@ namespace Tests
                     heartbeatEvent = (s, e) =>
                     {
                         var heartbeat = e.Data;
-                        _output.WriteLine($"Client1 received a {heartbeat}");
+                        _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
                         numHeartbeats++;
                     };
                     client1.HeartbeatEvent += heartbeatEvent;
                     sw.Restart();
-                    while (numHeartbeats == 0)
+                    while (numHeartbeats < 2)
                     {
-                        // Wait for the first heartbeat
+                        // Wait for the first two heartbeats
                         await Task.Delay(1).ConfigureAwait(false);
                     }
                     var elapsed = sw.ElapsedMilliseconds;
-                    _output.WriteLine($"Client1 received first heartbeat in {elapsed} msecs");
+                    _output.WriteLine($"Client1 received first two heartbeats in {elapsed} msecs");
                 }
+            }
+        }
+
+
+        [Fact]
+        public async Task ClientDisconnectedServerDownTest()
+        {
+            const int timeoutNoActivity = 10000;
+            using (var server = StartExampleServer(timeoutNoActivity))
+            {
+
             }
         }
 

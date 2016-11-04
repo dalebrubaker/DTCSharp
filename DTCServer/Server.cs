@@ -71,7 +71,7 @@ namespace DTCServer
                     }
                     var clientHandler = _clientHandlers[i];
                     clientHandler.Dispose(); // ClientHandler.Dispose() also closes tcpClient
-                    OnClientHandlerDisconnected(clientHandler);
+                    OnClientDisconnected(clientHandler);
                     _clientHandlerTasks.RemoveAt(i);
                     _clientHandlers.RemoveAt(i);
                     i--;
@@ -79,19 +79,19 @@ namespace DTCServer
             }
         }
 
-        public event EventHandler<EventArgs<ClientHandler>> ClientHandlerConnected;
+        public event EventHandler<EventArgs<ClientHandler>> ClientConnected;
 
-        private void OnClientHandlerConnected(ClientHandler clientHandler)
+        private void OnClientConnected(ClientHandler clientHandler)
         {
-            var temp = ClientHandlerConnected;
+            var temp = ClientConnected;
             temp?.Invoke(this, new EventArgs<ClientHandler>(clientHandler));
         }
 
-        public event EventHandler<EventArgs<ClientHandler>> ClientHandlerDisconnected;
+        public event EventHandler<EventArgs<ClientHandler>> ClientDisconnected;
 
-        private void OnClientHandlerDisconnected(ClientHandler clientHandler)
+        private void OnClientDisconnected(ClientHandler clientHandler)
         {
-            var temp = ClientHandlerDisconnected;
+            var temp = ClientDisconnected;
             temp?.Invoke(this, new EventArgs<ClientHandler>(clientHandler));
         }
 
@@ -146,7 +146,7 @@ namespace DTCServer
                             _clientHandlerTasks.Add(task);
                             _clientHandlers.Add(clientHandler);
                         }
-                        OnClientHandlerConnected(clientHandler);
+                        OnClientConnected(clientHandler);
                     }
                     catch (Exception ex)
                     {

@@ -72,7 +72,7 @@ namespace TestClient
         private async void btnConnect_Click(object sender, EventArgs e)
         {
             await DisposeClientAsync().ConfigureAwait(true); // remove the old client just in case it was missed elsewhere
-            _client = new Client(txtServer.Text, PortListener, callbackToMainThread:true, timeoutNoActivity:30000);
+            _client = new Client(txtServer.Text, PortListener, stayOnCallingThread:true, timeoutNoActivity:30000);
             RegisterClientEvents(_client);
             var clientName = "TestClient";
             try
@@ -457,7 +457,7 @@ namespace TestClient
         private async Task RequestHistoricalDataAsync(HistoricalDataIntervalEnum recordInterval)
         {
             _historicalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>();
-            using (var client = new Client(txtServer.Text, PortHistorical, callbackToMainThread:false, timeoutNoActivity:30000))
+            using (var client = new Client(txtServer.Text, PortHistorical, stayOnCallingThread:false, timeoutNoActivity:30000))
             {
                 const int timeout = 5000;
                 try

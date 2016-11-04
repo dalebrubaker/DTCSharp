@@ -141,7 +141,7 @@ namespace DTCServer
                 {
                     case DTCMessageType.LogonRequest:
                         var logonRequest = _currentCodec.Load<LogonRequest>(messageType, bytes);
-                        if (_useHeartbeat)
+                        if (_useHeartbeat && _timerHeartbeat == null)
                         {
                             // start the heartbeat
                             _timerHeartbeat = new Timer(logonRequest.HeartbeatIntervalInSeconds * 1000);
@@ -162,6 +162,8 @@ namespace DTCServer
                             // stop the heartbeat
                             _timerHeartbeat.Elapsed -= TimerHeartbeatElapsed;
                             _timerHeartbeat.Stop();
+                            _timerHeartbeat.Dispose();
+                            _timerHeartbeat = null;
                         }
                         var logoff = _currentCodec.Load<Logoff>(messageType, bytes);
                         _callback(this, messageType, logoff);
