@@ -29,7 +29,6 @@ namespace DTCServer
         private readonly List<Task> _clientHandlerTasks;
         private readonly List<ClientHandler> _clientHandlers; // parallel list to _clientHandlerTasks
 
-
         /// <summary>
         /// Start a TCP Listener on port at ipAddress
         /// </summary>
@@ -51,7 +50,10 @@ namespace DTCServer
             _timerCheckForDisconnects = new Timer(1000);
             _timerCheckForDisconnects.Elapsed += TimerCheckForDisconnects_Elapsed;
             _cts = new CancellationTokenSource();
+            Address = new IPEndPoint(_ipAddress, _port).ToString();
         }
+
+        public string Address { get;  }
 
         private void TimerCheckForDisconnects_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {

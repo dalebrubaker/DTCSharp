@@ -138,11 +138,11 @@ namespace DTCClient
             temp?.Invoke(this, new EventArgs());
         }
 
-        public event EventHandler<EventArgs<Error>> ClientDisconnected;
+        public event EventHandler<EventArgs<Error>> Disconnected;
 
         private void OnClientDisconnected(Error error)
         {
-            var temp = ClientDisconnected;
+            var temp = Disconnected;
             temp?.Invoke(this, new EventArgs<Error>(error));
         }
 

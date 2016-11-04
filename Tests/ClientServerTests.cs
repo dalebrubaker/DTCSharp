@@ -89,8 +89,7 @@ namespace Tests
             using (var server = StartExampleServer(timeoutNoActivity))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = null;
-                clientHandlerConnected = (s, e) =>
+                EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = (s, e) =>
                 {
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
@@ -99,8 +98,7 @@ namespace Tests
                 server.ClientConnected += clientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = null;
-                clientHandlerDisconnected = (s, e) =>
+                EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = (s, e) =>
                 {
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
@@ -140,8 +138,7 @@ namespace Tests
             using (var server = StartExampleServer(timeoutNoActivity))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = null;
-                clientHandlerConnected = (s, e) =>
+                EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = (s, e) =>
                 {
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
@@ -150,8 +147,7 @@ namespace Tests
                 server.ClientConnected += clientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = null;
-                clientHandlerDisconnected = (s, e) =>
+                EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = (s, e) =>
                 {
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
@@ -193,25 +189,24 @@ namespace Tests
             const int timeoutNoActivity = 2000;
             using (var server = StartExampleServer(timeoutNoActivity))
             {
-                // Set up the handler to capture the ClientHandlerConnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = null;
-                clientHandlerConnected = (s, e) =>
+                // Set up the handler to capture the ClientConnected event
+                EventHandler<EventArgs<ClientHandler>> clientConnected = (s, e) =>
                 {
                     var clientHandler = e.Data;
-                    _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
+                    _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} connected to {clientHandler}");
                     numConnects++;
                 };
-                server.ClientConnected += clientHandlerConnected;
+                server.ClientConnected += clientConnected;
 
-                // Set up the handler to capture the ClientHandlerDisconnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = null;
-                clientHandlerDisconnected = (s, e) =>
+                // Set up the handler to capture the ClientDisconnected event
+                EventHandler<EventArgs<ClientHandler>> clientDisconnected = (s, e) =>
                 {
                     var clientHandler = e.Data;
-                    _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
+                    _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} disconnected from {clientHandler}");
                     numDisconnects++;
                 };
-                server.ClientDisconnected += clientHandlerDisconnected;
+                server.ClientDisconnected += clientDisconnected;
+
                 using (var client1 = await ConnectClientAsync(timeoutNoActivity: timeoutNoActivity).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
@@ -252,9 +247,55 @@ namespace Tests
         public async Task ClientDisconnectedServerDownTest()
         {
             const int timeoutNoActivity = 10000;
-            using (var server = StartExampleServer(timeoutNoActivity))
+            var server = StartExampleServer(timeoutNoActivity);
+            using (var client1 = await ConnectClientAsync(timeoutNoActivity: timeoutNoActivity).ConfigureAwait(false))
             {
+                var sw = Stopwatch.StartNew();
+                while (!client1.IsConnected && sw.ElapsedMilliseconds < 1000)
+                {
+                    // Wait for the client to connect
+                    await Task.Delay(1).ConfigureAwait(false);
+                }
 
+                // Set up the handler to capture the Connected event
+                EventHandler  connected = (s, e) =>
+                {
+                    _output.WriteLine($"Client is connected to {server.Address}");
+                };
+                client1.Connected += connected;
+
+                // Set up the handler to capture the Connected event
+                EventHandler<EventArgs<Error>> disconnected = (s, e) =>
+                {
+                    var error = e.Data;
+                    _output.WriteLine($"Client is disconnected from {server.Address}");
+                };
+                client1.Disconnected += disconnected;
+
+                // Now kill the server
+                server.Dispose();
+
+                var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
+                Assert.NotNull(loginResponse);
+
+                // Set up the handler to capture the HeartBeat event
+                var numHeartbeats = 0;
+                EventHandler<EventArgs<Heartbeat>> heartbeatEvent = null;
+                heartbeatEvent = (s, e) =>
+                {
+                    var heartbeat = e.Data;
+                    _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
+                    numHeartbeats++;
+                };
+                client1.HeartbeatEvent += heartbeatEvent;
+                sw.Restart();
+                while (numHeartbeats < 2)
+                {
+                    // Wait for the first two heartbeats
+                    await Task.Delay(1).ConfigureAwait(false);
+                }
+                var elapsed = sw.ElapsedMilliseconds;
+                _output.WriteLine($"Client1 received first two heartbeats in {elapsed} msecs");
             }
         }
 
