@@ -32,8 +32,18 @@ namespace DTCCommon.Codecs
         const int32_t CLIENT_SERVER_NAME_LENGTH = 48;
         const int32_t GENERAL_IDENTIFIER_LENGTH = 64;
 
+        /// <summary>
+        /// Write the message using binaryWriter
+        /// </summary>
+        /// <param name="messageType"></param>
+        /// <param name="message"></param>
+        /// <param name="binaryWriter">It's possible for this to become null because of stream failure and a Dispose()</param>
         public void Write<T>(DTCMessageType messageType, T message, BinaryWriter binaryWriter) where T : IMessage
         {
+            if (binaryWriter == null)
+            {
+                return;
+            }
             int sizeExcludingHeader;
             switch (messageType)
             {

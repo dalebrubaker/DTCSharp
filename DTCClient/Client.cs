@@ -221,7 +221,7 @@ namespace DTCClient
             _currentCodec = new CodecBinary();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             // Fire and forget
-            Task.Run(MessageReaderAsync, _cts.Token);
+            Task.Run(() => MessageReaderAsync(), _cts.Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             if (!_timerNoActivity.Enabled)
@@ -683,36 +683,41 @@ namespace DTCClient
             //}
             //else
             //{
-                ThrowEventImpl(message, eventForMessage);
+            ThrowEventImpl(message, eventForMessage);
             //}
         }
 
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
         /// </summary>
-        private async Task MessageReaderAsync()
+        private void MessageReaderAsync()
         {
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!_cts.Token.IsCancellationRequested && _networkStream != null)
             {
-                if (!_networkStream.DataAvailable)
-                {
-                    await Task.Delay(1, _cts.Token).ConfigureAwait(false);
-                    continue;
-                }
-
-                // Read the header
+                // Read the header. Blocks, because this method is running on its own thread.
                 _lastActivityTime = DateTime.Now;
-                var size = binaryReader.ReadUInt16(); 
-                var messageType = (DTCMessageType)binaryReader.ReadUInt16();
-#if DEBUG
-                if (messageType != DTCMessageType.Heartbeat)
+                try
                 {
-                    var debug = 1;
-                }
+                    var size = binaryReader.ReadUInt16();
+                    var messageType = (DTCMessageType)binaryReader.ReadUInt16();
+#if DEBUG
+                    if (messageType != DTCMessageType.Heartbeat)
+                    {
+                        var debug = 1;
+                    }
 #endif
-                var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
-                HandleMessage(messageType, bytes, ref binaryReader);
+                    var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
+                    HandleMessage(messageType, bytes, ref binaryReader);
+                }
+                catch (IOException ex)
+                {
+                    Disconnect(new Error("Read error.", ex));
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
             }
         }
 

@@ -16,12 +16,16 @@ namespace DTCCommon.Codecs
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        /// <param name="binaryWriter"></param>
+        /// <param name="binaryWriter">It's possible for this to become null because of stream failure and a Dispose()</param>
         public void Write<T>(DTCMessageType messageType, T message, BinaryWriter binaryWriter) where T : IMessage
         {
+            if (binaryWriter == null)
+            {
+                return;
+            }
             var bytes = message.ToByteArray();
             Utility.WriteHeader(binaryWriter, bytes.Length, messageType);
-            binaryWriter.Write(bytes);
+            binaryWriter?.Write(bytes);
         }
 
         /// <summary>

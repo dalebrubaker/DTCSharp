@@ -13,13 +13,21 @@ namespace DTCCommon
         /// <summary>
         /// Write a header
         /// </summary>
-        /// <param name="binaryWriter"></param>
+        /// <param name="binaryWriter">It's possible for this become null because of stream failure and a Dispose()</param>
         /// <param name="sizeExcludingHeader">the size EXCLUDING the header</param>
         /// <param name="messageType"></param>
         public static void WriteHeader(BinaryWriter binaryWriter, int sizeExcludingHeader, DTCMessageType messageType)
         {
-            binaryWriter.Write((ushort)(sizeExcludingHeader + 4));
-            binaryWriter.Write((ushort)messageType);
+            try
+            {
+                binaryWriter?.Write((ushort)(sizeExcludingHeader + 4));
+                binaryWriter?.Write((ushort)messageType);
+            }
+            catch (IOException)
+            {
+                // unable to write to stream
+                throw;
+            }
         }
 
         /// <summary>

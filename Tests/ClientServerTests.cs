@@ -280,21 +280,15 @@ namespace Tests
                 heartbeatEvent = (s, e) =>
                 {
                     var heartbeat = e.Data;
-                    _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
+                    _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs after server shutdown.");
                     numHeartbeats++;
                 };
                 client1.HeartbeatEvent += heartbeatEvent;
 
                 // Now kill the server
-                sw.Restart();
                 server.Dispose();
 
-                while (server.IsConnected)
-                {
-                    await Task.Delay(1).ConfigureAwait(true);
-                }
-                _output.WriteLine($"server shutdown took {sw.ElapsedMilliseconds} msecs");
-
+                sw.Restart();
                 var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
                 Assert.NotNull(loginResponse);
 

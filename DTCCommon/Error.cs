@@ -29,7 +29,7 @@ namespace DTCCommon
 
         public override string ToString()
         {
-            return $"{_resultText} {_exception?.Message} {_errorType}";
+            return $"Result:{_resultText} Exception:{_exception?.Message} ErrorType:{_errorType}";
         }
     }
 }
