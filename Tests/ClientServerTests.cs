@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
+using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
 using TestServer;
@@ -41,9 +42,12 @@ namespace Tests
             }
         }
 
-        private static Server StartExampleServer(int timeoutNoActivity)
+        private static Server StartExampleServer(int timeoutNoActivity, ExampleService exampleService = null)
         {
-            var exampleService = new ExampleService();
+            if (exampleService == null)
+            {
+                exampleService = new ExampleService();
+            }
             var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: timeoutNoActivity, useHeartbeat: true);
             var ctsServer = new CancellationTokenSource();
 #pragma warning disable 4014
@@ -305,6 +309,94 @@ namespace Tests
             }
         }
 
+
+        /// <summary>
+        /// see ClientForm.btnSubscribeCallbacks1_Click() for a WinForms example
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task MarketDataCompactTest()
+        {
+            const int timeoutNoActivity = 2000;
+            const int timeoutForConnect = 2000;
+
+            // Set up the exampleService response
+            var exampleService = new ExampleService();
+            const int numTrades = 1000;
+            for (int i = 0; i < numTrades; i++)
+            {
+                var trade = new MarketDataUpdateTradeCompact
+                {
+                    AtBidOrAsk = AtBidOrAskEnum.AtAsk,
+                    DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
+                    Price = 2000f + i,
+                    SymbolID = 1u,
+                    Volume = i + 1,
+                };
+                exampleService.MarketDataUpdateTradeCompacts.Add(trade);
+                var bidAsk = new MarketDataUpdateBidAskCompact
+                {
+                    AskPrice = 2000f + i,
+                    BidPrice = 2000f + i - 0.25f,
+                    AskQuantity = i,
+                    BidQuantity = i + 1,
+                    DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
+                    SymbolID = 1u,
+                };
+                exampleService.MarketDataUpdateBidAskCompacts.Add(bidAsk);
+            }
+            exampleService.MarketDataSnapshot = new MarketDataSnapshot
+            {
+                AskPrice = 1,
+                AskQuantity = 2,
+                BidAskDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
+                BidPrice = 3,
+                BidQuantity = 4,
+                LastTradeDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
+                LastTradePrice = 5,
+                LastTradeVolume = 6,
+                OpenInterest = 7,
+                SessionHighPrice = 8,
+            };
+
+
+            using (var server = StartExampleServer(timeoutNoActivity, exampleService))
+            {
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
+                {
+                    var sw = Stopwatch.StartNew();
+                    while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
+                    {
+                        // Wait for the client to connect
+                        await Task.Delay(1).ConfigureAwait(false);
+                    }
+                    Assert.Equal(1, server.NumberOfClientHandlers);
+
+                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
+                    Assert.NotNull(loginResponse);
+
+                    // Set up the handler to capture the HeartBeat event
+                    var numHeartbeats = 0;
+                    EventHandler<EventArgs<Heartbeat>> heartbeatEvent = null;
+                    heartbeatEvent = (s, e) =>
+                    {
+                        var heartbeat = e.Data;
+                        _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
+                        numHeartbeats++;
+                    };
+                    client1.HeartbeatEvent += heartbeatEvent;
+                    sw.Restart();
+                    while (numHeartbeats < 2)
+                    {
+                        // Wait for the first two heartbeats
+                        await Task.Delay(1).ConfigureAwait(false);
+                    }
+                    var elapsed = sw.ElapsedMilliseconds;
+                    _output.WriteLine($"Client1 received first two heartbeats in {elapsed} msecs");
+                }
+            }
+
+        }
 
 
     }

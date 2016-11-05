@@ -596,7 +596,8 @@ namespace TestClient
             var symbol = txtSymbolLevel1_1.Text;
             try
             {
-                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol1.Token, 5000, symbol, "", MarketDataSnapshotCallback,
+                const int timeout = 5000;
+                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol1.Token, timeout, symbol, "", MarketDataSnapshotCallback,
                     MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
                 if (reject != null)
                 {

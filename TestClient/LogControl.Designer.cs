@@ -39,7 +39,7 @@
             this.groupBoxLog.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBoxLog.Location = new System.Drawing.Point(0, 0);
             this.groupBoxLog.Name = "groupBoxLog";
-            this.groupBoxLog.Size = new System.Drawing.Size(315, 347);
+            this.groupBoxLog.Size = new System.Drawing.Size(363, 359);
             this.groupBoxLog.TabIndex = 0;
             this.groupBoxLog.TabStop = false;
             // 
@@ -48,7 +48,7 @@
             this.rtbMessages.Dock = System.Windows.Forms.DockStyle.Fill;
             this.rtbMessages.Location = new System.Drawing.Point(3, 16);
             this.rtbMessages.Name = "rtbMessages";
-            this.rtbMessages.Size = new System.Drawing.Size(309, 328);
+            this.rtbMessages.Size = new System.Drawing.Size(357, 340);
             this.rtbMessages.TabIndex = 1;
             this.rtbMessages.Text = "";
             // 
@@ -58,7 +58,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.groupBoxLog);
             this.Name = "LogControl";
-            this.Size = new System.Drawing.Size(315, 347);
+            this.Size = new System.Drawing.Size(363, 359);
             this.groupBoxLog.ResumeLayout(false);
             this.ResumeLayout(false);
 

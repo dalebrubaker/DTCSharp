@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using DTCCommon;
 using DTCPB;
@@ -16,6 +17,25 @@ namespace TestServer
         {
             
         }
+
+        #region PropertiesForTesting
+
+        /// <summary>
+        /// Set this to the trades to be sent as the result of a MarketDataRequest
+        /// </summary>
+        public List<MarketDataUpdateTradeCompact> MarketDataUpdateTradeCompacts { get; set; }
+
+        /// <summary>
+        /// Set this to the BidAsks to be sent as the result of a MarketDataRequest
+        /// </summary>
+        public List<MarketDataUpdateBidAskCompact> MarketDataUpdateBidAskCompacts { get; set; }
+
+        /// <summary>
+        /// Set this to the snapshot to be sent as the result of a MarketDataRequest
+        /// </summary>
+        public MarketDataSnapshot MarketDataSnapshot { get; set; }
+
+        #endregion PropertiesForTesting
 
         // These events just show a mechanism for having other parts of your server application hook up to client requests.
         #region  events
