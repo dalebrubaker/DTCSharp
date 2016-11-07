@@ -15,7 +15,8 @@ namespace TestServer
     {
         public ExampleService()
         {
-            
+            MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>();
+            MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>();
         }
 
         #region PropertiesForTesting
@@ -138,7 +139,15 @@ namespace TestServer
                     break;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = message as MarketDataRequest;
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
+                    clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, MarketDataSnapshot);
+                    foreach (var marketDataUpdateTradeCompact in MarketDataUpdateTradeCompacts)
+                    {
+                        clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact,  marketDataUpdateTradeCompact);
+                    }
+                    foreach (var marketDataUpdateBidAskCompact in MarketDataUpdateBidAskCompacts)
+                    {
+                        clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
+                    }
                     break;
                 case DTCMessageType.MarketDepthRequest:
                     var marketDepthRequest = message as MarketDepthRequest;

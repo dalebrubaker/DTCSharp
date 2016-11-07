@@ -194,7 +194,7 @@ namespace DTCServer
         {
             if (disposing && !_isDisposed)
             {
-                _tcpListener.Stop();
+                _tcpListener?.Stop();
                 IsConnected = false;
                 _cts.Cancel();
                 _timerCheckForDisconnects?.Dispose();

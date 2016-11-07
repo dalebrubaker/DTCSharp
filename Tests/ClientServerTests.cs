@@ -314,89 +314,115 @@ namespace Tests
         /// see ClientForm.btnSubscribeCallbacks1_Click() for a WinForms example
         /// </summary>
         /// <returns></returns>
-        [Fact]
-        public async Task MarketDataCompactTest()
-        {
-            const int timeoutNoActivity = 2000;
-            const int timeoutForConnect = 2000;
+        //[Fact]
+        //public async Task MarketDataCompactTest()
+        //{
+        //    const int timeoutNoActivity = 10000;
+        //    const int timeoutForConnect = 10000;
 
-            // Set up the exampleService response
-            var exampleService = new ExampleService();
-            const int numTrades = 1000;
-            for (int i = 0; i < numTrades; i++)
-            {
-                var trade = new MarketDataUpdateTradeCompact
-                {
-                    AtBidOrAsk = AtBidOrAskEnum.AtAsk,
-                    DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
-                    Price = 2000f + i,
-                    SymbolID = 1u,
-                    Volume = i + 1,
-                };
-                exampleService.MarketDataUpdateTradeCompacts.Add(trade);
-                var bidAsk = new MarketDataUpdateBidAskCompact
-                {
-                    AskPrice = 2000f + i,
-                    BidPrice = 2000f + i - 0.25f,
-                    AskQuantity = i,
-                    BidQuantity = i + 1,
-                    DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
-                    SymbolID = 1u,
-                };
-                exampleService.MarketDataUpdateBidAskCompacts.Add(bidAsk);
-            }
-            exampleService.MarketDataSnapshot = new MarketDataSnapshot
-            {
-                AskPrice = 1,
-                AskQuantity = 2,
-                BidAskDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
-                BidPrice = 3,
-                BidQuantity = 4,
-                LastTradeDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
-                LastTradePrice = 5,
-                LastTradeVolume = 6,
-                OpenInterest = 7,
-                SessionHighPrice = 8,
-            };
+        //    // Set up the exampleService responses
+        //    var exampleService = new ExampleService();
+        //    const int numTradesAndBidAsksToSend = 1000;
+        //    for (int i = 0; i < numTradesAndBidAsksToSend; i++)
+        //    {
+        //        var trade = new MarketDataUpdateTradeCompact
+        //        {
+        //            AtBidOrAsk = AtBidOrAskEnum.AtAsk,
+        //            DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
+        //            Price = 2000f + i,
+        //            SymbolID = 1u,
+        //            Volume = i + 1,
+        //        };
+        //        exampleService.MarketDataUpdateTradeCompacts.Add(trade);
+        //        var bidAsk = new MarketDataUpdateBidAskCompact
+        //        {
+        //            AskPrice = 2000f + i,
+        //            BidPrice = 2000f + i - 0.25f,
+        //            AskQuantity = i,
+        //            BidQuantity = i + 1,
+        //            DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
+        //            SymbolID = 1u,
+        //        };
+        //        exampleService.MarketDataUpdateBidAskCompacts.Add(bidAsk);
+        //    }
+        //    exampleService.MarketDataSnapshot = new MarketDataSnapshot
+        //    {
+        //        AskPrice = 1,
+        //        AskQuantity = 2,
+        //        BidAskDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
+        //        BidPrice = 3,
+        //        BidQuantity = 4,
+        //        LastTradeDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
+        //        LastTradePrice = 5,
+        //        LastTradeVolume = 6,
+        //        OpenInterest = 7,
+        //        SessionHighPrice = 8,
+        //    };
 
+        //    using (var server = StartExampleServer(timeoutNoActivity, exampleService))
+        //    {
+        //        using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
+        //        {
+        //            var sw = Stopwatch.StartNew();
+        //            while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
+        //            {
+        //                // Wait for the client to connect
+        //                await Task.Delay(1).ConfigureAwait(false);
+        //            }
+        //            Assert.Equal(1, server.NumberOfClientHandlers);
 
-            using (var server = StartExampleServer(timeoutNoActivity, exampleService))
-            {
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
-                {
-                    var sw = Stopwatch.StartNew();
-                    while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
-                    {
-                        // Wait for the client to connect
-                        await Task.Delay(1).ConfigureAwait(false);
-                    }
-                    Assert.Equal(1, server.NumberOfClientHandlers);
+        //            var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
+        //            Assert.NotNull(loginResponse);
 
-                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
-                    Assert.NotNull(loginResponse);
+        //            var numSnapshots = 0;
+        //            var numBidAsks = 0;
+        //            var numTrades = 0;
 
-                    // Set up the handler to capture the HeartBeat event
-                    var numHeartbeats = 0;
-                    EventHandler<EventArgs<Heartbeat>> heartbeatEvent = null;
-                    heartbeatEvent = (s, e) =>
-                    {
-                        var heartbeat = e.Data;
-                        _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
-                        numHeartbeats++;
-                    };
-                    client1.HeartbeatEvent += heartbeatEvent;
-                    sw.Restart();
-                    while (numHeartbeats < 2)
-                    {
-                        // Wait for the first two heartbeats
-                        await Task.Delay(1).ConfigureAwait(false);
-                    }
-                    var elapsed = sw.ElapsedMilliseconds;
-                    _output.WriteLine($"Client1 received first two heartbeats in {elapsed} msecs");
-                }
-            }
+        //            // Set up the handler to capture the MarketDataSnapshot event
+        //            EventHandler<EventArgs<MarketDataSnapshot>> marketDataSnapshotEvent = (s, e) =>
+        //            {
+        //                var snapshot = e.Data;
+        //                _output.WriteLine($"Client1 received a MarketDataSnapshot after {sw.ElapsedMilliseconds} msecs");
+        //                numSnapshots++;
+        //            };
+        //            client1.MarketDataSnapshotEvent += marketDataSnapshotEvent;
 
-        }
+        //            // Set up the handler to capture the MarketDataUpdateTradeCompact events
+        //            EventHandler<EventArgs<MarketDataUpdateTradeCompact>> marketDataUpdateTradeCompactEvent = (s, e) =>
+        //            {
+        //                var trade = e.Data;
+        //                numTrades++;
+        //            };
+        //            client1.MarketDataUpdateTradeCompactEvent += marketDataUpdateTradeCompactEvent;
+
+        //            // Set up the handler to capture the MarketDataUpdateBidAskCompact events
+        //            EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> marketDataUpdateBidAskCompactEvent = (s, e) =>
+        //            {
+        //                var bidAsk = e.Data;
+        //                numBidAsks++;
+        //            };
+        //            client1.MarketDataUpdateBidAskCompactEvent += marketDataUpdateBidAskCompactEvent;
+
+        //            // Now subscribe to the data
+        //            sw.Restart();
+        //            var symbolId = client1.SubscribeMarketData("ESZ6", "");
+        //            Assert.Equal(1u, symbolId);
+        //            while (numTrades < numTradesAndBidAsksToSend)
+        //            {
+        //                // Wait for the first two heartbeats
+        //                await Task.Delay(1).ConfigureAwait(false);
+        //            }
+        //            var elapsed = sw.ElapsedMilliseconds;
+        //            _output.WriteLine($"Client1 received first all trades and bid/asks in {elapsed} msecs");
+
+        //            Assert.Equal(1, numSnapshots);
+        //            Assert.Equal(numTradesAndBidAsksToSend, numTrades);
+        //            Assert.Equal(numTradesAndBidAsksToSend, numBidAsks);
+
+        //            client1.UnsubscribeMarketData(symbolId);
+        //        }
+        //    }
+        //}
 
 
     }
