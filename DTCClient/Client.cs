@@ -220,11 +220,10 @@ namespace DTCClient
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
             _currentCodec = new CodecBinary();
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            // Fire and forget
-            Task.Run(() => MessageReaderAsync(_cts.Token), _cts.Token);
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-
+            TaskHelper.RunBgLong(async () =>
+            {
+                await MessageReaderAsync().ConfigureAwait(false);
+            });
             if (!_timerNoActivity.Enabled)
             {
                 // Now we are connected, so start this timer so we can detect a stopped server even when we aren't using a heartbeat (e.g. getting historical data)
@@ -691,7 +690,7 @@ namespace DTCClient
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
         /// </summary>
-        private async Task MessageReaderAsync(CancellationToken cancellationToken)
+        private async Task MessageReaderAsync()
         {
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!_cts.Token.IsCancellationRequested && _networkStream != null)
@@ -699,7 +698,7 @@ namespace DTCClient
                 // Read the header.
                 if (!_networkStream.DataAvailable)
                 {
-                    await Task.Delay(1, cancellationToken).ConfigureAwait(true);
+                    await Task.Delay(1, _cts.Token).ConfigureAwait(true);
                     continue;
                 }
 

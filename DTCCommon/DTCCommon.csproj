@@ -102,6 +102,7 @@
     <Compile Include="Partials\MarketDataFeedSymbolStatus.cs" />
     <Compile Include="Partials\Heartbeat.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TaskHelper.cs" />
     <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
