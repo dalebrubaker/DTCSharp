@@ -26,6 +26,7 @@ namespace DTCCommon
             catch (IOException)
             {
                 // unable to write to stream
+                // perhaps the other side disconnected
                 throw;
             }
         }

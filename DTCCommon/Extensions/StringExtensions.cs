@@ -38,5 +38,15 @@ namespace DTCCommon.Extensions
             var result = Encoding.UTF8.GetString(bytes, startIndex, length);
             return result;
         }
+
+        public static int ToInt32(this string str)
+        {
+            int result;
+            if (int.TryParse(str, out result))
+            {
+                return result;
+            }
+            return 0;
+        }
     }
 }

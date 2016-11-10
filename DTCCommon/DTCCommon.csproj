@@ -55,6 +55,7 @@
     <Compile Include="Codecs\CodecProtobuf.cs" />
     <Compile Include="Codecs\ICodecDTC.cs" />
     <Compile Include="Codecs\ZipCodec.cs" />
+    <Compile Include="Config\WindowConfig.cs" />
     <Compile Include="Error.cs" />
     <Compile Include="EventArgs.cs" />
     <Compile Include="EventToCallbackForSymbol.cs" />

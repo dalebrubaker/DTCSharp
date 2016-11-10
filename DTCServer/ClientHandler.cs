@@ -98,7 +98,15 @@ namespace DTCServer
 
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat();
-            SendResponse(DTCMessageType.Heartbeat, heartbeat);
+            try
+            {
+                SendResponse(DTCMessageType.Heartbeat, heartbeat);
+            }
+            catch (IOException ex)
+            {
+                // perhaps the other side disconnected
+                Dispose(true);
+            }
         }
 
         /// <summary>

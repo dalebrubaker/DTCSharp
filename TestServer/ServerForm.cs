@@ -10,7 +10,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using DTCCommon;
 using DTCServer;
+using static DTCCommon.WindowConfig;
 
 namespace TestServer
 {
@@ -94,6 +96,17 @@ namespace TestServer
             btnStartHistorical.Enabled = true;
             btnStopHistorical.Enabled = false;
             _ctsHistorical.Cancel();
+        }
+
+        private void ServerForm_Load(object sender, EventArgs e)
+        {
+            WindowPlacement.SetPlacement(this.Handle, Settings1.Default.MainWindowPlacement);
+        }
+
+        private void ServerForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Settings1.Default.MainWindowPlacement = WindowPlacement.GetPlacement(this.Handle);
+            Settings1.Default.Save();
         }
     }
 }

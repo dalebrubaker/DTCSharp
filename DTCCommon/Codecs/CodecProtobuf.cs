@@ -24,8 +24,17 @@ namespace DTCCommon.Codecs
                 return;
             }
             var bytes = message.ToByteArray();
+            try
+            {
+
+            }
+            catch (IOException ex)
+            {
+                // perhaps the other side disconnected
+                throw;
+            }
             Utility.WriteHeader(binaryWriter, bytes.Length, messageType);
-            binaryWriter?.Write(bytes);
+            binaryWriter.Write(bytes);
         }
 
         /// <summary>

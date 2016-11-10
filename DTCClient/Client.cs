@@ -29,7 +29,7 @@ namespace DTCClient
         private DateTime _lastActivityTime;
         private NetworkStream _networkStream;
         private ICodecDTC _currentCodec;
-        private readonly CancellationTokenSource _cts;
+        private readonly CancellationTokenSource _ctsRequestReader;
         private int _nextRequestId;
         private uint _nextSymbolId;
         private bool _useHeartbeat;
@@ -51,7 +51,7 @@ namespace DTCClient
             SymbolIdBySymbolExchangeCombo = new ConcurrentDictionary<string, uint>();
             SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
             _currentCodec = new CodecBinary();
-            _cts = new CancellationTokenSource();
+            _ctsRequestReader = new CancellationTokenSource();
             _timerNoActivity = new Timer(timeoutNoActivity);
             _timerNoActivity.Elapsed += TimerNoActivity_Elapsed;
 
@@ -222,7 +222,7 @@ namespace DTCClient
             _currentCodec = new CodecBinary();
             TaskHelper.RunBgLong(async () =>
             {
-                await MessageReaderAsync().ConfigureAwait(false);
+                await RequestReaderAsync().ConfigureAwait(false);
             });
             if (!_timerNoActivity.Enabled)
             {
@@ -504,7 +504,7 @@ namespace DTCClient
         }
 
         /// <summary>
-        /// Get the for symbol and exchange, adding it if it doesn't already exist
+        /// Get the SymbolId for symbol and exchange, adding it if it doesn't already exist
         /// </summary>
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
@@ -690,18 +690,11 @@ namespace DTCClient
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
         /// </summary>
-        private async Task MessageReaderAsync()
+        private Task RequestReaderAsync()
         {
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
-            while (!_cts.Token.IsCancellationRequested && _networkStream != null)
+            while (!_ctsRequestReader.Token.IsCancellationRequested)
             {
-                // Read the header.
-                if (!_networkStream.DataAvailable)
-                {
-                    await Task.Delay(1, _cts.Token).ConfigureAwait(true);
-                    continue;
-                }
-
                 try
                 {
                     var size = binaryReader.ReadUInt16();
@@ -713,17 +706,22 @@ namespace DTCClient
                     }
 #endif
                     var messageBytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
-                    HandleMessage(messageType, messageBytes, ref binaryReader);
+                    ProcessRequest(messageType, messageBytes, ref binaryReader);
                 }
                 catch (IOException ex)
                 {
-                    Disconnect(new Error("Read error.", ex));
+                    // Ignore this if it results from disconnect (cancellation)
+                    if (!_ctsRequestReader.Token.IsCancellationRequested)
+                    {
+                        Disconnect(new Error("Read error.", ex));
+                    }
                 }
                 catch (Exception ex)
                 {
                     throw;
                 }
             }
+            return Task.WhenAll(); // fake return
         }
 
         /// <summary>
@@ -733,7 +731,7 @@ namespace DTCClient
         /// <param name="messageType"></param>
         /// <param name="messageBytes"></param>
         /// <param name="binaryReader"></param>
-        private void HandleMessage(DTCMessageType messageType, byte[] messageBytes, ref BinaryReader binaryReader)
+        private void ProcessRequest(DTCMessageType messageType, byte[] messageBytes, ref BinaryReader binaryReader)
         {
             _lastActivityTime = DateTime.Now;
             switch (messageType)
@@ -763,7 +761,7 @@ namespace DTCClient
                         case EncodingEnum.BinaryWithVariableLengthStrings:
                         case EncodingEnum.JsonEncoding:
                         case EncodingEnum.JsonCompactEncoding:
-                            throw new NotImplementedException($"Not implemented in {nameof(HandleMessage)}: {nameof(encodingResponse.Encoding)}");
+                            throw new NotImplementedException($"Not implemented in {nameof(ProcessRequest)}: {nameof(encodingResponse.Encoding)}");
                         case EncodingEnum.ProtocolBuffers:
                             _currentCodec = new CodecProtobuf();
                             break;
@@ -1009,7 +1007,7 @@ namespace DTCClient
                 case DTCMessageType.AccountBalanceRequest:
                 case DTCMessageType.HistoricalPriceDataRequest:
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {ClientName} {nameof(HandleMessage)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {ClientName} {nameof(ProcessRequest)}.");
             }
         }
 
@@ -1038,7 +1036,7 @@ namespace DTCClient
 
             _timerHeartbeat?.Dispose();
             _timerNoActivity?.Dispose();
-            _cts?.Cancel();
+            _ctsRequestReader?.Cancel();
             _networkStream?.Close();
             _networkStream?.Dispose();
             _networkStream = null;

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DTCClient;
+using DTCCommon;
 using DTCCommon.Extensions;
 using DTCPB;
 
@@ -24,6 +26,7 @@ namespace TestClient
         public ClientForm()
         {
             InitializeComponent();
+            btnDisconnect.Enabled = false;
             this.Disposed += Form1_Disposed;
             toolStripStatusLabel1.Text = "Disconnected";
             btnUnsubscribe1.Enabled = false;
@@ -31,9 +34,9 @@ namespace TestClient
             _ticks = new List<MarketDataUpdateTradeCompact>();
         }
 
-        private void Form1_Disposed(object sender, EventArgs e)
+        private async void Form1_Disposed(object sender, EventArgs e)
         {
-            DisposeClientAsync();
+            await DisposeClientAsync().ConfigureAwait(false);
         }
 
         private async Task DisposeClientAsync()
@@ -71,6 +74,8 @@ namespace TestClient
 
         private async void btnConnect_Click(object sender, EventArgs e)
         {
+            btnConnect.Enabled = false;
+            btnDisconnect.Enabled = true;
             await DisposeClientAsync().ConfigureAwait(true); // remove the old client just in case it was missed elsewhere
             _client = new Client(txtServer.Text, PortListener, stayOnCallingThread:true, timeoutNoActivity:30000);
             RegisterClientEvents(_client);
@@ -136,6 +141,7 @@ namespace TestClient
             client.UserMessageEvent -= Client_UserMessageEvent;
             client.GeneralLogMessageEvent -= Client_GeneralLogMessageEvent;
             client.ExchangeListResponseEvent -= Client_ExchangeListResponseEvent;
+            client.HeartbeatEvent -= Client_HeartbeatEvent;
         }
 
         private void UnregisterClientEventsMarketData(Client client)
@@ -164,6 +170,12 @@ namespace TestClient
             client.UserMessageEvent += Client_UserMessageEvent;
             client.GeneralLogMessageEvent += Client_GeneralLogMessageEvent;
             client.ExchangeListResponseEvent += Client_ExchangeListResponseEvent;
+            client.HeartbeatEvent += Client_HeartbeatEvent;
+        }
+
+        private void Client_HeartbeatEvent(object sender, EventArgs<Heartbeat> e)
+        {
+            logControlConnect.LogMessage("Heartbeat received from server.");
         }
 
         private void RegisterClientEventsMarketData(Client client)
@@ -382,6 +394,8 @@ namespace TestClient
 
         private async void btnDisconnect_Click(object sender, EventArgs e)
         {
+            btnConnect.Enabled = true;
+            btnDisconnect.Enabled = false;
             var logoffRequest = new Logoff
             {
                 DoNotReconnect = 1,
@@ -546,6 +560,7 @@ namespace TestClient
             {
                 RegisterClientEventsMarketData(_client);
             }
+            logControlLevel1.LogMessage($"Subscribing to market data for {txtSymbolLevel1_1.Text}");
             _symbolId1 = _client.SubscribeMarketData(txtSymbolLevel1_1.Text, "");
         }
 
@@ -571,6 +586,7 @@ namespace TestClient
             {
                 RegisterClientEventsMarketData(_client);
             }
+            logControlLevel1.LogMessage($"Subscribing to market data for {txtSymbolLevel1_2.Text}");
             _symbolId2 = _client.SubscribeMarketData(txtSymbolLevel1_2.Text, "");
         }
 
@@ -594,6 +610,7 @@ namespace TestClient
             btnSubscribeCallbacks1.Enabled = false;
             _ctsLevel1Symbol1 = new CancellationTokenSource();
             var symbol = txtSymbolLevel1_1.Text;
+            logControlLevel1.LogMessage($"Getting market data for {symbol}");
             try
             {
                 const int timeout = 5000;
@@ -618,6 +635,7 @@ namespace TestClient
             btnSubscribeCallbacks2.Enabled = false;
             _ctsLevel1Symbol2 = new CancellationTokenSource();
             var symbol = txtSymbolLevel1_2.Text;
+            logControlLevel1.LogMessage($"Getting market data for {symbol}");
             try
             {
                 var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol2.Token, 5000, symbol, "", MarketDataSnapshotCallback,
@@ -692,12 +710,13 @@ namespace TestClient
                 return;
             }
             var newTicks = Interlocked.Exchange(ref _ticks, new List<MarketDataUpdateTradeCompact>());
-            if (newTicks.Count > MaxLevel1Rows)
+            logControlLevel1.LogMessage($"Received {newTicks.Count} rows.");
+            var count = newTicks.Count;
+            if (count > MaxLevel1Rows)
             {
                 // If we get a backfill of 1000's of ticks, we don't want to insert them all!
-                var count = Math.Min(newTicks.Count, MaxLevel1Rows);
-                newTicks = newTicks.GetRange(newTicks.Count - count, count);
-                logControlLevel1.LogMessage($"Skipping {MaxLevel1Rows - count} rows due to high incoming volume.");
+                logControlLevel1.LogMessage($"Skipping {count - MaxLevel1Rows} rows due to high incoming volume.");
+                newTicks = newTicks.GetRange(count - MaxLevel1Rows, MaxLevel1Rows);
             }
             var lines = new List<string>(newTicks.Count);
             foreach (var response in newTicks)
@@ -708,6 +727,18 @@ namespace TestClient
                 lines.Add(line);
             }
             logControlLevel1.LogMessages(lines);
+        }
+
+        private void ClientForm_Load(object sender, EventArgs e)
+        {
+            WindowConfig.WindowPlacement.SetPlacement(this.Handle, Settings1.Default.ClientWindowPlacement);
+
+        }
+
+        private void ClientForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Settings1.Default.ClientWindowPlacement = WindowConfig.WindowPlacement.GetPlacement(this.Handle);
+            Settings1.Default.Save();
         }
     }
 }

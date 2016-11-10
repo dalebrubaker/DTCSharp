@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using DTCCommon;
+using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
 using Google.Protobuf;
@@ -17,9 +18,51 @@ namespace TestServer
         {
             MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>();
             MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>();
+
+            // Define default test data
+            NumTradesAndBidAsksToSend = 1000;
+            for (int i = 0; i < NumTradesAndBidAsksToSend; i++)
+            {
+                var trade = new MarketDataUpdateTradeCompact
+                {
+                    AtBidOrAsk = AtBidOrAskEnum.AtAsk,
+                    DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
+                    Price = 2000f + i,
+                    SymbolID = 1u,
+                    Volume = i + 1,
+                };
+                MarketDataUpdateTradeCompacts.Add(trade);
+                var bidAsk = new MarketDataUpdateBidAskCompact
+                {
+                    AskPrice = 2000f + i,
+                    BidPrice = 2000f + i - 0.25f,
+                    AskQuantity = i,
+                    BidQuantity = i + 1,
+                    DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
+                    SymbolID = 1u,
+                };
+                MarketDataUpdateBidAskCompacts.Add(bidAsk);
+            }
+            MarketDataSnapshot = new MarketDataSnapshot
+            {
+                AskPrice = 1,
+                AskQuantity = 2,
+                BidAskDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
+                BidPrice = 3,
+                BidQuantity = 4,
+                LastTradeDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
+                LastTradePrice = 5,
+                LastTradeVolume = 6,
+                OpenInterest = 7,
+                SessionHighPrice = 8,
+                SymbolID = 1,
+            };
+
         }
+        public int NumTradesAndBidAsksToSend { get; set; }
 
         #region PropertiesForTesting
+
 
         /// <summary>
         /// Set this to the trades to be sent as the result of a MarketDataRequest
