@@ -30,7 +30,7 @@ namespace DTCServer
         private NetworkStream _networkStream;
         private BinaryWriter _binaryWriter;
         private DateTime _lastHeartbeatReceivedTime;
-        private readonly CancellationTokenSource _cts;
+        private readonly CancellationTokenSource _ctsRequestReader;
 
         /// <summary>
         /// 
@@ -46,7 +46,7 @@ namespace DTCServer
             _currentCodec = new CodecBinary();
             RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _localEndPoint = tcpClient.Client.LocalEndPoint.ToString();
-            _cts = new CancellationTokenSource();
+            _ctsRequestReader = new CancellationTokenSource();
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
 
@@ -82,85 +82,46 @@ namespace DTCServer
 
         /// <summary>
         /// This method runs "forever", reading requests and throwing them as events until the network stream is closed.
-        /// All reads and writes are done async on one thread.
+        /// All reads are done async on this thread.
         /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public async Task RunAsync(CancellationToken cancellationToken)
+        public async Task<Task> RequestReaderAsync()
         {
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
-            var headerBuffer = new byte[4];
-            while (!cancellationToken.IsCancellationRequested && !_cts.Token.IsCancellationRequested)
+            while (!_ctsRequestReader.Token.IsCancellationRequested)
             {
-                #region newMethod
-
-                //                try
-                //                {
-                //                    // Because we are not reading on a separate thread, we read async.
-                //                    // Read the header
-                //                    var count = 4;
-                //                    var numRead = await _networkStream.ReadBytesAsync(headerBuffer, count, cancellationToken).ConfigureAwait(true);
-                //                    if (numRead != count)
-                //                    {
-                //                        // Reached end-of-stream. Client closed the connection
-                //                        Dispose();
-                //                        break;
-                //                    }
-                //                    var size = BitConverter.ToUInt16(headerBuffer, 0);
-                //                    var messageType = (DTCMessageType)BitConverter.ToUInt16(headerBuffer, 2);
-                //#if DEBUG
-                //                    if (messageType != DTCMessageType.Heartbeat)
-                //                    {
-                //                        var debug = 1;
-                //                    }
-                //#endif
-                //                    // Read the message
-                //                    var messageBytes = new byte[size];
-                //                    count = size - 4;
-                //                    numRead = await _networkStream.ReadBytesAsync(messageBytes, count, cancellationToken).ConfigureAwait(true);
-                //                    if (numRead != count)
-                //                    {
-                //                        // Reached end-of-stream. Client closed the connection
-                //                        Dispose();
-                //                        break;
-                //                    }
-                //                    HandleMessage(messageType, messageBytes);
-                //                }
-                //                catch (IOException ex)
-                //                {
-                //                    // Client closed the connection.
-                //                    Dispose();
-                //                    break;
-                //                }
-                //                catch (Exception ex)
-                //                {
-                //                    throw;
-                //                }
-
-                #endregion newMethod
-
-                #region oldMethod
-
-                if (!_networkStream.DataAvailable)
+                try
                 {
-                    await Task.Delay(1, cancellationToken).ConfigureAwait(true);
-                    continue;
-                }
+                    if (!_networkStream.DataAvailable)
+                    {
+                        await Task.Delay(1, _ctsRequestReader.Token).ConfigureAwait(true);
+                        continue;
+                    }
 
-                // Read the header
-                var size = binaryReader.ReadUInt16();
-                var messageType = (DTCMessageType)binaryReader.ReadUInt16();
+                    var size = binaryReader.ReadUInt16();
+                    var messageType = (DTCMessageType)binaryReader.ReadUInt16();
 #if DEBUG
-                if (messageType != DTCMessageType.Heartbeat)
-                {
-                    var debug = 1;
-                }
+                    if (messageType != DTCMessageType.Heartbeat)
+                    {
+                        var debug = 1;
+                    }
 #endif
-                var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
-                HandleMessage(messageType, bytes);
-
-                #endregion oldMethod
+                    var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
+                    ProcessRequest(messageType, bytes);
+                }
+                catch (IOException ex)
+                {
+                    // Ignore this if it results from disconnected client or other socket error
+                    if (!_ctsRequestReader.Token.IsCancellationRequested)
+                    {
+                        Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
             }
+            return Task.WhenAll(); // fake return
         }
 
         /// <summary>
@@ -168,7 +129,7 @@ namespace DTCServer
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="messageBytes"></param>
-        private void HandleMessage(DTCMessageType messageType, byte[] messageBytes)
+        private void ProcessRequest(DTCMessageType messageType, byte[] messageBytes)
         {
             switch (messageType)
             {
@@ -374,7 +335,7 @@ namespace DTCServer
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
                 case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(HandleMessage)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(ProcessRequest)}.");
             }
         }
 
@@ -393,7 +354,7 @@ namespace DTCServer
         {
             if (disposing && !_isDisposed)
             {
-                _cts.Cancel();
+                _ctsRequestReader.Cancel();
                 _timerHeartbeat?.Dispose();
                 _networkStream?.Close();
                 _networkStream?.Dispose();

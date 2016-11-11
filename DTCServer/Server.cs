@@ -145,9 +145,12 @@ namespace DTCServer
                 {
                     var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(true); // will be disposed when clientHandler is disposed
                     tcpClient.NoDelay = true;
-                    tcpClient.ReceiveTimeout = _timeoutNoActivity;
+                    if (_timeoutNoActivity != 0)
+                    {
+                        tcpClient.ReceiveTimeout = _timeoutNoActivity;
+                    }
                     var clientHandler = new ClientHandler(_callback, tcpClient, _useHeartbeat);
-                    var task = clientHandler.RunAsync(_cts.Token);
+                    var task = clientHandler.RequestReaderAsync();
                     lock (_lock)
                     {
                         _clientHandlerTasks.Add(task);

@@ -56,7 +56,7 @@ namespace Tests
         private static async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect)
         {
             var client = new Client(IPAddress.Loopback.ToString(), serverPort: 54321, timeoutNoActivity: timeoutNoActivity);
-            var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers, timeoutForConnect, clientName: "TestClient1").ConfigureAwait(false);
+            var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClient1", timeoutForConnect).ConfigureAwait(false);
             Assert.Equal(EncodingEnum.ProtocolBuffers, encodingResponse.Encoding);
             return client;
         }
