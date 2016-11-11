@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
@@ -16,10 +17,12 @@ namespace Tests
     public class ClientServerTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
+        private int _nextServerPort;
 
         public ClientServerTests(ITestOutputHelper output)
         {
             _output = output;
+            _nextServerPort = 54321;
         }
 
         public void Dispose()
@@ -27,58 +30,32 @@ namespace Tests
             _output.WriteLine("Disposing");
         }
 
-
         [Fact]
         public void StartServerTest()
         {
-            using (var server = StartExampleServer(timeoutNoActivity: 1000))
+            using (var server = StartExampleServer(1000, _nextServerPort++))
             {
                 Assert.Equal(0, server.NumberOfClientHandlers);
             }
         }
 
-        private static Server StartExampleServer(int timeoutNoActivity, ExampleService exampleService = null)
+        private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null)
         {
             if (exampleService == null)
             {
                 exampleService = new ExampleService();
             }
-            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: timeoutNoActivity, useHeartbeat: true);
+            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port : port, timeoutNoActivity: timeoutNoActivity, useHeartbeat: true);
             TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
 
-        private static async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect)
+        private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port)
         {
-            var client = new Client(IPAddress.Loopback.ToString(), serverPort: 54321, timeoutNoActivity: timeoutNoActivity);
+            var client = new Client(IPAddress.Loopback.ToString(), serverPort: port, timeoutNoActivity: timeoutNoActivity);
             var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClient1", timeoutForConnect).ConfigureAwait(false);
             Assert.Equal(EncodingEnum.ProtocolBuffers, encodingResponse.Encoding);
             return client;
-        }
-
-        [Fact]
-        public async Task StartDuplicateServerThrowsSocketExceptionTest()
-        {
-            var exampleService = new ExampleService();
-            using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000, useHeartbeat: true))
-            {
-                try
-                {
-                    TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
-                }
-                catch (Exception exception)
-                {
-                    var typeName = exception.GetType().Name;
-                    throw;
-                }
-                await Task.Delay(100).ConfigureAwait(false);
-                using (var server2 = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000, useHeartbeat: true))
-                {
-                    await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync()).ConfigureAwait(false);
-                    await Task.Delay(100).ConfigureAwait(false);
-                    Assert.Equal(0, server.NumberOfClientHandlers);
-                }
-            }
         }
 
         [Fact]
@@ -86,9 +63,10 @@ namespace Tests
         {
             int numConnects = 0;
             int numDisconnects = 0;
-            const int timeoutNoActivity = 100;
-            const int timeoutForConnect = 100;
-            using (var server = StartExampleServer(timeoutNoActivity))
+            const int timeoutNoActivity = 1000;
+            const int timeoutForConnect = 1000;
+            var port = _nextServerPort++;
+            using (var server = StartExampleServer(timeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
                 EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = (s, e) =>
@@ -108,7 +86,7 @@ namespace Tests
                 };
                 server.ClientDisconnected += clientHandlerDisconnected;
                 var sw = Stopwatch.StartNew();
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
                 {
                     while (numConnects != 1 && sw.ElapsedMilliseconds < 10000)
                     {
@@ -138,7 +116,8 @@ namespace Tests
             int numDisconnects = 0;
             const int timeoutNoActivity = 100;
             const int timeoutForConnect = 1000;
-            using (var server = StartExampleServer(timeoutNoActivity))
+            var port = _nextServerPort++;
+            using (var server = StartExampleServer(timeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
                 EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = (s, e) =>
@@ -158,8 +137,8 @@ namespace Tests
                 };
                 server.ClientDisconnected += clientHandlerDisconnected;
                 var sw = Stopwatch.StartNew();
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
-                using (var client2 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
+                using (var client2 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
                 {
                     //while (numConnects != 2 && sw.ElapsedMilliseconds < 1000)
                     while (server.NumberOfClientHandlers != 2) // && sw.ElapsedMilliseconds < 1000)
@@ -187,11 +166,13 @@ namespace Tests
         [Fact]
         public async Task ClientLogonAndHeartbeatTest()
         {
+            await Task.Delay(1000).ConfigureAwait(false);
             int numConnects = 0;
             int numDisconnects = 0;
-            const int timeoutNoActivity = 2000;
-            const int timeoutForConnect = 2000;
-            using (var server = StartExampleServer(timeoutNoActivity))
+            const int timeoutNoActivity = 30000;
+            const int timeoutForConnect = 5000;
+            var port = _nextServerPort++;
+            using (var server = StartExampleServer(timeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientConnected event
                 EventHandler<EventArgs<ClientHandler>> clientConnected = (s, e) =>
@@ -211,7 +192,7 @@ namespace Tests
                 };
                 server.ClientDisconnected += clientDisconnected;
 
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
                     while (numConnects != 1 && sw.ElapsedMilliseconds < 1000)
@@ -251,8 +232,9 @@ namespace Tests
         {
             const int timeoutNoActivity = 1000;
             const int timeoutForConnect = 1000;
-            var server = StartExampleServer(timeoutNoActivity);
-            using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
+            var port = _nextServerPort++;
+            var server = StartExampleServer(timeoutNoActivity, port);
+            using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
             {
                 bool isConnected = false;
                 var sw = Stopwatch.StartNew();
@@ -307,15 +289,16 @@ namespace Tests
         [Fact]
         public async Task MarketDataCompactTest()
         {
-            const int timeoutNoActivity = 10000;
-            const int timeoutForConnect = 10000;
+            const int timeoutNoActivity = 1000;
+            const int timeoutForConnect = 1000;
 
             // Set up the exampleService responses
             var exampleService = new ExampleService();
-
-            using (var server = StartExampleServer(timeoutNoActivity, exampleService))
+            var port = _nextServerPort++;
+            
+            using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
             {
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
                     while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
@@ -364,7 +347,7 @@ namespace Tests
                     while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
                     {
                         // Wait for the first two heartbeats
-                        await Task.Delay(1).ConfigureAwait(false);
+                        await Task.Delay(100).ConfigureAwait(false);
                     }
                     var elapsed = sw.ElapsedMilliseconds;
                     _output.WriteLine($"Client1 received all trades and bid/asks in {elapsed} msecs");

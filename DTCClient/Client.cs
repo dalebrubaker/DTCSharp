@@ -188,6 +188,10 @@ namespace DTCClient
         /// <returns><c>true</c> if successful. <c>false</c> means protocol buffers are not supported by server</returns>
         public async Task<EncodingResponse> ConnectAsync(EncodingEnum requestedEncoding, string clientName, int timeout = 1000)
         {
+            if (_isDisposed)
+            {
+                return null;
+            }
             ClientName = clientName;
             _tcpClient = new TcpClient {NoDelay = true};
             try
@@ -277,6 +281,10 @@ namespace DTCClient
             int timeout = 1000, string userName = "", string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0,
             TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", string hardwareIdentifier = "")
         {
+            if (_isDisposed)
+            {
+                return null;
+            }
             _useHeartbeat = useHeartbeat;
             if (_useHeartbeat)
             {
