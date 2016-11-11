@@ -53,7 +53,7 @@ namespace Tests
         private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port)
         {
             var client = new Client(IPAddress.Loopback.ToString(), serverPort: port, timeoutNoActivity: timeoutNoActivity);
-            var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClient1", timeoutForConnect).ConfigureAwait(false);
+            var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClient" + port, timeoutForConnect).ConfigureAwait(false);
             Assert.Equal(EncodingEnum.ProtocolBuffers, encodingResponse.Encoding);
             return client;
         }
@@ -361,6 +361,87 @@ namespace Tests
             }
         }
 
+        /// <summary>
+        /// see ClientForm.btnGetHistoricalTicks_Click() for a WinForms example
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task HistoricalPriceDataRecordResponseTickUnzippedTest()
+        {
+            const int timeoutNoActivity = 1000;
+            const int timeoutForConnect = 1000;
+
+            // Set up the exampleService responses
+            var exampleService = new ExampleService();
+            var port = _nextServerPort++;
+
+            using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
+            {
+                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
+                {
+                    var sw = Stopwatch.StartNew();
+                    while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
+                    {
+                        // Wait for the client to connect
+                        await Task.Delay(1).ConfigureAwait(false);
+                    }
+                    Assert.Equal(1, server.NumberOfClientHandlers);
+
+                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
+                    Assert.NotNull(loginResponse);
+
+                    // TODO replace below
+
+
+                    //var numSnapshots = 0;
+                    //var numBidAsks = 0;
+                    //var numTrades = 0;
+
+                    //// Set up the handler to capture the MarketDataSnapshot event
+                    //EventHandler<EventArgs<MarketDataSnapshot>> marketDataSnapshotEvent = (s, e) =>
+                    //{
+                    //    var snapshot = e.Data;
+                    //    _output.WriteLine($"Client1 received a MarketDataSnapshot after {sw.ElapsedMilliseconds} msecs");
+                    //    numSnapshots++;
+                    //};
+                    //client1.MarketDataSnapshotEvent += marketDataSnapshotEvent;
+
+                    //// Set up the handler to capture the MarketDataUpdateTradeCompact events
+                    //EventHandler<EventArgs<MarketDataUpdateTradeCompact>> marketDataUpdateTradeCompactEvent = (s, e) =>
+                    //{
+                    //    var trade = e.Data;
+                    //    numTrades++;
+                    //};
+                    //client1.MarketDataUpdateTradeCompactEvent += marketDataUpdateTradeCompactEvent;
+
+                    //// Set up the handler to capture the MarketDataUpdateBidAskCompact events
+                    //EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> marketDataUpdateBidAskCompactEvent = (s, e) =>
+                    //{
+                    //    var bidAsk = e.Data;
+                    //    numBidAsks++;
+                    //};
+                    //client1.MarketDataUpdateBidAskCompactEvent += marketDataUpdateBidAskCompactEvent;
+
+                    //// Now subscribe to the data
+                    //sw.Restart();
+                    //var symbolId = client1.SubscribeMarketData("ESZ6", "");
+                    //Assert.Equal(1u, symbolId);
+                    //while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
+                    //{
+                    //    // Wait for the first two heartbeats
+                    //    await Task.Delay(100).ConfigureAwait(false);
+                    //}
+                    //var elapsed = sw.ElapsedMilliseconds;
+                    //_output.WriteLine($"Client1 received all trades and bid/asks in {elapsed} msecs");
+
+                    //Assert.Equal(1, numSnapshots);
+                    //Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numTrades);
+                    //Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numBidAsks);
+
+                    //client1.UnsubscribeMarketData(symbolId);
+                }
+            }
+        }
 
     }
 }

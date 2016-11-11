@@ -16,11 +16,15 @@ namespace TestServer
     {
         public ExampleService()
         {
-            MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>();
-            MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>();
+            NumTradesAndBidAsksToSend = 1000;
+            MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>(NumTradesAndBidAsksToSend);
+            MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>(NumTradesAndBidAsksToSend);
+            MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>(NumTradesAndBidAsksToSend);
+
+            NumHistoricalPriceDataRecordsToSend = 20000;
+            HistoricalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>(NumHistoricalPriceDataRecordsToSend);
 
             // Define default test data
-            NumTradesAndBidAsksToSend = 1000;
             for (int i = 0; i < NumTradesAndBidAsksToSend; i++)
             {
                 var trade = new MarketDataUpdateTradeCompact
@@ -58,8 +62,40 @@ namespace TestServer
                 SymbolID = 1,
             };
 
+            HistoricalPriceDataResponseHeader = new HistoricalPriceDataResponseHeader
+            {
+                IntToFloatPriceDivisor = 1,
+                NoRecordsToReturn = 0,
+                RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
+                RequestID = 1,
+                UseZLibCompression = 0
+            };
+
+            for (int i = 0; i < NumHistoricalPriceDataRecordsToSend; i++)
+            {
+                var response = new HistoricalPriceDataRecordResponse
+                {
+                    AskVolume = i,
+                    BidVolume = i,
+                    HighPrice = 2010,
+                    IsFinalRecord = 0,
+                    LastPrice = 2008,
+                    LowPrice = 2001,
+                    NumTrades = (uint)i,
+                    OpenPrice = 2002,
+                    RequestID = 1,
+                    StartDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
+                };
+                HistoricalPriceDataRecordResponses.Add(response);
+            }
+
         }
+
+        public List<HistoricalPriceDataRecordResponse> HistoricalPriceDataRecordResponses { get; set; }
+
         public int NumTradesAndBidAsksToSend { get; set; }
+
+        public int NumHistoricalPriceDataRecordsToSend { get; set; }
 
         #region PropertiesForTesting
 
@@ -78,6 +114,11 @@ namespace TestServer
         /// Set this to the snapshot to be sent as the result of a MarketDataRequest
         /// </summary>
         public MarketDataSnapshot MarketDataSnapshot { get; set; }
+
+        /// <summary>
+        /// Set this to the header to be sent as the result of a HistoricalPriceDataRequest
+        /// </summary>
+        public HistoricalPriceDataResponseHeader HistoricalPriceDataResponseHeader { get; set; }
 
         #endregion PropertiesForTesting
 
@@ -290,7 +331,19 @@ namespace TestServer
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
                     ThrowEvent(historicalPriceDataRequest, HistoricalPriceDataRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
+                    HistoricalPriceDataResponseHeader.RequestID = historicalPriceDataRequest.RequestID;
+                    HistoricalPriceDataResponseHeader.UseZLibCompression = historicalPriceDataRequest.UseZLibCompression;
+                    for (int i = 0; i < NumHistoricalPriceDataRecordsToSend; i++)
+                    {
+                        var response = HistoricalPriceDataRecordResponses[i];
+                        if ((i + 1) % ushort.MaxValue == 0)
+                        {
+                            // I think Sierra Chart sends 16,384 records max in a batch
+                            response.IsFinalRecord = 1;
+                        }
+                        response.RequestID = historicalPriceDataRequest.RequestID;
+                        clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, response);
+                    }
                     break;
                 case DTCMessageType.MessageTypeUnset:
                 case DTCMessageType.LogonResponse:

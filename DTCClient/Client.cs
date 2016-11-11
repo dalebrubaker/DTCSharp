@@ -725,7 +725,7 @@ namespace DTCClient
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="messageBytes"></param>
-        /// <param name="binaryReader"></param>
+        /// <param name="binaryReader">may be changed to use a new DeflateStream if we change to zipped</param>
         private void ProcessResponse(DTCMessageType messageType, byte[] messageBytes, ref BinaryReader binaryReader)
         {
             switch (messageType)
@@ -948,6 +948,10 @@ namespace DTCClient
                     var historicalPriceDataResponseHeader = _currentCodec.Load<HistoricalPriceDataResponseHeader>(messageType, messageBytes);
                     if (historicalPriceDataResponseHeader.UseZLibCompression == 1)
                     {
+                        if (_useHeartbeat)
+                        {
+                            throw new DTCSharpException("Heartbeat cannot co-exist with compression.");
+                        }
                         // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
                         var zlibCmf = binaryReader.ReadByte(); // 120 = 0111 1000 means Deflate 
                         var zlibFlg = binaryReader.ReadByte(); // 156 = 1001 1100
