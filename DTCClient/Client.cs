@@ -704,6 +704,7 @@ namespace DTCClient
                 }
                 catch (Exception ex)
                 {
+                    var typeName = ex.GetType().Name;
                     throw;
                 }
             }

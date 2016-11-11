@@ -131,7 +131,8 @@ namespace DTCServer
             }
             catch (ThreadAbortException)
             {
-                // ignore this. It means Stop() was called
+                // Dispose() has been called
+                CloseAllClientHandlers();
             }
             catch (Exception ex)
             {
@@ -160,11 +161,13 @@ namespace DTCServer
                 }
                 catch (InvalidOperationException)
                 {
-                    // ignore this. It means Stop() was called
+                    // Dispose() has been called
+                    CloseAllClientHandlers();
                 }
                 catch (ThreadAbortException)
                 {
-                    // ignore this. It means Stop() was called
+                    // Dispose() has been called
+                    CloseAllClientHandlers();
                 }
                 catch (Exception ex)
                 {
@@ -172,6 +175,11 @@ namespace DTCServer
                 }
             }
             await Task.WhenAll(_clientHandlerTasks).ConfigureAwait(false);
+            CloseAllClientHandlers();
+        }
+
+        private void CloseAllClientHandlers()
+        {
             lock (_lock)
             {
                 foreach (var clientHandler in _clientHandlers)

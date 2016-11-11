@@ -84,21 +84,25 @@ namespace DTCServer
         /// This method runs "forever", reading requests and throwing them as events until the network stream is closed.
         /// All reads are done async on this thread.
         /// </summary>
-        public async Task<Task> RequestReaderAsync()
+        public async Task RequestReaderAsync()
         {
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!_ctsRequestReader.Token.IsCancellationRequested)
             {
                 try
                 {
-                    if (!_networkStream.DataAvailable)
+                    var headerBuffer = new byte[4];
+                    var numBytesRead = await _networkStream.ReadBytesAsync(headerBuffer, 4, _ctsRequestReader.Token).ConfigureAwait(false);
+                    if (numBytesRead == 0)
                     {
-                        await Task.Delay(1, _ctsRequestReader.Token).ConfigureAwait(true);
-                        continue;
+                        throw new EndOfStreamException();
                     }
-
-                    var size = binaryReader.ReadUInt16();
-                    var messageType = (DTCMessageType)binaryReader.ReadUInt16();
+                    if (numBytesRead == 0)
+                    {
+                        throw new InvalidOperationException();
+                    }
+                    var size = BitConverter.ToUInt16(headerBuffer, 0);
+                    var messageType = (DTCMessageType)BitConverter.ToUInt16(headerBuffer, 2);
 #if DEBUG
                     if (messageType != DTCMessageType.Heartbeat)
                     {
@@ -118,10 +122,10 @@ namespace DTCServer
                 }
                 catch (Exception ex)
                 {
+                    var typeName = ex.GetType().Name;
                     throw;
                 }
             }
-            return Task.WhenAll(); // fake return
         }
 
         /// <summary>

@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
-using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
 using TestServer;
@@ -67,7 +62,15 @@ namespace Tests
             var exampleService = new ExampleService();
             using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000, useHeartbeat: true))
             {
-                TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
+                try
+                {
+                    TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
+                }
+                catch (Exception exception)
+                {
+                    var typeName = exception.GetType().Name;
+                    throw;
+                }
                 await Task.Delay(100).ConfigureAwait(false);
                 using (var server2 = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000, useHeartbeat: true))
                 {
@@ -246,8 +249,8 @@ namespace Tests
         [Fact]
         public async Task ClientDisconnectedServerDownTest()
         {
-            const int timeoutNoActivity = 10000;
-            const int timeoutForConnect = 10000;
+            const int timeoutNoActivity = 1000;
+            const int timeoutForConnect = 1000;
             var server = StartExampleServer(timeoutNoActivity);
             using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect).ConfigureAwait(false))
             {
@@ -292,14 +295,7 @@ namespace Tests
 
                 sw.Restart();
                 var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
-                Assert.NotNull(loginResponse);
-
-                while (isConnected)
-                {
-                    // wait for a client write failure
-                    await Task.Delay(1).ConfigureAwait(true);
-                }
-                _output.WriteLine($"client disconnect took {sw.ElapsedMilliseconds} msecs");
+                Assert.Null(loginResponse);
             }
         }
 
