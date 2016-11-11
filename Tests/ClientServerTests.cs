@@ -49,17 +49,14 @@ namespace Tests
                 exampleService = new ExampleService();
             }
             var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: timeoutNoActivity, useHeartbeat: true);
-            var ctsServer = new CancellationTokenSource();
-#pragma warning disable 4014
-            server.RunAsync(ctsServer.Token);
-#pragma warning restore 4014
+            TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
 
         private static async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect)
         {
-            var client = new Client(IPAddress.Loopback.ToString(), serverPort: 54321, stayOnCallingThread: true, timeoutNoActivity: timeoutNoActivity);
-            var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers, timeoutForConnect).ConfigureAwait(false);
+            var client = new Client(IPAddress.Loopback.ToString(), serverPort: 54321, timeoutNoActivity: timeoutNoActivity);
+            var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers, timeoutForConnect, clientName: "TestClient1").ConfigureAwait(false);
             Assert.Equal(EncodingEnum.ProtocolBuffers, encodingResponse.Encoding);
             return client;
         }
@@ -67,18 +64,15 @@ namespace Tests
         [Fact]
         public async Task StartDuplicateServerThrowsSocketExceptionTest()
         {
-            var ctsServer = new CancellationTokenSource();
             var exampleService = new ExampleService();
             using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000, useHeartbeat: true))
             {
-#pragma warning disable 4014
-                server.RunAsync(ctsServer.Token);
-#pragma warning restore 4014
-                await Task.Delay(100, ctsServer.Token).ConfigureAwait(false);
+                TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
+                await Task.Delay(100).ConfigureAwait(false);
                 using (var server2 = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: 54321, timeoutNoActivity: 1000, useHeartbeat: true))
                 {
-                    await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync(ctsServer.Token)).ConfigureAwait(false);
-                    await Task.Delay(100, ctsServer.Token).ConfigureAwait(false);
+                    await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync()).ConfigureAwait(false);
+                    await Task.Delay(100).ConfigureAwait(false);
                     Assert.Equal(0, server.NumberOfClientHandlers);
                 }
             }
@@ -224,7 +218,7 @@ namespace Tests
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
-                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
+                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     // Set up the handler to capture the HeartBeat event
@@ -297,7 +291,7 @@ namespace Tests
                 server.Dispose();
 
                 sw.Restart();
-                var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
+                var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
                 Assert.NotNull(loginResponse);
 
                 while (isConnected)
@@ -335,7 +329,7 @@ namespace Tests
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
-                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000, clientName: "TestClient1").ConfigureAwait(true);
+                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     var numSnapshots = 0;

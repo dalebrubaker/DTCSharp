@@ -7,10 +7,10 @@ namespace DTCCommon
     /// </summary>
     public class Error
     {
-        private readonly string _resultText;
-        private readonly Exception _exception;
-        private readonly string _errorType;
-        private readonly object _resultObject;
+        public string ResultText { get; }
+        public Exception Exception1 { get; }
+        public string ErrorType { get; }
+        public object ResultObject { get; }
 
         /// <summary>
         /// ctor
@@ -21,15 +21,15 @@ namespace DTCCommon
         /// <param name="resultObject">optional object</param>
         public Error(string resultText, Exception exception = null, string errorType = null, object resultObject = null)
         {
-            _resultText = resultText;
-            _exception = exception;
-            _errorType = errorType;
-            _resultObject = resultObject;
+            ResultText = resultText;
+            Exception1 = exception;
+            ErrorType = errorType;
+            ResultObject = resultObject;
         }
 
         public override string ToString()
         {
-            return $"Result:{_resultText} Exception:{_exception?.Message} ErrorType:{_errorType}";
+            return $"Result:{ResultText} Exception:{Exception1?.Message} ErrorType:{ErrorType}";
         }
     }
 }

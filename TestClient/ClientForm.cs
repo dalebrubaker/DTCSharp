@@ -45,8 +45,8 @@ namespace TestClient
             {
                 // Wait for pending message to finish
                 await Task.Delay(100).ConfigureAwait(false);
+                _client.Dispose(); // will throw Disconnected event
                 UnregisterClientEvents(_client);
-                _client.Dispose();
                 _client = null;
                 toolStripStatusLabel1.Text = "Disconnected";
             }
@@ -74,10 +74,10 @@ namespace TestClient
 
         private async void btnConnect_Click(object sender, EventArgs e)
         {
+            await DisposeClientAsync().ConfigureAwait(true); // remove the old client just in case it was missed elsewhere
             btnConnect.Enabled = false;
             btnDisconnect.Enabled = true;
-            await DisposeClientAsync().ConfigureAwait(true); // remove the old client just in case it was missed elsewhere
-            _client = new Client(txtServer.Text, PortListener, stayOnCallingThread:true, timeoutNoActivity:30000);
+            _client = new Client(txtServer.Text, PortListener, timeoutNoActivity:30000);
             RegisterClientEvents(_client);
             var clientName = "TestClient";
             try
@@ -87,7 +87,7 @@ namespace TestClient
                 const bool useHeartbeat = true;
 
                 // Make a connection
-                var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, timeout).ConfigureAwait(true);
+                var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClientPrimary", timeout).ConfigureAwait(true);
                 if (encodingResponse == null)
                 {
                     // timed out
@@ -142,6 +142,8 @@ namespace TestClient
             client.GeneralLogMessageEvent -= Client_GeneralLogMessageEvent;
             client.ExchangeListResponseEvent -= Client_ExchangeListResponseEvent;
             client.HeartbeatEvent -= Client_HeartbeatEvent;
+            client.Connected -= Client_Connected;
+            client.Disconnected -= Client_Disconnected;
         }
 
         private void UnregisterClientEventsMarketData(Client client)
@@ -171,6 +173,36 @@ namespace TestClient
             client.GeneralLogMessageEvent += Client_GeneralLogMessageEvent;
             client.ExchangeListResponseEvent += Client_ExchangeListResponseEvent;
             client.HeartbeatEvent += Client_HeartbeatEvent;
+            client.Connected += Client_Connected;
+            client.Disconnected += Client_Disconnected;
+        }
+
+        private void Client_Disconnected(object sender, EventArgs<Error> e)
+        {
+            var error = e.Data;
+            logControlConnect.LogMessage(error.ResultText, "Disconnected");
+            var client = (Client)sender;
+            logControlConnect.LogMessage($"Disconnected from client:{client.ClientName} due to {error.ResultText}");
+            ShowDisconnected();
+        }
+
+        private void ShowDisconnected()
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new MethodInvoker(ShowDisconnected));
+            }
+            else
+            {
+                btnConnect.Enabled = true;
+                btnDisconnect.Enabled = false;
+            }
+        }
+
+        private void Client_Connected(object sender, EventArgs e)
+        {
+            var client = (Client)sender;
+            logControlConnect.LogMessage($"Connected to client:{client.ClientName}");
         }
 
         private void Client_HeartbeatEvent(object sender, EventArgs<Heartbeat> e)
@@ -471,7 +503,7 @@ namespace TestClient
         private async Task RequestHistoricalDataAsync(HistoricalDataIntervalEnum recordInterval)
         {
             _historicalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>();
-            using (var client = new Client(txtServer.Text, PortHistorical, stayOnCallingThread:false, timeoutNoActivity:30000))
+            using (var client = new Client(txtServer.Text, PortHistorical, timeoutNoActivity:30000))
             {
                 const int timeout = 5000;
                 try
@@ -481,7 +513,7 @@ namespace TestClient
                     var clientName = $"HistoricalClient|{txtSymbolHistorical.Text}";
 
                     // Make a connection
-                    var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, timeout).ConfigureAwait(true);
+                    var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClientHistorical", timeout).ConfigureAwait(true);
                     if (encodingResponse == null)
                     {
                         // timed out

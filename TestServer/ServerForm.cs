@@ -20,10 +20,8 @@ namespace TestServer
     {
         private Server _serverPrimary;
         private Server _serverHistorical;
-        private IPAddress _ipAddress;
+        private readonly IPAddress _ipAddress;
         private readonly ExampleService _exampleServer;
-        private CancellationTokenSource _ctsPrimary;
-        private CancellationTokenSource _ctsHistorical;
 
         public ServerForm()
         {
@@ -68,16 +66,22 @@ namespace TestServer
         {
             btnStartPrimary.Enabled = false;
             btnStopPrimary.Enabled = true;
-            _serverPrimary = new Server(_exampleServer.HandleRequest, _ipAddress, PortListener, timeoutNoActivity:30000, useHeartbeat:true);
-            _ctsPrimary = new CancellationTokenSource();
-            await _serverPrimary.RunAsync(_ctsPrimary.Token).ConfigureAwait(false);
+            _serverPrimary = new Server(_exampleServer.HandleRequest, _ipAddress, PortListener, timeoutNoActivity: 30000, useHeartbeat: true);
+            try
+            {
+                await _serverPrimary.RunAsync().ConfigureAwait(false);
+            }
+            catch (TaskCanceledException)
+            {
+                // ignore. Server was disconnected
+            }
         }
 
         private void btnStopPrimary_Click(object sender, EventArgs e)
         {
             btnStartPrimary.Enabled = true;
             btnStopPrimary.Enabled = false;
-            _ctsPrimary.Cancel();
+            _serverPrimary.Dispose();
         }
 
         private async void btnStartHistorical_Click(object sender, EventArgs e)
@@ -87,15 +91,21 @@ namespace TestServer
             
             // useHeartbeat = false See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
             _serverHistorical = new Server(_exampleServer.HandleRequest, _ipAddress, PortListener, timeoutNoActivity: 30000, useHeartbeat: true);
-            _ctsHistorical = new CancellationTokenSource();
-            await _serverHistorical.RunAsync(_ctsHistorical.Token).ConfigureAwait(false);
+            try
+            {
+                await _serverHistorical.RunAsync().ConfigureAwait(false);
+            }
+            catch (TaskCanceledException)
+            {
+                // ignore. Server was disconnected
+            }
         }
 
         private void btnStopHistorical_Click(object sender, EventArgs e)
         {
             btnStartHistorical.Enabled = true;
             btnStopHistorical.Enabled = false;
-            _ctsHistorical.Cancel();
+            _serverHistorical.Dispose();
         }
 
         private void ServerForm_Load(object sender, EventArgs e)

@@ -113,10 +113,9 @@ namespace DTCServer
         #endregion events
 
         /// <summary>
-        /// Run until cancelled  by CancellationTokenSource.Cancel() or by Dispose()
+        /// Run until cancelled by Dispose()
         /// </summary>
-        /// <param name="cancellationToken"></param>
-        public async Task RunAsync(CancellationToken cancellationToken)
+        public async Task RunAsync()
         {
             try
             {
@@ -140,27 +139,21 @@ namespace DTCServer
                 throw;
             }
             IsConnected = true;
-            while (!cancellationToken.IsCancellationRequested && !_cts.Token.IsCancellationRequested)
+            while (!_cts.Token.IsCancellationRequested)
             {
                 try
                 {
-                    var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(true);
+                    var tcpClient = await _tcpListener.AcceptTcpClientAsync().ConfigureAwait(true); // will be disposed when clientHandler is disposed
                     tcpClient.NoDelay = true;
-                    var clientHandler = new ClientHandler(_callback, tcpClient, _timeoutNoActivity, _useHeartbeat);
-                    try
+                    tcpClient.ReceiveTimeout = _timeoutNoActivity;
+                    var clientHandler = new ClientHandler(_callback, tcpClient, _useHeartbeat);
+                    var task = clientHandler.RunAsync(_cts.Token);
+                    lock (_lock)
                     {
-                        var task = clientHandler.RunAsync(cancellationToken);
-                        lock (_lock)
-                        {
-                            _clientHandlerTasks.Add(task);
-                            _clientHandlers.Add(clientHandler);
-                        }
-                        OnClientConnected(clientHandler);
+                        _clientHandlerTasks.Add(task);
+                        _clientHandlers.Add(clientHandler);
                     }
-                    catch (Exception ex)
-                    {
-                        throw;
-                    }
+                    OnClientConnected(clientHandler);
                 }
                 catch (InvalidOperationException)
                 {
@@ -172,11 +165,19 @@ namespace DTCServer
                 }
                 catch (Exception ex)
                 {
-
                     throw;
                 }
             }
             await Task.WhenAll(_clientHandlerTasks).ConfigureAwait(false);
+            lock (_lock)
+            {
+                foreach (var clientHandler in _clientHandlers)
+                {
+                    clientHandler.Dispose();
+                }
+                _clientHandlerTasks.Clear();
+                _clientHandlers.Clear();
+            }
         }
 
         public override string ToString()
@@ -195,6 +196,8 @@ namespace DTCServer
             if (disposing && !_isDisposed)
             {
                 _tcpListener?.Stop();
+                _tcpListener?.Server.Dispose();
+                _tcpListener = null;
                 IsConnected = false;
                 _cts.Cancel();
                 _timerCheckForDisconnects?.Dispose();

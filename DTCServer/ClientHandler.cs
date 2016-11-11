@@ -23,17 +23,13 @@ namespace DTCServer
         private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
         private TcpClient _tcpClient;
         private readonly bool _useHeartbeat;
-        private readonly int _timeoutNoActivity;
         private bool _isDisposed;
         private Timer _timerHeartbeat;
-        private readonly Timer _timerNoActivity;
         private readonly string _localEndPoint;
         private ICodecDTC _currentCodec;
         private NetworkStream _networkStream;
         private BinaryWriter _binaryWriter;
         private DateTime _lastHeartbeatReceivedTime;
-        private DateTime _lastActivityTime;
-        private TaskScheduler _taskSchedulerCurrContext;
         private readonly CancellationTokenSource _cts;
 
         /// <summary>
@@ -41,44 +37,19 @@ namespace DTCServer
         /// </summary>
         /// <param name="callback">The callback to the DTC service implementation. Every request will be sent to the callback</param>
         /// <param name="tcpClient"></param>
-        /// <param name="timeoutNoActivity">milliseconds timeout to assume disconnected if no activity</param>
         /// <param name="useHeartbeat">Don't send heartbeats. Used for sending zipped historical data</param>
-        public ClientHandler(Action<ClientHandler, DTCMessageType, IMessage> callback, TcpClient tcpClient, int timeoutNoActivity, bool useHeartbeat)
+        public ClientHandler(Action<ClientHandler, DTCMessageType, IMessage> callback, TcpClient tcpClient, bool useHeartbeat)
         {
             _callback = callback;
             _tcpClient = tcpClient;
-            _timeoutNoActivity = timeoutNoActivity;
             _useHeartbeat = useHeartbeat;
             _currentCodec = new CodecBinary();
             RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _localEndPoint = tcpClient.Client.LocalEndPoint.ToString();
-            _timerNoActivity = new Timer(timeoutNoActivity);
-            _timerNoActivity.Elapsed += TimerNoActivity_Elapsed;
-            _timerNoActivity.Start();
             _cts = new CancellationTokenSource();
-            _taskSchedulerCurrContext = TaskScheduler.FromCurrentSynchronizationContext();
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
 
-            if (SynchronizationContext.Current != null)
-            {
-                _taskSchedulerCurrContext = TaskScheduler.FromCurrentSynchronizationContext();
-            }
-            else
-            {
-                // If there is no SyncContext for this thread (e.g. we are in a unit test
-                // or console scenario instead of running in an app), then just use the
-                // default scheduler because there is no UI thread to sync with.
-                _taskSchedulerCurrContext = TaskScheduler.Current;
-            }
-        }
-
-        private void TimerNoActivity_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            if ((DateTime.Now - _lastActivityTime).TotalMilliseconds > _timeoutNoActivity)
-            {
-                Dispose();
-            }
         }
 
         public string RemoteEndPoint { get; }
@@ -199,7 +170,6 @@ namespace DTCServer
         /// <param name="messageBytes"></param>
         private void HandleMessage(DTCMessageType messageType, byte[] messageBytes)
         {
-            _lastActivityTime = DateTime.Now;
             switch (messageType)
             {
                 case DTCMessageType.LogonRequest:
@@ -425,7 +395,6 @@ namespace DTCServer
             {
                 _cts.Cancel();
                 _timerHeartbeat?.Dispose();
-                _timerNoActivity.Dispose();
                 _networkStream?.Close();
                 _networkStream?.Dispose();
                 _networkStream = null;
