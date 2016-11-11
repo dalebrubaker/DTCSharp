@@ -361,13 +361,13 @@ namespace Tests
                     sw.Restart();
                     var symbolId = client1.SubscribeMarketData("ESZ6", "");
                     Assert.Equal(1u, symbolId);
-                    while (numTrades < exampleService.NumTradesAndBidAsksToSend)
+                    while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
                     {
                         // Wait for the first two heartbeats
                         await Task.Delay(1).ConfigureAwait(false);
                     }
                     var elapsed = sw.ElapsedMilliseconds;
-                    _output.WriteLine($"Client1 received first all trades and bid/asks in {elapsed} msecs");
+                    _output.WriteLine($"Client1 received all trades and bid/asks in {elapsed} msecs");
 
                     Assert.Equal(1, numSnapshots);
                     Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numTrades);
