@@ -361,7 +361,14 @@ namespace DTCServer
 
         public void SendResponse<T>(DTCMessageType messageType, T message) where T : IMessage
         {
-            _currentCodec.Write(messageType, message, _binaryWriter);
+            try
+            {
+                _currentCodec.Write(messageType, message, _binaryWriter);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         public void Dispose()

@@ -333,12 +333,19 @@ namespace TestServer
                     ThrowEvent(historicalPriceDataRequest, HistoricalPriceDataRequestEvent, messageType, clientHandler);
                     HistoricalPriceDataResponseHeader.RequestID = historicalPriceDataRequest.RequestID;
                     HistoricalPriceDataResponseHeader.UseZLibCompression = historicalPriceDataRequest.UseZLibCompression;
+
+                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader);
+
                     for (int i = 0; i < NumHistoricalPriceDataRecordsToSend; i++)
                     {
                         var response = HistoricalPriceDataRecordResponses[i];
-                        if ((i + 1) % ushort.MaxValue == 0)
+                        //if ((i + 1) % ushort.MaxValue == 0)
+                        //{
+                        //    // I think Sierra Chart sends 16,384 records max in a batch TODO check this
+                        //    response.IsFinalRecord = 1;
+                        //}
+                        if (i == NumHistoricalPriceDataRecordsToSend - 1)
                         {
-                            // I think Sierra Chart sends 16,384 records max in a batch
                             response.IsFinalRecord = 1;
                         }
                         response.RequestID = historicalPriceDataRequest.RequestID;

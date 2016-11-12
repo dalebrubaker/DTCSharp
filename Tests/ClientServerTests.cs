@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
+using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
 using TestServer;
@@ -289,8 +290,8 @@ namespace Tests
         [Fact]
         public async Task MarketDataCompactTest()
         {
-            const int timeoutNoActivity = 1000;
-            const int timeoutForConnect = 1000;
+            const int timeoutNoActivity = 10000;
+            const int timeoutForConnect = 10000;
 
             // Set up the exampleService responses
             var exampleService = new ExampleService();
@@ -346,7 +347,6 @@ namespace Tests
                     Assert.Equal(1u, symbolId);
                     while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
                     {
-                        // Wait for the first two heartbeats
                         await Task.Delay(100).ConfigureAwait(false);
                     }
                     var elapsed = sw.ElapsedMilliseconds;
@@ -362,14 +362,17 @@ namespace Tests
         }
 
         /// <summary>
-        /// see ClientForm.btnGetHistoricalTicks_Click() for a WinForms example
+        /// See ClientForm.btnGetHistoricalTicks_Click() for a WinForms example
+        /// Also see Client.GetHistoricalPriceDataRecordResponsesAsync() which does something very similar
         /// </summary>
         /// <returns></returns>
         [Fact]
-        public async Task HistoricalPriceDataRecordResponseTickUnzippedTest()
+        public async Task HistoricalPriceDataRecordResponseTickNotZippedTest()
         {
-            const int timeoutNoActivity = 1000;
-            const int timeoutForConnect = 1000;
+            const int timeoutNoActivity = 10000;
+            const int timeoutForConnect = 10000;
+            const bool useZLibCompression = false;
+            var isFinalRecordReceived = false;
 
             // Set up the exampleService responses
             var exampleService = new ExampleService();
@@ -390,55 +393,55 @@ namespace Tests
                     var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
-                    // TODO replace below
+                    var numHistoricalPriceDataResponseHeader = 0;
+                    var numTrades = 0;
 
+                    // Set up the handler to capture the HistoricalPriceDataResponseHeader event
+                    EventHandler<EventArgs<HistoricalPriceDataResponseHeader>> responseHeaderEvent = (s, e) =>
+                    {
+                        var header = e.Data;
+                        _output.WriteLine($"Client1 received a HistoricalPriceDataResponseHeader after {sw.ElapsedMilliseconds} msecs");
+                        numHistoricalPriceDataResponseHeader++;
+                    };
+                    client1.HistoricalPriceDataResponseHeaderEvent += responseHeaderEvent;
 
-                    //var numSnapshots = 0;
-                    //var numBidAsks = 0;
-                    //var numTrades = 0;
+                    // Set up the handler to capture the HistoricalPriceDataRecordResponse events
+                    EventHandler<EventArgs<HistoricalPriceDataRecordResponse>> historicalPriceDataRecordResponseEvent = (s, e) =>
+                    {
+                        var trade = e.Data;
+                        numTrades++;
+                        if (trade.IsFinalRecord != 0)
+                        {
+                            isFinalRecordReceived = true;
+                        }
+                    };
+                    client1.HistoricalPriceDataRecordResponseEvent += historicalPriceDataRecordResponseEvent;
 
-                    //// Set up the handler to capture the MarketDataSnapshot event
-                    //EventHandler<EventArgs<MarketDataSnapshot>> marketDataSnapshotEvent = (s, e) =>
-                    //{
-                    //    var snapshot = e.Data;
-                    //    _output.WriteLine($"Client1 received a MarketDataSnapshot after {sw.ElapsedMilliseconds} msecs");
-                    //    numSnapshots++;
-                    //};
-                    //client1.MarketDataSnapshotEvent += marketDataSnapshotEvent;
+                    // Now request the data
+                    var request = new HistoricalPriceDataRequest
+                    {
+                        RequestID = 1,
+                        Symbol = "ESZ6",
+                        Exchange = "",
+                        RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
+                        StartDateTime = DateTime.UtcNow.UtcToDtcDateTime(), // ignored in this test
+                        EndDateTime = DateTime.UtcNow.UtcToDtcDateTime(), // ignored in this test
+                        MaxDaysToReturn = 1, // ignored in this test
+                        UseZLibCompression = useZLibCompression ? 1 : 0,
+                        RequestDividendAdjustedStockData = 0,
+                        Flag1 = 0,
+                    };
+                    sw.Restart();
+                    client1.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
+                    while (!isFinalRecordReceived)
+                    {
+                        await Task.Delay(100).ConfigureAwait(false);
+                    }
+                    var elapsed = sw.ElapsedMilliseconds;
+                    _output.WriteLine($"Client1 received all {numTrades} historical trades in {elapsed} msecs");
 
-                    //// Set up the handler to capture the MarketDataUpdateTradeCompact events
-                    //EventHandler<EventArgs<MarketDataUpdateTradeCompact>> marketDataUpdateTradeCompactEvent = (s, e) =>
-                    //{
-                    //    var trade = e.Data;
-                    //    numTrades++;
-                    //};
-                    //client1.MarketDataUpdateTradeCompactEvent += marketDataUpdateTradeCompactEvent;
-
-                    //// Set up the handler to capture the MarketDataUpdateBidAskCompact events
-                    //EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> marketDataUpdateBidAskCompactEvent = (s, e) =>
-                    //{
-                    //    var bidAsk = e.Data;
-                    //    numBidAsks++;
-                    //};
-                    //client1.MarketDataUpdateBidAskCompactEvent += marketDataUpdateBidAskCompactEvent;
-
-                    //// Now subscribe to the data
-                    //sw.Restart();
-                    //var symbolId = client1.SubscribeMarketData("ESZ6", "");
-                    //Assert.Equal(1u, symbolId);
-                    //while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
-                    //{
-                    //    // Wait for the first two heartbeats
-                    //    await Task.Delay(100).ConfigureAwait(false);
-                    //}
-                    //var elapsed = sw.ElapsedMilliseconds;
-                    //_output.WriteLine($"Client1 received all trades and bid/asks in {elapsed} msecs");
-
-                    //Assert.Equal(1, numSnapshots);
-                    //Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numTrades);
-                    //Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numBidAsks);
-
-                    //client1.UnsubscribeMarketData(symbolId);
+                    Assert.Equal(1, numHistoricalPriceDataResponseHeader);
+                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend, numTrades);
                 }
             }
         }
