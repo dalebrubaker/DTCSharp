@@ -5,5 +5,32 @@
     <Setting Name="ClientWindowPlacement" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="SymbolHistorical" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ESZ6</Value>
+    </Setting>
+    <Setting Name="SymbolDef" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ESZ6</Value>
+    </Setting>
+    <Setting Name="SymbolLevel1_1" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ESZ6</Value>
+    </Setting>
+    <Setting Name="SymbolLevel1_2" Type="System.String" Scope="User">
+      <Value Profile="(Default)">NQZ6</Value>
+    </Setting>
+    <Setting Name="HistStart" Type="System.DateTime" Scope="User">
+      <Value Profile="(Default)">2016-10-21</Value>
+    </Setting>
+    <Setting Name="Zip" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="Server" Type="System.String" Scope="User">
+      <Value Profile="(Default)">localhost</Value>
+    </Setting>
+    <Setting Name="PortListening" Type="System.String" Scope="User">
+      <Value Profile="(Default)">11099</Value>
+    </Setting>
+    <Setting Name="PortHistorical" Type="System.String" Scope="User">
+      <Value Profile="(Default)">11098</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

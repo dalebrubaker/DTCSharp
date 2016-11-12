@@ -40,22 +40,22 @@ namespace Tests
             }
         }
 
-        private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null)
+        private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null, bool useHeartbeat = true)
         {
             if (exampleService == null)
             {
                 exampleService = new ExampleService();
             }
-            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port : port, timeoutNoActivity: timeoutNoActivity, useHeartbeat: true);
+            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port : port, timeoutNoActivity: timeoutNoActivity, useHeartbeat: useHeartbeat);
             TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
 
-        private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port)
+        private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port, EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
         {
             var client = new Client(IPAddress.Loopback.ToString(), serverPort: port, timeoutNoActivity: timeoutNoActivity);
-            var encodingResponse = await client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClient" + port, timeoutForConnect).ConfigureAwait(false);
-            Assert.Equal(EncodingEnum.ProtocolBuffers, encodingResponse.Encoding);
+            var encodingResponse = await client.ConnectAsync(encoding, "TestClient" + port, timeoutForConnect).ConfigureAwait(false);
+            Assert.Equal(encoding, encodingResponse.Encoding);
             return client;
         }
 
@@ -378,19 +378,19 @@ namespace Tests
             var exampleService = new ExampleService();
             var port = _nextServerPort++;
 
-            using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
+            using (var server = StartExampleServer(timeoutNoActivity, port, exampleService, useHeartbeat:false))
             {
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
+                using (var clientHistorical = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port, EncodingEnum.BinaryEncoding).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
-                    while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
+                    while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
                     {
                         // Wait for the client to connect
                         await Task.Delay(1).ConfigureAwait(false);
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
-                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
+                    var loginResponse = await clientHistorical.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: false, timeout: 5000).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     var numHistoricalPriceDataResponseHeader = 0;
@@ -403,7 +403,7 @@ namespace Tests
                         _output.WriteLine($"Client1 received a HistoricalPriceDataResponseHeader after {sw.ElapsedMilliseconds} msecs");
                         numHistoricalPriceDataResponseHeader++;
                     };
-                    client1.HistoricalPriceDataResponseHeaderEvent += responseHeaderEvent;
+                    clientHistorical.HistoricalPriceDataResponseHeaderEvent += responseHeaderEvent;
 
                     // Set up the handler to capture the HistoricalPriceDataRecordResponse events
                     EventHandler<EventArgs<HistoricalPriceDataRecordResponse>> historicalPriceDataRecordResponseEvent = (s, e) =>
@@ -415,7 +415,7 @@ namespace Tests
                             isFinalRecordReceived = true;
                         }
                     };
-                    client1.HistoricalPriceDataRecordResponseEvent += historicalPriceDataRecordResponseEvent;
+                    clientHistorical.HistoricalPriceDataRecordResponseEvent += historicalPriceDataRecordResponseEvent;
 
                     // Now request the data
                     var request = new HistoricalPriceDataRequest
@@ -432,7 +432,7 @@ namespace Tests
                         Flag1 = 0,
                     };
                     sw.Restart();
-                    client1.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
+                    clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
                     while (!isFinalRecordReceived)
                     {
                         await Task.Delay(100).ConfigureAwait(false);

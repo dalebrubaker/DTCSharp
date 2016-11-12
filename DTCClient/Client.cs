@@ -339,7 +339,6 @@ namespace DTCClient
         /// </summary>
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
-        /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
         /// <param name="recordInterval"></param>
         /// <param name="startDateTimeUtc">Use DateTime.MinValue for 0</param>
         /// <param name="endDateTimeUtc">Use DateTime.MinValue for 0</param>
@@ -351,11 +350,12 @@ namespace DTCClient
         /// <param name="dataCallback">callback for HistoricalPriceDataRecordResponses</param>
         /// <param name="cancellationToken"></param>
         /// <returns>rejection, or null if not rejected</returns>
-        public async Task<HistoricalPriceDataReject> GetHistoricalPriceDataRecordResponsesAsync(int timeout, string symbol, string exchange,
+        public async Task<HistoricalPriceDataReject> GetHistoricalPriceDataRecordResponsesAsync(string symbol, string exchange,
             HistoricalDataIntervalEnum recordInterval, DateTime startDateTimeUtc, DateTime endDateTimeUtc, uint maxDaysToReturn, bool useZLibCompression,
             bool requestDividendAdjustedStockData, bool flag1, Action<HistoricalPriceDataResponseHeader> headerCallback,
             Action<HistoricalPriceDataRecordResponse> dataCallback, CancellationToken cancellationToken = default(CancellationToken))
         {
+            var timeout = _timeoutNoActivity;
             HistoricalPriceDataReject historicalPriceDataReject = null;
 
             // Set up handler to capture the reject event

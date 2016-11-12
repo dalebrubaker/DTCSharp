@@ -319,7 +319,7 @@ namespace DTCCommon.Codecs
                     return;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
                     var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
-                    sizeExcludingHeader = 4 + 4 + 2 + 4;
+                    sizeExcludingHeader = 4 + 4 + 2 + 2 + 4;
                     Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
                     binaryWriter.Write(historicalPriceDataResponseHeader.RequestID);
                     binaryWriter.Write((int)historicalPriceDataResponseHeader.RecordInterval);

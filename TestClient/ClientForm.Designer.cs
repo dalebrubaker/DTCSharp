@@ -107,7 +107,7 @@
             this.txtPortListening.Name = "txtPortListening";
             this.txtPortListening.Size = new System.Drawing.Size(100, 20);
             this.txtPortListening.TabIndex = 3;
-            this.txtPortListening.Text = "49999";
+            this.txtPortListening.Text = "11099";
             // 
             // label2
             // 
@@ -124,7 +124,7 @@
             this.txtPortHistorical.Name = "txtPortHistorical";
             this.txtPortHistorical.Size = new System.Drawing.Size(100, 20);
             this.txtPortHistorical.TabIndex = 5;
-            this.txtPortHistorical.Text = "49998";
+            this.txtPortHistorical.Text = "11098";
             // 
             // label3
             // 
@@ -293,7 +293,7 @@
             this.txtSymbolDef.Name = "txtSymbolDef";
             this.txtSymbolDef.Size = new System.Drawing.Size(67, 20);
             this.txtSymbolDef.TabIndex = 3;
-            this.txtSymbolDef.Text = "ESZ16";
+            this.txtSymbolDef.Text = "ESZ6";
             // 
             // tabPageLevel1
             // 

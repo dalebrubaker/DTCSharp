@@ -75,16 +75,17 @@ namespace TestServer
             {
                 var response = new HistoricalPriceDataRecordResponse
                 {
-                    AskVolume = i,
-                    BidVolume = i,
+                    AskVolume = i + 1,
+                    BidVolume = i + 1,
                     HighPrice = 2010,
                     IsFinalRecord = 0,
                     LastPrice = 2008,
                     LowPrice = 2001,
-                    NumTrades = (uint)i,
+                    NumTrades = (uint)i + 1,
                     OpenPrice = 2002,
                     RequestID = 1,
                     StartDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
+                    Volume = i + 1,
                 };
                 HistoricalPriceDataRecordResponses.Add(response);
             }
@@ -223,6 +224,7 @@ namespace TestServer
                     break;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = message as MarketDataRequest;
+                    ThrowEvent(marketDataRequest, MarketDataRequestEvent, messageType, clientHandler);
                     clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, MarketDataSnapshot);
                     foreach (var marketDataUpdateTradeCompact in MarketDataUpdateTradeCompacts)
                     {

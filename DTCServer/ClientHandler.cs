@@ -175,6 +175,7 @@ namespace DTCServer
                     switch (encodingRequest.Encoding)
                     {
                         case EncodingEnum.BinaryEncoding:
+                            newEncoding = EncodingEnum.BinaryEncoding;
                             break;
                         case EncodingEnum.BinaryWithVariableLengthStrings:
                         case EncodingEnum.JsonEncoding:

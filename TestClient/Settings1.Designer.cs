@@ -34,5 +34,113 @@ namespace TestClient {
                 this["ClientWindowPlacement"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ESZ6")]
+        public string SymbolHistorical {
+            get {
+                return ((string)(this["SymbolHistorical"]));
+            }
+            set {
+                this["SymbolHistorical"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ESZ6")]
+        public string SymbolDef {
+            get {
+                return ((string)(this["SymbolDef"]));
+            }
+            set {
+                this["SymbolDef"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ESZ6")]
+        public string SymbolLevel1_1 {
+            get {
+                return ((string)(this["SymbolLevel1_1"]));
+            }
+            set {
+                this["SymbolLevel1_1"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("NQZ6")]
+        public string SymbolLevel1_2 {
+            get {
+                return ((string)(this["SymbolLevel1_2"]));
+            }
+            set {
+                this["SymbolLevel1_2"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2016-10-21")]
+        public global::System.DateTime HistStart {
+            get {
+                return ((global::System.DateTime)(this["HistStart"]));
+            }
+            set {
+                this["HistStart"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool Zip {
+            get {
+                return ((bool)(this["Zip"]));
+            }
+            set {
+                this["Zip"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("localhost")]
+        public string Server {
+            get {
+                return ((string)(this["Server"]));
+            }
+            set {
+                this["Server"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("11099")]
+        public string PortListening {
+            get {
+                return ((string)(this["PortListening"]));
+            }
+            set {
+                this["PortListening"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("11098")]
+        public string PortHistorical {
+            get {
+                return ((string)(this["PortHistorical"]));
+            }
+            set {
+                this["PortHistorical"] = value;
+            }
+        }
     }
 }

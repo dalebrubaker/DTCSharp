@@ -502,25 +502,31 @@ namespace TestClient
 
         private async Task RequestHistoricalDataAsync(HistoricalDataIntervalEnum recordInterval)
         {
+            if (_client == null)
+            {
+                MessageBox.Show("You must connect first.");
+                return;
+            }
             _historicalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>();
-            using (var client = new Client(txtServer.Text, PortHistorical, timeoutNoActivity:30000))
+            var timeoutNoActivity = (int)TimeSpan.FromMinutes(5).TotalMilliseconds; // "several minutes" per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData
+            using (var clientHistorical = new Client(txtServer.Text, PortHistorical, timeoutNoActivity: timeoutNoActivity))
             {
                 const int timeout = 5000;
                 try
                 {
-                    const int heartbeatIntervalInSeconds = 10;
+                    const int heartbeatIntervalInSeconds = 0;
                     const bool useHeartbeat = false;
                     var clientName = $"HistoricalClient|{txtSymbolHistorical.Text}";
 
                     // Make a connection
-                    var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClientHistorical", timeout).ConfigureAwait(true);
+                    var encodingResponse = await clientHistorical.ConnectAsync(EncodingEnum.BinaryEncoding, clientName, timeout).ConfigureAwait(true);
                     if (encodingResponse == null)
                     {
                         // timed out
                         MessageBox.Show("Timed out trying to connect.");
                         return;
                     }
-                    var response = await client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, clientName, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
+                    var response = await clientHistorical.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
                     if (response == null)
                     {
                         logControlHistorical.LogMessage("Null logon response from logon attempt to " + clientName);
@@ -531,16 +537,16 @@ namespace TestClient
                         case LogonStatusEnum.LogonStatusUnset:
                             throw new ArgumentException("Unexpected logon result");
                         case LogonStatusEnum.LogonSuccess:
-                            DisplayLogonResponse(logControlHistorical, client, response);
+                            DisplayLogonResponse(logControlHistorical, clientHistorical, response);
                             break;
                         case LogonStatusEnum.LogonErrorNoReconnect:
-                            logControlHistorical.LogMessage($"{client} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
+                            logControlHistorical.LogMessage($"{clientHistorical} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
                             return;
                         case LogonStatusEnum.LogonError:
-                            logControlHistorical.LogMessage($"{client} Login failed: {response.Result} {response.ResultText}.");
+                            logControlHistorical.LogMessage($"{clientHistorical} Login failed: {response.Result} {response.ResultText}.");
                             return;
                         case LogonStatusEnum.LogonReconnectNewAddress:
-                            logControlHistorical.LogMessage($"{client} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
+                            logControlHistorical.LogMessage($"{clientHistorical} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
                             return;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -556,7 +562,7 @@ namespace TestClient
                 }
 
                 // Now we have successfully logged on
-                var historicalPriceDataReject = await client.GetHistoricalPriceDataRecordResponsesAsync(timeout, txtSymbolHistorical.Text, "", recordInterval,
+                var historicalPriceDataReject = await clientHistorical.GetHistoricalPriceDataRecordResponsesAsync(txtSymbolHistorical.Text, "", recordInterval,
                     dtpStart.Value.ToUniversalTime(), DateTime.MinValue, 0U, cbZip.Checked, false, false, HistoricalPriceDataResponseHeaderCallback,
                     HistoricalPriceDataRecordResponseCallback).ConfigureAwait(false);
                 if (historicalPriceDataReject != null)
@@ -764,12 +770,32 @@ namespace TestClient
         private void ClientForm_Load(object sender, EventArgs e)
         {
             WindowConfig.WindowPlacement.SetPlacement(this.Handle, Settings1.Default.ClientWindowPlacement);
-
+            txtServer.Text = Settings1.Default.Server;
+            txtServer.Text = Settings1.Default.Server;
+            txtPortListening.Text = Settings1.Default.PortListening;
+            txtPortHistorical.Text = Settings1.Default.PortHistorical;
+            txtSymbolDef.Text = Settings1.Default.SymbolDef;
+            txtSymbolLevel1_1.Text = Settings1.Default.SymbolLevel1_1;
+            txtSymbolLevel1_2.Text = Settings1.Default.SymbolLevel1_2;
+            txtSymbolHistorical.Text = Settings1.Default.SymbolHistorical;
+            dtpStart.Value = Settings1.Default.HistStart;
+            cbZip.Checked = Settings1.Default.Zip;
         }
 
         private void ClientForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             Settings1.Default.ClientWindowPlacement = WindowConfig.WindowPlacement.GetPlacement(this.Handle);
+            Settings1.Default.Server = txtServer.Text;
+            Settings1.Default.Server = txtServer.Text;
+            Settings1.Default.PortListening = txtPortListening.Text;
+            Settings1.Default.PortHistorical = txtPortHistorical.Text;
+            Settings1.Default.SymbolDef = txtSymbolDef.Text;
+            Settings1.Default.SymbolLevel1_1 = txtSymbolLevel1_1.Text;
+            Settings1.Default.SymbolLevel1_2 = txtSymbolLevel1_2.Text;
+            Settings1.Default.SymbolHistorical = txtSymbolHistorical.Text;
+            Settings1.Default.HistStart = dtpStart.Value;
+            Settings1.Default.Zip = cbZip.Checked;
+
             Settings1.Default.Save();
         }
     }
