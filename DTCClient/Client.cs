@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -651,6 +653,14 @@ namespace DTCClient
 
         public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
+#if DEBUG
+            if (messageType != DTCMessageType.Heartbeat)
+            {
+                var debug = 1;
+            }
+            var messageStr = $"{messageType} {_currentCodec}";
+            DebugHelpers.RequestsSent.Add(messageStr);
+#endif
             try
             {
                 _currentCodec.Write(messageType, message, _binaryWriter);
@@ -681,6 +691,7 @@ namespace DTCClient
             //}
         }
 
+
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
         /// </summary>
@@ -698,6 +709,8 @@ namespace DTCClient
                     {
                         var debug = 1;
                     }
+                    var messageStr = $"{messageType} {_currentCodec} size:{size}";
+                    DebugHelpers.ResponsesReceived.Add(messageStr);
 #endif
                     var messageBytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                     ProcessResponse(messageType, messageBytes, ref binaryReader);
@@ -1005,6 +1018,10 @@ namespace DTCClient
                 case DTCMessageType.AccountBalanceRequest:
                 case DTCMessageType.HistoricalPriceDataRequest:
                 default:
+                    var requestsSent = DebugHelpers.RequestsSent;
+                    var requestsReceived = DebugHelpers.RequestsReceived;
+                    var responsesReceived = DebugHelpers.ResponsesReceived;
+                    var responsesSent = DebugHelpers.ResponsesSent;
                     throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {ClientName} {nameof(ProcessResponse)}.");
             }
         }

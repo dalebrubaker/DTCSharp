@@ -109,6 +109,8 @@ namespace DTCServer
                     {
                         var debug = 1;
                     }
+                    var messageStr = $"{messageType} {_currentCodec} size:{size}";
+                    DebugHelpers.RequestsReceived.Add(messageStr);
 #endif
                     var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                     ProcessRequest(messageType, bytes);
@@ -359,6 +361,14 @@ namespace DTCServer
         /// <param name="thenSwitchToZipped"></param>
         public void SendResponse<T>(DTCMessageType messageType, T message, bool thenSwitchToZipped = false) where T : IMessage
         {
+#if DEBUG
+            if (messageType != DTCMessageType.Heartbeat)
+            {
+                var debug = 1;
+            }
+            var messageStr = $"{messageType} {_currentCodec}";
+            DebugHelpers.ResponsesSent.Add(messageStr);
+#endif
             try
             {
                 _currentCodec.Write(messageType, message, _binaryWriter);
