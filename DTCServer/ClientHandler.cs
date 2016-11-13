@@ -285,20 +285,10 @@ namespace DTCServer
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = _currentCodec.Load<HistoricalPriceDataRequest>(messageType, messageBytes);
                     _callback(this, messageType, historicalPriceDataRequest);
-                    if (historicalPriceDataRequest.UseZLibCompression == 1u)
+                    if (_useHeartbeat)
                     {
-                        if (_useHeartbeat)
-                        {
-                            throw new DTCSharpException("Heartbeat cannot co-exist with compression.");
-                        }
-
-                        // Switch to writing zipped
-                        var deflateStream = new DeflateStream(_networkStream, CompressionMode.Compress);
-                        _binaryWriter = new BinaryWriter(deflateStream);
-
-                        // Write the 2-byte header that Sierra Chart has coming from ZLib. See https://tools.ietf.org/html/rfc1950
-                        _binaryWriter.Write(120); // zlibCmf 120 = 0111 1000 means Deflate 
-                        _binaryWriter.Write(156); // zlibFlg 156 = 1001 1100
+                        // TODO delay heartbeats until IsFinalRecord is sent, for this and ExchangeList etc.
+                        throw new DTCSharpException("Heartbeat cannot co-exist with compression.");
                     }
                     break;
                 case DTCMessageType.MessageTypeUnset:
@@ -360,11 +350,28 @@ namespace DTCServer
             }
         }
 
-        public void SendResponse<T>(DTCMessageType messageType, T message) where T : IMessage
+        /// <summary>
+        /// Write the response. If thenSwitchToZipped, then switch the write stream to zlib format
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="messageType"></param>
+        /// <param name="message"></param>
+        /// <param name="thenSwitchToZipped"></param>
+        public void SendResponse<T>(DTCMessageType messageType, T message, bool thenSwitchToZipped = false) where T : IMessage
         {
             try
             {
                 _currentCodec.Write(messageType, message, _binaryWriter);
+                if (thenSwitchToZipped)
+                {
+                    // Switch to writing zipped
+                    var deflateStream = new DeflateStream(_networkStream, CompressionMode.Compress);
+                    _binaryWriter = new BinaryWriter(deflateStream);
+
+                    // Write the 2-byte header that Sierra Chart has coming from ZLib. See https://tools.ietf.org/html/rfc1950
+                    _binaryWriter.Write(120); // zlibCmf 120 = 0111 1000 means Deflate 
+                    _binaryWriter.Write(156); // zlibFlg 156 = 1001 1100
+                }
             }
             catch (Exception ex)
             {

@@ -333,11 +333,15 @@ namespace TestServer
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
                     ThrowEvent(historicalPriceDataRequest, HistoricalPriceDataRequestEvent, messageType, clientHandler);
+
+                    // DO NOT send the HistoricalPriceDataResponseHeader, which was already done for you in clientHandler.
+                    // This is because the HistoricalPriceDataResponseHeader must be sent without compression 
+                    // and ONLY THEN does the clientHandler switches to compression mode (if requested)
+
                     HistoricalPriceDataResponseHeader.RequestID = historicalPriceDataRequest.RequestID;
                     HistoricalPriceDataResponseHeader.UseZLibCompression = historicalPriceDataRequest.UseZLibCompression;
-
-                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader);
-
+                    var zip = historicalPriceDataRequest.UseZLibCompression != 0;
+                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader, thenSwitchToZipped: zip);
                     for (int i = 0; i < NumHistoricalPriceDataRecordsToSend; i++)
                     {
                         var response = HistoricalPriceDataRecordResponses[i];
