@@ -17,7 +17,7 @@ namespace Tests
     /// <summary>
     /// This tests needs to be in its own class or it causes others to fail
     /// </summary>
-    public class ServerThrowTests
+    public class ServerThrowTests : IDisposable
     {
 
         private readonly ITestOutputHelper _output;

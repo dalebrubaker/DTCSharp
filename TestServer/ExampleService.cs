@@ -357,6 +357,10 @@ namespace TestServer
                         response.RequestID = historicalPriceDataRequest.RequestID;
                         clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, response);
                     }
+                    if (zip)
+                    {
+                        clientHandler.EndZippedWriting(); // MUST do this to flush the compressed bytes
+                    }
                     break;
                 case DTCMessageType.MessageTypeUnset:
                 case DTCMessageType.LogonResponse:

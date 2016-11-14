@@ -32,6 +32,7 @@ namespace DTCClient
         private int _nextRequestId;
         private uint _nextSymbolId;
         private bool _useHeartbeat;
+        private bool _isBinaryReaderZipped;
 
         /// <summary>
         /// Constructor for a client
@@ -698,6 +699,7 @@ namespace DTCClient
         private Task ResponseReaderAsync()
         {
             var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
+            _isBinaryReaderZipped = false;
             while (!_ctsResponseReader.Token.IsCancellationRequested)
             {
                 try
@@ -709,7 +711,7 @@ namespace DTCClient
                     {
                         var debug = 1;
                     }
-                    var messageStr = $"{messageType} {_currentCodec} size:{size}";
+                    var messageStr = $"{messageType} {_currentCodec} zipped:{_isBinaryReaderZipped} size:{size}";
                     DebugHelpers.ResponsesReceived.Add(messageStr);
 #endif
                     var messageBytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
@@ -967,9 +969,18 @@ namespace DTCClient
                         }
                         // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
                         var zlibCmf = binaryReader.ReadByte(); // 120 = 0111 1000 means Deflate 
+                        if (zlibCmf != 120)
+                        {
+                            throw new DTCSharpException($"Unexpected zlibCmf header byte {zlibCmf}, expected 120");
+                        }
                         var zlibFlg = binaryReader.ReadByte(); // 156 = 1001 1100
+                        if (zlibFlg != 156)
+                        {
+                            throw new DTCSharpException($"Unexpected zlibFlg header byte {zlibFlg}, expected 156");
+                        }
                         var deflateStream = new DeflateStream(_networkStream, CompressionMode.Decompress);
                         binaryReader = new BinaryReader(deflateStream);
+                        _isBinaryReaderZipped = true;
                     }
                     ThrowEvent(historicalPriceDataResponseHeader, HistoricalPriceDataResponseHeaderEvent);
                     break;
@@ -1018,10 +1029,12 @@ namespace DTCClient
                 case DTCMessageType.AccountBalanceRequest:
                 case DTCMessageType.HistoricalPriceDataRequest:
                 default:
+#if DEBUG
                     var requestsSent = DebugHelpers.RequestsSent;
                     var requestsReceived = DebugHelpers.RequestsReceived;
                     var responsesReceived = DebugHelpers.ResponsesReceived;
                     var responsesSent = DebugHelpers.ResponsesSent;
+#endif
                     throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {ClientName} {nameof(ProcessResponse)}.");
             }
         }

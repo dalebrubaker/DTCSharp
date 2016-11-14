@@ -32,6 +32,8 @@ namespace DTCServer
         private BinaryWriter _binaryWriter;
         private DateTime _lastHeartbeatReceivedTime;
         private readonly CancellationTokenSource _ctsRequestReader;
+        private bool _isBinaryWriterZipped;
+        private DeflateStream _deflateStream;
 
         /// <summary>
         /// 
@@ -50,6 +52,7 @@ namespace DTCServer
             _ctsRequestReader = new CancellationTokenSource();
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
+            _isBinaryWriterZipped = false;
 
         }
 
@@ -96,6 +99,12 @@ namespace DTCServer
                     var numBytesRead = await _networkStream.ReadBytesAsync(headerBuffer, 4, _ctsRequestReader.Token).ConfigureAwait(false);
                     if (numBytesRead == 0)
                     {
+#if DEBUG
+                        var requestsSent = DebugHelpers.RequestsSent;
+                        var requestsReceived = DebugHelpers.RequestsReceived;
+                        var responsesReceived = DebugHelpers.ResponsesReceived;
+                        var responsesSent = DebugHelpers.ResponsesSent;
+#endif
                         throw new EndOfStreamException();
                     }
                     if (numBytesRead == 0)
@@ -366,7 +375,7 @@ namespace DTCServer
             {
                 var debug = 1;
             }
-            var messageStr = $"{messageType} {_currentCodec}";
+            var messageStr = $"{messageType} {_currentCodec} zipped:{_isBinaryWriterZipped}";
             DebugHelpers.ResponsesSent.Add(messageStr);
 #endif
             try
@@ -375,18 +384,31 @@ namespace DTCServer
                 if (thenSwitchToZipped)
                 {
                     // Switch to writing zipped
-                    var deflateStream = new DeflateStream(_networkStream, CompressionMode.Compress);
-                    _binaryWriter = new BinaryWriter(deflateStream);
-
                     // Write the 2-byte header that Sierra Chart has coming from ZLib. See https://tools.ietf.org/html/rfc1950
-                    _binaryWriter.Write(120); // zlibCmf 120 = 0111 1000 means Deflate 
-                    _binaryWriter.Write(156); // zlibFlg 156 = 1001 1100
+                    _binaryWriter.Write((byte)120); // zlibCmf 120 = 0111 1000 means Deflate 
+                    _binaryWriter.Write((byte)156); // zlibFlg 156 = 1001 1100
+
+                    _deflateStream = new DeflateStream(_networkStream, CompressionMode.Compress, true);
+                    _deflateStream.Flush();
+                    _binaryWriter = new BinaryWriter(_deflateStream);
+                    _isBinaryWriterZipped = true;
                 }
             }
             catch (Exception ex)
             {
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Do this when you are done writing compressed data.
+        /// And you can't write any future info to this ClientHandler
+        /// </summary>
+        public void EndZippedWriting()
+        {
+            _deflateStream.Close();
+            _deflateStream?.Dispose();
+            _deflateStream = null;
         }
 
         public void Dispose()
