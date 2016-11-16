@@ -118,8 +118,7 @@ namespace DTCServer
                     {
                         var debug = 1;
                     }
-                    var messageStr = $"{messageType} {_currentCodec} size:{size}";
-                    DebugHelpers.RequestsReceived.Add(messageStr);
+                    DebugHelpers.AddRequestReceived(messageType, _currentCodec, false, size);
 #endif
                     var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                     ProcessRequest(messageType, bytes);
@@ -375,8 +374,7 @@ namespace DTCServer
             {
                 var debug = 1;
             }
-            var messageStr = $"{messageType} {_currentCodec} zipped:{_isBinaryWriterZipped}";
-            DebugHelpers.ResponsesSent.Add(messageStr);
+            DebugHelpers.AddResponseSent(messageType, _currentCodec, _isBinaryWriterZipped);;
 #endif
             try
             {

@@ -659,8 +659,7 @@ namespace DTCClient
             {
                 var debug = 1;
             }
-            var messageStr = $"{messageType} {_currentCodec}";
-            DebugHelpers.RequestsSent.Add(messageStr);
+            DebugHelpers.AddRequestSent(messageType, _currentCodec);
 #endif
             try
             {
@@ -711,8 +710,7 @@ namespace DTCClient
                     {
                         var debug = 1;
                     }
-                    var messageStr = $"{messageType} {_currentCodec} zipped:{_isBinaryReaderZipped} size:{size}";
-                    DebugHelpers.ResponsesReceived.Add(messageStr);
+                    DebugHelpers.AddResponseReceived(messageType, _currentCodec, _isBinaryReaderZipped, size);
 #endif
                     var messageBytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                     ProcessResponse(messageType, messageBytes, ref binaryReader);
@@ -991,6 +989,12 @@ namespace DTCClient
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
                     var historicalPriceDataRecordResponse = _currentCodec.Load<HistoricalPriceDataRecordResponse>(messageType, messageBytes);
                     ThrowEvent(historicalPriceDataRecordResponse, HistoricalPriceDataRecordResponseEvent);
+#if DEBUG
+                    var requestsSent2 = DebugHelpers.RequestsSent;
+                    var requestsReceived2 = DebugHelpers.RequestsReceived;
+                    var responsesReceived2 = DebugHelpers.ResponsesReceived;
+                    var responsesSent2 = DebugHelpers.ResponsesSent;
+#endif
                     break;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     var historicalPriceDataTickRecordResponse = _currentCodec.Load<HistoricalPriceDataTickRecordResponse>(messageType, messageBytes);
