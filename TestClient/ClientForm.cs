@@ -94,7 +94,7 @@ namespace TestClient
                     MessageBox.Show("Timed out trying to connect.");
                     return;
                 }
-                var response = await _client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, clientName, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
+                var response = await _client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
                 if (response == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
@@ -514,7 +514,7 @@ namespace TestClient
                 const int timeout = 5000;
                 try
                 {
-                    const int heartbeatIntervalInSeconds = 0;
+                    const int heartbeatIntervalInSeconds = 3600;
                     const bool useHeartbeat = false;
                     var clientName = $"HistoricalClient|{txtSymbolHistorical.Text}";
 

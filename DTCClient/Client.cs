@@ -711,6 +711,18 @@ namespace DTCClient
                         var debug = 1;
                     }
                     DebugHelpers.AddResponseReceived(messageType, _currentCodec, _isBinaryReaderZipped, size);
+                    var requestsSent = DebugHelpers.RequestsSent;
+                    var requestsReceived = DebugHelpers.RequestsReceived;
+                    var responsesReceived = DebugHelpers.ResponsesReceived;
+                    var responsesSent = DebugHelpers.ResponsesSent;
+                    if (ClientName.ToLower().Contains("historical"))
+                    {
+                        var debug2 = 1;
+                        if (messageType == DTCMessageType.Heartbeat)
+                        {
+                            var debug3 = 2;
+                        }
+                    }
 #endif
                     var messageBytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                     ProcessResponse(messageType, messageBytes, ref binaryReader);
@@ -726,7 +738,7 @@ namespace DTCClient
                 catch (Exception ex)
                 {
                     var typeName = ex.GetType().Name;
-                    throw;
+                    Disconnect(new Error($"Read error {typeName}.", ex));
                 }
             }
             return Task.WhenAll(); // fake return

@@ -13,6 +13,17 @@ namespace DTCCommon
     /// </summary>
     public static class TaskHelper
     {
+
+        /// <summary>
+        /// Runs a TPL Task fire-and-forget style, the right way - in the
+        /// background, separate from the current thread, with no risk
+        /// of it trying to rejoin the current thread.
+        /// </summary>
+        public static void RunBg(Action fn)
+        {
+            Task.Run(fn).ConfigureAwait(false);
+        }
+
         /// <summary>
         /// Runs a TPL Task fire-and-forget style, the right way - in the
         /// background, separate from the current thread, with no risk
