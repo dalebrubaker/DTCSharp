@@ -771,9 +771,10 @@ namespace TestClient
         {
             WindowConfig.WindowPlacement.SetPlacement(this.Handle, Settings1.Default.ClientWindowPlacement);
             txtServer.Text = Settings1.Default.Server;
-            txtServer.Text = Settings1.Default.Server;
             txtPortListening.Text = Settings1.Default.PortListening;
             txtPortHistorical.Text = Settings1.Default.PortHistorical;
+            txtUsername.Text = Settings1.Default.UserName;
+            txtPassword.Text = Settings1.Default.Password;
             txtSymbolDef.Text = Settings1.Default.SymbolDef;
             txtSymbolLevel1_1.Text = Settings1.Default.SymbolLevel1_1;
             txtSymbolLevel1_2.Text = Settings1.Default.SymbolLevel1_2;
@@ -786,9 +787,10 @@ namespace TestClient
         {
             Settings1.Default.ClientWindowPlacement = WindowConfig.WindowPlacement.GetPlacement(this.Handle);
             Settings1.Default.Server = txtServer.Text;
-            Settings1.Default.Server = txtServer.Text;
             Settings1.Default.PortListening = txtPortListening.Text;
             Settings1.Default.PortHistorical = txtPortHistorical.Text;
+            Settings1.Default.UserName = txtUsername.Text;
+            Settings1.Default.Password = txtPassword.Text;
             Settings1.Default.SymbolDef = txtSymbolDef.Text;
             Settings1.Default.SymbolLevel1_1 = txtSymbolLevel1_1.Text;
             Settings1.Default.SymbolLevel1_2 = txtSymbolLevel1_2.Text;

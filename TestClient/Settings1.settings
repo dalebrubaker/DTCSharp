@@ -32,5 +32,11 @@
     <Setting Name="PortHistorical" Type="System.String" Scope="User">
       <Value Profile="(Default)">11098</Value>
     </Setting>
+    <Setting Name="UserName" Type="System.String" Scope="User">
+      <Value Profile="(Default)">testUserName</Value>
+    </Setting>
+    <Setting Name="Password" Type="System.String" Scope="User">
+      <Value Profile="(Default)">xxx</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
