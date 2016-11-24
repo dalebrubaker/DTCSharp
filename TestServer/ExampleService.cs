@@ -204,6 +204,7 @@ namespace TestServer
                         MarketDataSupported = 1,
                     };
                     clientHandler.SendResponse(DTCMessageType.LogonResponse, logonResponse);
+                    OnMessage("Sent LogonResponse to client");
                     ThrowEvent(logonRequest, LogonRequestEvent, messageType, clientHandler);
                     break;
                 case DTCMessageType.Heartbeat:
@@ -226,14 +227,17 @@ namespace TestServer
                     var marketDataRequest = message as MarketDataRequest;
                     ThrowEvent(marketDataRequest, MarketDataRequestEvent, messageType, clientHandler);
                     clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, MarketDataSnapshot);
+                    OnMessage("Sent MarketDataSnapshot to client");
                     foreach (var marketDataUpdateTradeCompact in MarketDataUpdateTradeCompacts)
                     {
                         clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact,  marketDataUpdateTradeCompact);
                     }
+                    OnMessage("Sent MarketDataUpdateTradeCompact records to client");
                     foreach (var marketDataUpdateBidAskCompact in MarketDataUpdateBidAskCompacts)
                     {
                         clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                     }
+                    OnMessage("Sent marketDataUpdateBidAskCompact records to client");
                     break;
                 case DTCMessageType.MarketDepthRequest:
                     var marketDepthRequest = message as MarketDepthRequest;
@@ -318,7 +322,37 @@ namespace TestServer
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
                     var securityDefinitionForSymbolRequest = message as SecurityDefinitionForSymbolRequest;
                     ThrowEvent(securityDefinitionForSymbolRequest, SecurityDefinitionForSymbolRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
+                    if (!securityDefinitionForSymbolRequest.Symbol.ToUpper().StartsWith("ES"))
+                    {
+                        var securityDefinitionReject = new SecurityDefinitionReject
+                        {
+                            RequestID = securityDefinitionForSymbolRequest.RequestID,
+                            RejectText = "Only ES?? is supported by TestServer"   
+                        };
+                        clientHandler.SendResponse(DTCMessageType.SecurityDefinitionReject, securityDefinitionReject);
+                        OnMessage("Sent SecurityDefinitionReject to client");
+                    }
+                    else
+                    {
+                        var securityDefinitionResponse = new SecurityDefinitionResponse
+                        {
+                            RequestID = securityDefinitionForSymbolRequest.RequestID,
+                            Symbol = securityDefinitionForSymbolRequest.Symbol,
+                            Exchange = securityDefinitionForSymbolRequest.Exchange,
+                            Description = "E-mini S&P 500 - CME",
+                            MinPriceIncrement = 0.25f,
+                            PriceDisplayFormat = PriceDisplayFormatEnum.PriceDisplayFormatDecimal2,
+                            DisplayPriceMultiplier = 1,
+                            CurrencyValuePerIncrement = 12.5f,
+                            IsFinalMessage = 1,
+                            FloatToIntPriceMultiplier = 1,
+                            IntToFloatPriceDivisor = 1,
+                            UpdatesBidAskOnly = 0,
+                            HasMarketDepthData = 0,
+                        };
+                        clientHandler.SendResponse(DTCMessageType.SecurityDefinitionResponse, securityDefinitionResponse);
+                        OnMessage("Sent SecurityDefinitionResponse to client");
+                    }
                     break;
                 case DTCMessageType.SymbolSearchRequest:
                     var symbolSearchRequest = message as SymbolSearchRequest;
@@ -342,6 +376,7 @@ namespace TestServer
                     HistoricalPriceDataResponseHeader.UseZLibCompression = historicalPriceDataRequest.UseZLibCompression;
                     var zip = historicalPriceDataRequest.UseZLibCompression != 0;
                     clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader, thenSwitchToZipped: zip);
+                    OnMessage("Sent HistoricalPriceDataResponseHeader to client");
                     for (int i = 0; i < NumHistoricalPriceDataRecordsToSend; i++)
                     {
                         var response = HistoricalPriceDataRecordResponses[i];
@@ -361,6 +396,7 @@ namespace TestServer
                     {
                         clientHandler.EndZippedWriting(); // MUST do this to flush the compressed bytes
                     }
+                    OnMessage("Sent HistoricalPriceDataRecordResponse records to client");
                     break;
                 case DTCMessageType.MessageTypeUnset:
                 case DTCMessageType.LogonResponse:

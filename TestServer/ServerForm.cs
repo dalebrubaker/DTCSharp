@@ -90,7 +90,7 @@ namespace TestServer
             btnStopHistorical.Enabled = true;
             
             // useHeartbeat = false See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
-            _serverHistorical = new Server(_exampleServer.HandleRequest, _ipAddress, PortListener, timeoutNoActivity: 30000, useHeartbeat: true);
+            _serverHistorical = new Server(_exampleServer.HandleRequest, _ipAddress, PortHistorical, timeoutNoActivity: 30000, useHeartbeat: false);
             try
             {
                 await _serverHistorical.RunAsync().ConfigureAwait(false);

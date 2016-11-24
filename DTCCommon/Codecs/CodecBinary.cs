@@ -121,9 +121,21 @@ namespace DTCCommon.Codecs
                     binaryWriter.Write(protocolType2); // 3 chars DTC plus null terminator 
                     return;
                 case DTCMessageType.MarketDataRequest:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;
+                    var marketDataRequest = message as MarketDataRequest;
+                    sizeExcludingHeader = 4 + 2 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write((int)marketDataRequest.RequestAction);
+                    binaryWriter.Write((ushort)marketDataRequest.SymbolID);
+                    binaryWriter.Write(marketDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
+                    binaryWriter.Write(marketDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+                    return;
                 case DTCMessageType.MarketDataReject:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var marketDataReject = message as MarketDataReject;
+                    sizeExcludingHeader = 2 + TEXT_DESCRIPTION_LENGTH;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write((ushort)marketDataReject.SymbolID);
+                    binaryWriter.Write(marketDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+                    return;
                 case DTCMessageType.MarketDataSnapshot:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataSnapshotInt:
@@ -424,7 +436,7 @@ namespace DTCCommon.Codecs
                     index += 64;
                     logonResponse.Integer1 = BitConverter.ToInt32(bytes, index);
                     index += 4;
-                    logonResponse.ServerName =bytes.StringFromNullTerminatedBytes(index);
+                    logonResponse.ServerName = bytes.StringFromNullTerminatedBytes(index);
                     index += 60;
                     logonResponse.MarketDepthUpdatesBestBidAndAsk = bytes[index++];
                     logonResponse.TradingIsSupported = bytes[index++];
@@ -472,9 +484,23 @@ namespace DTCCommon.Codecs
                     encodingResponse.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
                     return result;
                 case DTCMessageType.MarketDataRequest:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var marketDataRequest = result as MarketDataRequest;
+                    marketDataRequest.RequestAction = (RequestActionEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    marketDataRequest.SymbolID = BitConverter.ToUInt16(bytes, index);
+                    index += 2;
+                    marketDataRequest.Symbol = bytes.StringFromNullTerminatedBytes(index);
+                    index += SYMBOL_LENGTH;
+                    marketDataRequest.Exchange = bytes.StringFromNullTerminatedBytes(index);
+                    index += EXCHANGE_LENGTH;
+                    return result;
                 case DTCMessageType.MarketDataReject:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var marketDataReject = result as MarketDataReject;
+                    marketDataReject.SymbolID = BitConverter.ToUInt16(bytes, index);
+                    index += 2;
+                    marketDataReject.RejectText = bytes.StringFromNullTerminatedBytes(index);
+                    index += TEXT_DESCRIPTION_LENGTH;
+                    return result;
                 case DTCMessageType.MarketDataSnapshot:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataSnapshotInt:
