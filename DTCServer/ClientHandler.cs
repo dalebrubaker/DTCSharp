@@ -19,7 +19,7 @@ namespace DTCServer
     {
         private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
         private TcpClient _tcpClient;
-        private readonly bool _useHeartbeat;
+        private bool _useHeartbeat;
         private bool _isDisposed;
         private Timer _timerHeartbeat;
         private readonly string _localEndPoint;
@@ -36,12 +36,10 @@ namespace DTCServer
         /// </summary>
         /// <param name="callback">The callback to the DTC service implementation. Every request will be sent to the callback</param>
         /// <param name="tcpClient"></param>
-        /// <param name="useHeartbeat">Don't send heartbeats. Used for sending zipped historical data</param>
-        public ClientHandler(Action<ClientHandler, DTCMessageType, IMessage> callback, TcpClient tcpClient, bool useHeartbeat)
+        public ClientHandler(Action<ClientHandler, DTCMessageType, IMessage> callback, TcpClient tcpClient)
         {
             _callback = callback;
             _tcpClient = tcpClient;
-            _useHeartbeat = useHeartbeat;
             _currentCodec = new CodecBinary();
             RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _localEndPoint = tcpClient.Client.LocalEndPoint.ToString();
@@ -145,15 +143,18 @@ namespace DTCServer
             switch (messageType)
             {
                 case DTCMessageType.LogonRequest:
-                    var logonRequest = _currentCodec.Load<LogonRequest>(messageType, messageBytes);
-                    if (_useHeartbeat && _timerHeartbeat == null)
+                    if (_timerHeartbeat != null)
                     {
-                        // start the heartbeat
-                        _timerHeartbeat = new Timer(logonRequest.HeartbeatIntervalInSeconds * 1000);
-                        _timerHeartbeat.Elapsed += TimerHeartbeatElapsed;
-                        _lastHeartbeatReceivedTime = DateTime.Now;
-                        _timerHeartbeat.Start();
+                        DisposeTimerHeartbeat();
                     }
+                    var logonRequest = _currentCodec.Load<LogonRequest>(messageType, messageBytes);
+                    _useHeartbeat = logonRequest.HeartbeatIntervalInSeconds > 0;
+
+                    // start the heartbeat
+                    _timerHeartbeat = new Timer(logonRequest.HeartbeatIntervalInSeconds * 1000);
+                    _timerHeartbeat.Elapsed += TimerHeartbeatElapsed;
+                    _lastHeartbeatReceivedTime = DateTime.Now;
+                    _timerHeartbeat.Start();
                     _callback(this, messageType, logonRequest);
                     break;
                 case DTCMessageType.Heartbeat:
@@ -165,10 +166,7 @@ namespace DTCServer
                     if (_useHeartbeat && _timerHeartbeat != null)
                     {
                         // stop the heartbeat
-                        _timerHeartbeat.Elapsed -= TimerHeartbeatElapsed;
-                        _timerHeartbeat.Stop();
-                        _timerHeartbeat.Dispose();
-                        _timerHeartbeat = null;
+                        DisposeTimerHeartbeat();
                     }
                     var logoff = _currentCodec.Load<Logoff>(messageType, messageBytes);
                     _callback(this, messageType, logoff);
@@ -356,6 +354,17 @@ namespace DTCServer
             }
         }
 
+        private void DisposeTimerHeartbeat()
+        {
+            if (_timerHeartbeat != null)
+            {
+                _timerHeartbeat.Elapsed -= TimerHeartbeatElapsed;
+                _timerHeartbeat.Stop();
+                _timerHeartbeat.Dispose();
+                _timerHeartbeat = null;
+            }
+        }
+
         /// <summary>
         /// Write the response. If thenSwitchToZipped, then switch the write stream to zlib format
         /// </summary>
@@ -416,7 +425,7 @@ namespace DTCServer
             if (disposing && !_isDisposed)
             {
                 _ctsRequestReader.Cancel();
-                _timerHeartbeat?.Dispose();
+                DisposeTimerHeartbeat();
                 _networkStream?.Close();
                 _networkStream?.Dispose();
                 _networkStream = null;

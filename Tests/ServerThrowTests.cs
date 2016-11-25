@@ -37,7 +37,7 @@ namespace Tests
         {
             var exampleService = new ExampleService();
             var port = 65432;
-            using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: 1000, useHeartbeat: true))
+            using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: 1000))
             {
                 try
                 {
@@ -49,7 +49,7 @@ namespace Tests
                     throw;
                 }
                 await Task.Delay(200).ConfigureAwait(false);
-                using (var server2 = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: 1000, useHeartbeat: true))
+                using (var server2 = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: 1000))
                 {
                     await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync()).ConfigureAwait(false);
                     await Task.Delay(100).ConfigureAwait(false);

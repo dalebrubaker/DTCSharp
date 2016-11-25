@@ -17,7 +17,6 @@ namespace DTCServer
     {
         private readonly int _port;
         private readonly int _timeoutNoActivity;
-        private readonly bool _useHeartbeat;
         private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
         private readonly IPAddress _ipAddress;
         private TcpListener _tcpListener;
@@ -35,15 +34,13 @@ namespace DTCServer
         /// <param name="callback">the callback for all client requests</param>
         /// <param name="port"></param>
         /// <param name="timeoutNoActivity">milliseconds timeout to assume disconnected if no activity</param>
-        /// <param name="useHeartbeat">Don't send heartbeats. Used for sending zipped historical data</param>
         /// <param name="ipAddress"></param>
-        public Server(Action<ClientHandler, DTCMessageType, IMessage> callback, IPAddress ipAddress, int port, int timeoutNoActivity, bool useHeartbeat)
+        public Server(Action<ClientHandler, DTCMessageType, IMessage> callback, IPAddress ipAddress, int port, int timeoutNoActivity)
         {
             _callback = callback;
             _ipAddress = ipAddress;
             _port = port;
             _timeoutNoActivity = timeoutNoActivity;
-            _useHeartbeat = useHeartbeat;
             _clientHandlerTasks = new List<Task>();
             _clientHandlers = new List<ClientHandler>();
             _lock = new object();
@@ -150,7 +147,7 @@ namespace DTCServer
                     {
                         tcpClient.ReceiveTimeout = _timeoutNoActivity;
                     }
-                    var clientHandler = new ClientHandler(_callback, tcpClient, _useHeartbeat);
+                    var clientHandler = new ClientHandler(_callback, tcpClient);
                     var task = clientHandler.RequestReaderAsync();
                     lock (_lock)
                     {

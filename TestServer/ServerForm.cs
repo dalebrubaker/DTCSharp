@@ -21,7 +21,7 @@ namespace TestServer
         private Server _serverPrimary;
         private Server _serverHistorical;
         private readonly IPAddress _ipAddress;
-        private readonly ExampleService _exampleServer;
+        private readonly ExampleService _exampleService;
 
         public ServerForm()
         {
@@ -33,11 +33,11 @@ namespace TestServer
             lblServerIPAddress.Text = $"Server IP Address: {ipAddress}";
             _ipAddress = txtServer.Text.Trim().ToLower() == "localhost" ? IPAddress.Loopback : ipAddress;
             lblUsingIpAddress.Text = $"Using IP Address: {_ipAddress}";
-            _exampleServer = new ExampleService();
-            _exampleServer.MessageEvent += ExampleServerMessageEvent;
+            _exampleService = new ExampleService();
+            _exampleService.MessageEvent += ExampleServiceMessageEvent;
         }
 
-        private void ExampleServerMessageEvent(object sender, string message)
+        private void ExampleServiceMessageEvent(object sender, string message)
         {
             logControl1.LogMessage(message);
         }
@@ -66,7 +66,7 @@ namespace TestServer
         {
             btnStartPrimary.Enabled = false;
             btnStopPrimary.Enabled = true;
-            _serverPrimary = new Server(_exampleServer.HandleRequest, _ipAddress, PortListener, timeoutNoActivity: 30000, useHeartbeat: true);
+            _serverPrimary = new Server(_exampleService.HandleRequest, _ipAddress, PortListener, timeoutNoActivity: 30000);
             try
             {
                 await _serverPrimary.RunAsync().ConfigureAwait(false);
@@ -90,7 +90,7 @@ namespace TestServer
             btnStopHistorical.Enabled = true;
             
             // useHeartbeat = false See: http://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer
-            _serverHistorical = new Server(_exampleServer.HandleRequest, _ipAddress, PortHistorical, timeoutNoActivity: 30000, useHeartbeat: false);
+            _serverHistorical = new Server(_exampleService.HandleRequest, _ipAddress, PortHistorical, timeoutNoActivity: 30000);
             try
             {
                 await _serverHistorical.RunAsync().ConfigureAwait(false);

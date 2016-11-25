@@ -40,13 +40,13 @@ namespace Tests
             }
         }
 
-        private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null, bool useHeartbeat = true)
+        private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null)
         {
             if (exampleService == null)
             {
                 exampleService = new ExampleService();
             }
-            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port : port, timeoutNoActivity: timeoutNoActivity, useHeartbeat: useHeartbeat);
+            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port : port, timeoutNoActivity: timeoutNoActivity);
             TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
@@ -378,7 +378,7 @@ namespace Tests
             var exampleService = new ExampleService();
             var port = _nextServerPort++;
 
-            using (var server = StartExampleServer(timeoutNoActivity, port, exampleService, useHeartbeat:false))
+            using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
             {
                 using (var clientHistorical = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port, EncodingEnum.BinaryEncoding).ConfigureAwait(false))
                 {

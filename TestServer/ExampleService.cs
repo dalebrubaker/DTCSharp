@@ -12,7 +12,7 @@ namespace TestServer
     /// <summary>
     /// The service implementation that provides responses to client requests.
     /// </summary>
-    public class ExampleService
+    public class ExampleService : IServiceDTC
     {
         public ExampleService()
         {
@@ -162,13 +162,13 @@ namespace TestServer
 
         public event EventHandler<string> MessageEvent;
 
-        private void OnMessage(string message)
+        public void OnMessage(string message)
         {
             var temp = MessageEvent;
             temp?.Invoke(this, message);
         }
 
-        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T, DTCMessageType, ClientHandler>> eventForMessage, DTCMessageType messageType, ClientHandler clientHandler) where T : IMessage
+        public void ThrowEvent<T>(T message, EventHandler<EventArgs<T, DTCMessageType, ClientHandler>> eventForMessage, DTCMessageType messageType, ClientHandler clientHandler) where T : IMessage
         {
             var temp = eventForMessage; // for thread safety
             temp?.Invoke(this, new EventArgs<T, DTCMessageType, ClientHandler>(message, messageType, clientHandler));
