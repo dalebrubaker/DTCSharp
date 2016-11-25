@@ -203,6 +203,7 @@ namespace DTCServer
         {
             if (disposing && !_isDisposed)
             {
+                CloseAllClientHandlers();
                 _tcpListener?.Stop();
                 _tcpListener?.Server.Dispose();
                 _tcpListener = null;
