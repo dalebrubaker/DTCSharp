@@ -40,8 +40,6 @@ namespace DTCServer
         event EventHandler<EventArgs<AccountBalanceRequest, DTCMessageType, ClientHandler>> AccountBalanceRequestEvent;
         event EventHandler<EventArgs<HistoricalPriceDataRequest, DTCMessageType, ClientHandler>> HistoricalPriceDataRequestEvent;
         event EventHandler<string> MessageEvent;
-        void OnMessage(string message);
-        void ThrowEvent<T>(T message, EventHandler<EventArgs<T, DTCMessageType, ClientHandler>> eventForMessage, DTCMessageType messageType, ClientHandler clientHandler) where T : IMessage;
 
         /// <summary>
         /// This method is called for every request received by a client connected to this server.

@@ -162,13 +162,13 @@ namespace TestServer
 
         public event EventHandler<string> MessageEvent;
 
-        public void OnMessage(string message)
+        private void OnMessage(string message)
         {
             var temp = MessageEvent;
             temp?.Invoke(this, message);
         }
 
-        public void ThrowEvent<T>(T message, EventHandler<EventArgs<T, DTCMessageType, ClientHandler>> eventForMessage, DTCMessageType messageType, ClientHandler clientHandler) where T : IMessage
+        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T, DTCMessageType, ClientHandler>> eventForMessage, DTCMessageType messageType, ClientHandler clientHandler) where T : IMessage
         {
             var temp = eventForMessage; // for thread safety
             temp?.Invoke(this, new EventArgs<T, DTCMessageType, ClientHandler>(message, messageType, clientHandler));
