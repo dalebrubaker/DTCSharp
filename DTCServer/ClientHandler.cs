@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,8 +55,9 @@ namespace DTCServer
 
         private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
-            if (!_useHeartbeat)
+            if (!_useHeartbeat || _isBinaryWriterZipped)
             {
+                // Don't send a heartbeat if output is zipped
                 return;
             }
             var maxWaitForHeartbeatTime = TimeSpan.FromMilliseconds(Math.Max(_timerHeartbeat.Interval * 2, 5000));
@@ -140,6 +142,13 @@ namespace DTCServer
         /// <param name="messageBytes"></param>
         private void ProcessRequest(DTCMessageType messageType, byte[] messageBytes)
         {
+#if DEBUG
+            var port = ((IPEndPoint)_tcpClient.Client.LocalEndPoint).Port;
+            if (port == 49998)
+            {
+                var debug = 1;
+            }
+#endif
             switch (messageType)
             {
                 case DTCMessageType.LogonRequest:
@@ -289,11 +298,6 @@ namespace DTCServer
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = _currentCodec.Load<HistoricalPriceDataRequest>(messageType, messageBytes);
                     _callback(this, messageType, historicalPriceDataRequest);
-                    if (_useHeartbeat)
-                    {
-                        // TODO delay heartbeats until IsFinalRecord is sent, for this and ExchangeList etc.
-                        throw new DTCSharpException("Heartbeat cannot co-exist with compression.");
-                    }
                     break;
                 case DTCMessageType.MessageTypeUnset:
                 case DTCMessageType.LogonResponse:
@@ -383,6 +387,13 @@ namespace DTCServer
 #endif
             try
             {
+#if DEBUG
+                var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
+                if (port == 49998 && messageType == DTCMessageType.LogonResponse)
+                {
+                    var debug2 = 1;
+                }
+#endif
                 _currentCodec.Write(messageType, message, _binaryWriter);
                 if (thenSwitchToZipped)
                 {

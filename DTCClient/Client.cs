@@ -973,10 +973,6 @@ namespace DTCClient
                     var historicalPriceDataResponseHeader = _currentCodec.Load<HistoricalPriceDataResponseHeader>(messageType, messageBytes);
                     if (historicalPriceDataResponseHeader.UseZLibCompression == 1)
                     {
-                        if (_useHeartbeat)
-                        {
-                            throw new DTCSharpException("Heartbeat cannot co-exist with compression.");
-                        }
                         // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
                         var zlibCmf = binaryReader.ReadByte(); // 120 = 0111 1000 means Deflate 
                         if (zlibCmf != 120)

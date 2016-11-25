@@ -87,7 +87,8 @@ namespace TestClient
                 const bool useHeartbeat = true;
 
                 // Make a connection
-                var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClientPrimary", timeout).ConfigureAwait(true);
+                var encodingResponse = await _client.ConnectAsync(EncodingEnum.BinaryEncoding, "TestClientPrimary", timeout).ConfigureAwait(true);
+                //var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClientPrimary", timeout).ConfigureAwait(true);
                 if (encodingResponse == null)
                 {
                     // timed out

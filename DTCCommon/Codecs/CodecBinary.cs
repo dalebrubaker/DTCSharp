@@ -68,7 +68,7 @@ namespace DTCCommon.Codecs
                     return;
                 case DTCMessageType.LogonResponse:
                     var logonResponse = message as LogonResponse;
-                    sizeExcludingHeader = 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + (4 * 1) + SYMBOL_EXCHANGE_DELIMITER_LENGTH + (9 * 1);
+                    sizeExcludingHeader = 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + (4 * 1) + SYMBOL_EXCHANGE_DELIMITER_LENGTH + (8 * 1) + 4;
                     Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
                     binaryWriter.Write(logonResponse.ProtocolVersion);
                     binaryWriter.Write((int)logonResponse.Result);
@@ -89,7 +89,7 @@ namespace DTCCommon.Codecs
                     binaryWriter.Write((uint8_t)logonResponse.BracketOrdersSupported);
                     binaryWriter.Write((uint8_t)logonResponse.UseIntegerPriceOrderMessages);
                     binaryWriter.Write((uint8_t)logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount);
-                    binaryWriter.Write((uint8_t)logonResponse.MarketDataSupported);
+                    binaryWriter.Write(logonResponse.MarketDataSupported);
                     return;
                 case DTCMessageType.Heartbeat:
                     var heartbeat = message as Heartbeat;
@@ -197,7 +197,11 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.MarketDepthFullUpdate20:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataFeedStatus:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
+                    var marketDataFeedStatus = message as MarketDataFeedStatus;
+                    sizeExcludingHeader = 4;
+                    Utility.WriteHeader(binaryWriter, sizeExcludingHeader, messageType);
+                    binaryWriter.Write((int)marketDataFeedStatus.Status);
+                    return;
                 case DTCMessageType.MarketDataFeedSymbolStatus:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewSingleOrder:
@@ -452,7 +456,8 @@ namespace DTCCommon.Codecs
                     logonResponse.BracketOrdersSupported = bytes[index++];
                     logonResponse.UseIntegerPriceOrderMessages = bytes[index++];
                     logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount = bytes[index++];
-                    logonResponse.MarketDataSupported = bytes[index++];
+                    logonResponse.MarketDataSupported = BitConverter.ToUInt32(bytes, index);
+                    index += 4;
                     return result;
                 case DTCMessageType.Heartbeat:
                     var heartbeat = result as Heartbeat;
@@ -562,7 +567,10 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.MarketDepthFullUpdate20:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.MarketDataFeedStatus:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
+                    var marketDataFeedStatus = result as MarketDataFeedStatus;
+                    marketDataFeedStatus.Status = (MarketDataFeedStatusEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    return result;
                 case DTCMessageType.MarketDataFeedSymbolStatus:
                     throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Load)}: {messageType}"); ;;
                 case DTCMessageType.SubmitNewSingleOrder:
