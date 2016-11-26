@@ -15,7 +15,7 @@ namespace DTCServer
         /// HandleMessage() takes care of changing the current encoding and responding.
         /// So do NOT respond to this event.
         /// </summary>
-        event EventHandler<EventArgs<EncodingRequest>> EncodingRequestEvent;
+        event EventHandler<EventArgs<EncodingRequest, DTCMessageType, ClientHandler>> EncodingRequestEvent;
 
         event EventHandler<EventArgs<LogonRequest, DTCMessageType, ClientHandler>> LogonRequestEvent;
         event EventHandler<EventArgs<MarketDataRequest, DTCMessageType, ClientHandler>> MarketDataRequestEvent;

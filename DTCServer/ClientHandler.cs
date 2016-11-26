@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
-using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;

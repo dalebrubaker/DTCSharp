@@ -134,7 +134,7 @@ namespace TestServer
         /// HandleMessage() takes care of changing the current encoding and responding.
         /// So do NOT respond to this event.
         /// </summary>
-        public event EventHandler<EventArgs<EncodingRequest>> EncodingRequestEvent;
+        public event EventHandler<EventArgs<EncodingRequest, DTCMessageType, ClientHandler>> EncodingRequestEvent;
 
 
         public event EventHandler<EventArgs<LogonRequest, DTCMessageType, ClientHandler>> LogonRequestEvent;
@@ -368,10 +368,6 @@ namespace TestServer
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
                     ThrowEvent(historicalPriceDataRequest, HistoricalPriceDataRequestEvent, messageType, clientHandler);
-
-                    // DO NOT send the HistoricalPriceDataResponseHeader, which was already done for you in clientHandler.
-                    // This is because the HistoricalPriceDataResponseHeader must be sent without compression 
-                    // and ONLY THEN does the clientHandler switches to compression mode (if requested)
 
                     HistoricalPriceDataResponseHeader.RequestID = historicalPriceDataRequest.RequestID;
                     HistoricalPriceDataResponseHeader.UseZLibCompression = historicalPriceDataRequest.UseZLibCompression;
