@@ -660,6 +660,17 @@ namespace DTCClient
                 var debug = 1;
             }
             DebugHelpers.AddRequestSent(messageType, _currentCodec);
+            var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
+            //if (port == 49998 && messageType == DTCMessageType.LogonResponse)
+            if (messageType == DTCMessageType.LogonRequest)
+                {
+                    var debug2 = 1;
+                var requestsSent = DebugHelpers.RequestsSent;
+                var requestsReceived = DebugHelpers.RequestsReceived;
+                var responsesReceived = DebugHelpers.ResponsesReceived;
+                var responsesSent = DebugHelpers.ResponsesSent;
+            }
+
 #endif
             try
             {

@@ -148,7 +148,7 @@ namespace DTCServer
                         tcpClient.ReceiveTimeout = _timeoutNoActivity;
                     }
                     var clientHandler = new ClientHandler(_callback, tcpClient);
-                    var task = clientHandler.RequestReaderAsync();
+                    var task = Task.Factory.StartNew(() => clientHandler.RequestReaderAsync(), TaskCreationOptions.LongRunning);
                     lock (_lock)
                     {
                         _clientHandlerTasks.Add(task);
