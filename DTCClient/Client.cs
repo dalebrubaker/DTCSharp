@@ -197,6 +197,10 @@ namespace DTCClient
             }
             ClientName = clientName;
             _tcpClient = new TcpClient {NoDelay = true};
+            if (_timeoutNoActivity != 0)
+            {
+                _tcpClient.ReceiveTimeout = _timeoutNoActivity;
+            }
             try
             {
                 await _tcpClient.ConnectAsync(ServerAddress, ServerPort).ConfigureAwait(false); // connect to the server
@@ -216,10 +220,6 @@ namespace DTCClient
             {
                 await ResponseReaderAsync().ConfigureAwait(false);
             });
-            if (_timeoutNoActivity != 0)
-            {
-                _tcpClient.ReceiveTimeout = _timeoutNoActivity;
-            }
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
@@ -724,7 +724,7 @@ namespace DTCClient
                         }
                     }
 #endif
-                    var messageBytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
+                    var messageBytes = binaryReader.ReadBytes(size - 4); // size includes the header size+type
                     ProcessResponse(messageType, messageBytes, ref binaryReader);
                 }
                 catch (IOException ex)

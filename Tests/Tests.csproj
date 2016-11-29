@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BinaryEncodingTests.cs" />
+    <Compile Include="ClientServerNotZippedTests.cs" />
     <Compile Include="ClientServerZippedTests.cs" />
     <Compile Include="ServerThrowTests.cs" />
     <Compile Include="UnitTests.cs" />

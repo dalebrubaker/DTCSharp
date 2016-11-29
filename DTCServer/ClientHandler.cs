@@ -114,6 +114,15 @@ namespace DTCServer
                         var debug = 1;
                     }
                     DebugHelpers.AddRequestReceived(messageType, _currentCodec, false, size);
+                    var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
+                    if (port == 49998 && messageType == DTCMessageType.LogonRequest)
+                    {
+                        var debug2 = 1;
+                        var requestsSent = DebugHelpers.RequestsSent;
+                        var requestsReceived = DebugHelpers.RequestsReceived;
+                        var responsesReceived = DebugHelpers.ResponsesReceived;
+                        var responsesSent = DebugHelpers.ResponsesSent;
+                    }
 #endif
                     var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                     ProcessRequest(messageType, bytes);

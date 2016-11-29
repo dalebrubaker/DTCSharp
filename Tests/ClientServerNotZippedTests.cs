@@ -13,13 +13,13 @@ using Xunit.Abstractions;
 
 namespace Tests
 {
-    public class ClientServerZippedTests : IDisposable
+    public class ClientServerNotZippedTests : IDisposable
     {
 
         private readonly ITestOutputHelper _output;
         private int _nextServerPort;
 
-        public ClientServerZippedTests(ITestOutputHelper output)
+        public ClientServerNotZippedTests(ITestOutputHelper output)
         {
             _output = output;
             _nextServerPort = 54321;
@@ -29,7 +29,6 @@ namespace Tests
         {
             _output.WriteLine("Disposing");
         }
-
 
         private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null)
         {
@@ -56,11 +55,11 @@ namespace Tests
         /// </summary>
         /// <returns></returns>
         [Fact]
-        public async Task HistoricalPriceDataRecordResponseTickZippedTest()
+        public async Task HistoricalPriceDataRecordResponseTickNotZippedTest()
         {
             const int timeoutNoActivity = 10000;
             const int timeoutForConnect = 10000;
-            const bool useZLibCompression = true;
+            const bool useZLibCompression = false;
             var isFinalRecordReceived = false;
 
             // Set up the exampleService responses
