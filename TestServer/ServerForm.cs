@@ -1,16 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using DTCCommon;
+using DTCCommon.Extensions;
 using DTCServer;
 using static DTCCommon.WindowConfig;
 
@@ -20,19 +14,12 @@ namespace TestServer
     {
         private Server _serverPrimary;
         private Server _serverHistorical;
-        private readonly IPAddress _ipAddress;
+        private IPAddress _ipAddress;
         private readonly ExampleService _exampleService;
 
         public ServerForm()
         {
             InitializeComponent();
-            var serverName = Environment.MachineName;
-            lblServerName.Text = $"Server Name: {serverName}";
-            var hostEntry = Dns.GetHostEntry(serverName);
-            var ipAddress = hostEntry.AddressList.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-            lblServerIPAddress.Text = $"Server IP Address: {ipAddress}";
-            _ipAddress = txtServer.Text.Trim().ToLower() == "localhost" ? IPAddress.Loopback : ipAddress;
-            lblUsingIpAddress.Text = $"Using IP Address: {_ipAddress}";
             _exampleService = new ExampleService();
             _exampleService.MessageEvent += ExampleServiceMessageEvent;
         }
@@ -110,13 +97,46 @@ namespace TestServer
 
         private void ServerForm_Load(object sender, EventArgs e)
         {
+            LoadConfig();
+            SetIpAddress();
+        }
+
+        private void SetIpAddress()
+        {
+            var serverName = Environment.MachineName;
+            lblServerName.Text = $"Server Name: {serverName}";
+            var hostEntry = Dns.GetHostEntry(serverName);
+            var ipAddress = hostEntry.AddressList.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+            lblServerIPAddress.Text = $"Server IP Address: {ipAddress}";
+            _ipAddress = txtServer.Text.Trim().ToLower() == "localhost" ? IPAddress.Loopback : ipAddress;
+            lblUsingIpAddress.Text = $"Using IP Address: {_ipAddress}";
+        }
+
+        private void LoadConfig()
+        {
             WindowPlacement.SetPlacement(this.Handle, Settings1.Default.MainWindowPlacement);
+            txtServer.Text = string.IsNullOrEmpty(Settings1.Default.ServerName) ? "localhost" : Settings1.Default.ServerName;
+            txtPortListening.Text = Settings1.Default.PortListening == 0 ? "49999" : Settings1.Default.PortListening.ToString();
+            txtPortHistorical.Text = Settings1.Default.PortHistorical == 0 ? "49998" : Settings1.Default.PortHistorical.ToString();
         }
 
         private void ServerForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            SaveConfig();
+        }
+
+        private void SaveConfig()
+        {
             Settings1.Default.MainWindowPlacement = WindowPlacement.GetPlacement(this.Handle);
+            Settings1.Default.ServerName = txtServer.Text;
+            Settings1.Default.PortListening = txtPortListening.Text.ToInt32();
+            Settings1.Default.PortHistorical = txtPortHistorical.Text.ToInt32();
             Settings1.Default.Save();
+        }
+
+        private void txtServer_Leave(object sender, EventArgs e)
+        {
+            SetIpAddress();
         }
     }
 }

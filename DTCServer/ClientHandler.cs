@@ -449,7 +449,7 @@ namespace DTCServer
 
         public override string ToString()
         {
-            return $"From:{RemoteEndPoint}";
+            return $"Remote:{RemoteEndPoint}";
         }
 
         /// <summary>

@@ -205,7 +205,7 @@ namespace TestServer
                         MarketDataSupported = 1,
                     };
                     clientHandler.SendResponse(DTCMessageType.LogonResponse, logonResponse);
-                    OnMessage("Sent LogonResponse to client");
+                    OnMessage($"Sent LogonResponse to client {clientHandler}");
                     ThrowEvent(logonRequest, LogonRequestEvent, messageType, clientHandler);
                     break;
                 case DTCMessageType.Heartbeat:
@@ -228,17 +228,17 @@ namespace TestServer
                     var marketDataRequest = message as MarketDataRequest;
                     ThrowEvent(marketDataRequest, MarketDataRequestEvent, messageType, clientHandler);
                     clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, MarketDataSnapshot);
-                    OnMessage("Sent MarketDataSnapshot to client");
+                    OnMessage($"Sent MarketDataSnapshot to client {clientHandler}");
                     foreach (var marketDataUpdateTradeCompact in MarketDataUpdateTradeCompacts)
                     {
                         clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact,  marketDataUpdateTradeCompact);
                     }
-                    OnMessage("Sent MarketDataUpdateTradeCompact records to client");
+                    OnMessage($"Sent MarketDataUpdateTradeCompact records to client {clientHandler}");
                     foreach (var marketDataUpdateBidAskCompact in MarketDataUpdateBidAskCompacts)
                     {
                         clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                     }
-                    OnMessage("Sent marketDataUpdateBidAskCompact records to client");
+                    OnMessage($"Sent marketDataUpdateBidAskCompact records to client {clientHandler}");
                     break;
                 case DTCMessageType.MarketDepthRequest:
                     var marketDepthRequest = message as MarketDepthRequest;
@@ -331,7 +331,7 @@ namespace TestServer
                             RejectText = "Only ES?? is supported by TestServer"   
                         };
                         clientHandler.SendResponse(DTCMessageType.SecurityDefinitionReject, securityDefinitionReject);
-                        OnMessage("Sent SecurityDefinitionReject to client");
+                        OnMessage($"Sent SecurityDefinitionReject to client {clientHandler}");
                     }
                     else
                     {
@@ -352,7 +352,7 @@ namespace TestServer
                             HasMarketDepthData = 0,
                         };
                         clientHandler.SendResponse(DTCMessageType.SecurityDefinitionResponse, securityDefinitionResponse);
-                        OnMessage("Sent SecurityDefinitionResponse to client");
+                        OnMessage($"Sent SecurityDefinitionResponse to client {clientHandler}");
                     }
                     break;
                 case DTCMessageType.SymbolSearchRequest:
@@ -373,7 +373,7 @@ namespace TestServer
                     HistoricalPriceDataResponseHeader.UseZLibCompression = historicalPriceDataRequest.UseZLibCompression;
                     var zip = historicalPriceDataRequest.UseZLibCompression != 0;
                     clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader, thenSwitchToZipped: zip);
-                    OnMessage("Sent HistoricalPriceDataResponseHeader to client");
+                    OnMessage($"Sent HistoricalPriceDataResponseHeader to client {clientHandler}");
                     for (int i = 0; i < NumHistoricalPriceDataRecordsToSend; i++)
                     {
                         var response = HistoricalPriceDataRecordResponses[i];
@@ -393,7 +393,7 @@ namespace TestServer
                     {
                         clientHandler.EndZippedWriting(); // MUST do this to flush the compressed bytes
                     }
-                    OnMessage("Sent HistoricalPriceDataRecordResponse records to client");
+                    OnMessage($"Sent HistoricalPriceDataRecordResponse records to client {clientHandler}");
                     break;
                 case DTCMessageType.MessageTypeUnset:
                 case DTCMessageType.LogonResponse:

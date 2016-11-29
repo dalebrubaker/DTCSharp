@@ -154,6 +154,7 @@
             this.txtServer.Size = new System.Drawing.Size(100, 20);
             this.txtServer.TabIndex = 18;
             this.txtServer.Text = "localhost";
+            this.txtServer.Leave += new System.EventHandler(this.txtServer_Leave);
             // 
             // logControl1
             // 
