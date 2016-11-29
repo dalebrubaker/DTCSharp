@@ -151,12 +151,14 @@ namespace DTCServer
                     }
                     var logonRequest = _currentCodec.Load<LogonRequest>(messageType, messageBytes);
                     _useHeartbeat = logonRequest.HeartbeatIntervalInSeconds > 0;
-
-                    // start the heartbeat
-                    _timerHeartbeat = new Timer(logonRequest.HeartbeatIntervalInSeconds * 1000);
-                    _timerHeartbeat.Elapsed += TimerHeartbeatElapsed;
-                    _lastHeartbeatReceivedTime = DateTime.Now;
-                    _timerHeartbeat.Start();
+                    if (_useHeartbeat)
+                    {
+                        // start the heartbeat
+                        _timerHeartbeat = new Timer(logonRequest.HeartbeatIntervalInSeconds * 1000);
+                        _timerHeartbeat.Elapsed += TimerHeartbeatElapsed;
+                        _lastHeartbeatReceivedTime = DateTime.Now;
+                        _timerHeartbeat.Start();
+                    }
                     _callback(this, messageType, logonRequest);
                     break;
                 case DTCMessageType.Heartbeat:
@@ -356,8 +358,8 @@ namespace DTCServer
             if (_timerHeartbeat != null)
             {
                 _timerHeartbeat.Elapsed -= TimerHeartbeatElapsed;
-                _timerHeartbeat.Stop();
-                _timerHeartbeat.Dispose();
+                _timerHeartbeat?.Stop();
+                _timerHeartbeat?.Dispose();
                 _timerHeartbeat = null;
             }
         }
@@ -375,6 +377,10 @@ namespace DTCServer
             if (messageType != DTCMessageType.Heartbeat)
             {
                 var debug = 1;
+            }
+            else
+            {
+                var debug3 = 1;
             }
             DebugHelpers.AddResponseSent(messageType, _currentCodec, _isBinaryWriterZipped);;
 #endif

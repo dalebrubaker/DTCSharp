@@ -1,19 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using DTCClient;
 using DTCCommon;
 using DTCCommon.Codecs;
 using DTCCommon.Extensions;
 using DTCPB;
-using DTCServer;
 using Google.Protobuf;
-using TestServer;
 using Xunit;
 
 namespace Tests

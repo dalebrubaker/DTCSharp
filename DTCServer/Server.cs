@@ -69,7 +69,7 @@ namespace DTCServer
                         continue;
                     }
                     var clientHandler = _clientHandlers[i];
-                    clientHandler.Dispose(); // ClientHandler.Dispose() also closes tcpClient
+                    clientHandler?.Dispose(); // ClientHandler.Dispose() also closes tcpClient
                     OnClientDisconnected(clientHandler);
                     _clientHandlerTasks.RemoveAt(i);
                     _clientHandlers.RemoveAt(i);

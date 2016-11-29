@@ -17,12 +17,10 @@ namespace Tests
     {
 
         private readonly ITestOutputHelper _output;
-        private int _nextServerPort;
 
         public ClientServerNotZippedTests(ITestOutputHelper output)
         {
             _output = output;
-            _nextServerPort = 54321;
         }
 
         public void Dispose()
@@ -64,7 +62,7 @@ namespace Tests
 
             // Set up the exampleService responses
             var exampleService = new ExampleService();
-            var port = _nextServerPort++;
+            var port = ClientServerTests.NextServerPort;
 
             using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
             {
@@ -78,7 +76,8 @@ namespace Tests
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
-                    var loginResponse = await clientHistorical.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: false, timeout: 5000).ConfigureAwait(true);
+                    // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
+                    var loginResponse = await clientHistorical.LogonAsync(heartbeatIntervalInSeconds: 0, useHeartbeat: false, timeout: 5000).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     var numHistoricalPriceDataResponseHeader = 0;

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
@@ -10,18 +12,33 @@ using DTCServer;
 using TestServer;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Tests
 {
     public class ClientServerTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
-        private int _nextServerPort;
+
+        // ReSharper disable once InconsistentNaming
+        private static int _nextServerPort = 54321;
+
+        private static readonly object Lock = new object();
+
+        public static int NextServerPort
+        {
+            get
+            {
+                lock (Lock)
+                {
+                    return _nextServerPort++;
+                }
+            }
+        }
 
         public ClientServerTests(ITestOutputHelper output)
         {
             _output = output;
-            _nextServerPort = 54321;
         }
 
         public void Dispose()
@@ -30,10 +47,11 @@ namespace Tests
         }
 
         [Fact]
-        public void StartServerTest()
+        public async Task StartServerTest()
         {
-            using (var server = StartExampleServer(1000, _nextServerPort++))
+            using (var server = StartExampleServer(1000, NextServerPort))
             {
+                await Task.Delay(100).ConfigureAwait(true); // give it time to start
                 Assert.Equal(0, server.NumberOfClientHandlers);
             }
         }
@@ -44,8 +62,24 @@ namespace Tests
             {
                 exampleService = new ExampleService();
             }
-            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port : port, timeoutNoActivity: timeoutNoActivity);
-            TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
+            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: timeoutNoActivity);
+            try
+            {
+                //TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(true));
+                var task = server.RunAsync().ConfigureAwait(true);
+            }
+            catch (AggregateException aex)
+            {
+                
+            }
+            catch (ThreadAbortException ex)
+            {
+                // normal
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
             return server;
         }
 
@@ -64,7 +98,7 @@ namespace Tests
             int numDisconnects = 0;
             const int timeoutNoActivity = 1000;
             const int timeoutForConnect = 1000;
-            var port = _nextServerPort++;
+            var port = NextServerPort;
             using (var server = StartExampleServer(timeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
@@ -115,7 +149,7 @@ namespace Tests
             int numDisconnects = 0;
             const int timeoutNoActivity = 100;
             const int timeoutForConnect = 1000;
-            var port = _nextServerPort++;
+            var port = NextServerPort;
             using (var server = StartExampleServer(timeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
@@ -170,7 +204,7 @@ namespace Tests
             int numDisconnects = 0;
             const int timeoutNoActivity = 30000;
             const int timeoutForConnect = 5000;
-            var port = _nextServerPort++;
+            var port = NextServerPort;
             using (var server = StartExampleServer(timeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientConnected event
@@ -231,7 +265,7 @@ namespace Tests
         {
             const int timeoutNoActivity = 1000;
             const int timeoutForConnect = 1000;
-            var port = _nextServerPort++;
+            var port = NextServerPort;
             var server = StartExampleServer(timeoutNoActivity, port);
             using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
             {
@@ -293,7 +327,7 @@ namespace Tests
 
             // Set up the exampleService responses
             var exampleService = new ExampleService();
-            var port = _nextServerPort++;
+            var port = NextServerPort;
             
             using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
             {

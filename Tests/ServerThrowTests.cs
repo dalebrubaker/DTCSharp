@@ -36,7 +36,7 @@ namespace Tests
         public async Task StartDuplicateServerThrowsSocketExceptionTest()
         {
             var exampleService = new ExampleService();
-            var port = 65432;
+            var port = ClientServerTests.NextServerPort;
             using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: 1000))
             {
                 try
