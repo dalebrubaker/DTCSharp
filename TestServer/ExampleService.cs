@@ -223,6 +223,8 @@ namespace TestServer
                     // In this SPECIAL CASE the response has already been sent to the client.
                     // The request is then sent here for informational purposes
                     var encodingRequest = message as EncodingRequest;
+                    ThrowEvent(encodingRequest, EncodingRequestEvent, messageType, clientHandler);
+                    OnMessage($"Received encodingRequest for {encodingRequest.Encoding} encoding from {clientHandler}");
                     break;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = message as MarketDataRequest;

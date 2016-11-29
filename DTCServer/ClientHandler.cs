@@ -212,7 +212,7 @@ namespace DTCServer
                     SetCurrentCodec(encodingResponse.Encoding);
 
                     // send this to the callback for informational purposes
-                    _callback(this, messageType, encodingResponse);
+                    _callback(this, messageType, encodingRequest);
                     break;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = _currentCodec.Load<MarketDataRequest>(messageType, messageBytes);
@@ -391,6 +391,10 @@ namespace DTCServer
                 if (port == 49998 && messageType == DTCMessageType.LogonResponse)
                 {
                     var debug2 = 1;
+                    var requestsSent = DebugHelpers.RequestsSent;
+                    var requestsReceived = DebugHelpers.RequestsReceived;
+                    var responsesReceived = DebugHelpers.ResponsesReceived;
+                    var responsesSent = DebugHelpers.ResponsesSent;
                 }
 #endif
                 _currentCodec.Write(messageType, message, _binaryWriter);
