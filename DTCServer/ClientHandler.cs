@@ -91,7 +91,7 @@ namespace DTCServer
                 try
                 {
                     var headerBuffer = new byte[4];
-                    var numBytesRead = await _networkStream.ReadBytesAsync(headerBuffer, 4, _ctsRequestReader.Token).ConfigureAwait(false);
+                    var numBytesRead = await _networkStream.ReadBytesAsync(headerBuffer, 4, _ctsRequestReader.Token).ConfigureAwait(true);
                     if (numBytesRead == 0)
                     {
 #if DEBUG
