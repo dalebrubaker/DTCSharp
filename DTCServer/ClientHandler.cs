@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
-using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
 using Timer = System.Timers.Timer;
@@ -409,6 +408,7 @@ namespace DTCServer
                     _deflateStream.Flush();
                     _binaryWriter = new BinaryWriter(_deflateStream);
                     _isBinaryWriterZipped = true;
+                    _useHeartbeat = false;
                 }
             }
             catch (Exception ex)

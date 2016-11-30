@@ -998,6 +998,7 @@ namespace DTCClient
                         var deflateStream = new DeflateStream(_networkStream, CompressionMode.Decompress);
                         binaryReader = new BinaryReader(deflateStream);
                         _isBinaryReaderZipped = true;
+                        _useHeartbeat = false;
                     }
                     ThrowEvent(historicalPriceDataResponseHeader, HistoricalPriceDataResponseHeaderEvent);
                     break;
