@@ -70,6 +70,8 @@
     <Compile Include="MessageWithType.cs" />
     <Compile Include="Partials\EncodingResponse.cs" />
     <Compile Include="Partials\EncodingRequest.cs" />
+    <Compile Include="Partials\HistoricalPriceDataRequest.cs" />
+    <Compile Include="Partials\HistoricalPriceDataRecordResponse.cs" />
     <Compile Include="Partials\IMessageSymbolId.cs" />
     <Compile Include="Partials\MarketDataUpdateLastTradeSnapshot.cs" />
     <Compile Include="Partials\MarketDataUpdateSessionLow_Int.cs" />

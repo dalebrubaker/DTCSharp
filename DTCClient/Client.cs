@@ -389,7 +389,7 @@ namespace DTCClient
             {
                 response = e.Data;
                 dataCallback(response);
-                if (e.Data.IsFinalRecord != 0)
+                if (e.Data.IsFinalRecordBool)
                 {
                     HistoricalPriceDataRecordResponseEvent -= handler; // unregister to avoid a potential memory leak
                     timeout = 0; // force immediate exit
