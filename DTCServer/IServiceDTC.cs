@@ -40,6 +40,8 @@ namespace DTCServer
         event EventHandler<EventArgs<AccountBalanceRequest, DTCMessageType, ClientHandler>> AccountBalanceRequestEvent;
         event EventHandler<EventArgs<HistoricalPriceDataRequest, DTCMessageType, ClientHandler>> HistoricalPriceDataRequestEvent;
         event EventHandler<string> MessageEvent;
+        event EventHandler<string> ConnectedEvent;
+        event EventHandler<string> DisconnectedEvent;
 
         bool SendSymbols { get; set; }
 

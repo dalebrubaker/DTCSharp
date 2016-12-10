@@ -51,6 +51,22 @@ namespace DTCServer
 
         public string RemoteEndPoint { get; }
 
+        public event EventHandler Connected;
+
+        private void OnConnected()
+        {
+            var temp = Connected;
+            temp?.Invoke(this, new EventArgs());
+        }
+
+        public event EventHandler<EventArgs<Error>> Disconnected;
+
+        private void OnDisconnected(Error error)
+        {
+            var temp = Disconnected;
+            temp?.Invoke(this, new EventArgs<Error>(error));
+        }
+
         private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
             if (!_useHeartbeat || _isBinaryWriterZipped)
@@ -62,6 +78,7 @@ namespace DTCServer
             var timeSinceHeartbeat = (DateTime.Now - _lastHeartbeatReceivedTime);
             if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
             {
+                OnDisconnected(new Error("Disconnecting because late heartbeat."));
                 Dispose();
             }
 
@@ -74,7 +91,8 @@ namespace DTCServer
             catch (IOException ex)
             {
                 // perhaps the other side disconnected
-                Dispose(true);
+                OnDisconnected(new Error($"Disconnecting because {ex.Message}."));
+                Dispose();
             }
         }
 
@@ -115,6 +133,7 @@ namespace DTCServer
                     // Ignore this if it results from disconnected client or other socket error
                     if (!_ctsRequestReader.Token.IsCancellationRequested)
                     {
+                        OnDisconnected(new Error("Disconnecting because cancellation is requested."));
                         Dispose();
                     }
                 }
@@ -448,6 +467,7 @@ namespace DTCServer
                 _tcpClient?.Close();
                 _tcpClient = null;
                 _isDisposed = true;
+                OnDisconnected(new Error("Disposed"));
             }
         }
 
