@@ -57,5 +57,23 @@ namespace Tests
             var dt = scDt.DtcDateTimeWithMillisecondsToUtc();
             Assert.Equal(origDt, dt);
         }
+
+        [Fact]
+        public void ScIntradayDateTimeWithMillisecondsTest()
+        {
+            var origDt = new DateTime(2001, 1, 1, 1, 1, 1, DateTimeKind.Utc);
+            origDt = origDt.AddMilliseconds(1);
+            var scDt = origDt.UtcToDtcIntradayDateTimeWithMilliseconds();
+            var dt = scDt.DtcIntradayDateTimeWithMillisecondsToUtc();
+            Assert.Equal(origDt, dt);
+        }
+        [Fact]
+        public void ScIntradayDateTimeWithMillisecondsTest2()
+        {
+            var origDt = new DateTime(2016, 5, 18, 4, 11, 48, DateTimeKind.Utc);
+            var scDt = 42506.174861111111; // SC number
+            var dt = scDt.DtcIntradayDateTimeWithMillisecondsToUtc();
+            Assert.Equal(origDt, dt);
+        }
     }
 }

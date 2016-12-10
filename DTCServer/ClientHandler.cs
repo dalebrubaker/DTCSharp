@@ -51,20 +51,20 @@ namespace DTCServer
 
         public string RemoteEndPoint { get; }
 
-        public event EventHandler Connected;
+        public static event EventHandler<string> Connected;
 
-        private void OnConnected()
+        private void OnConnected(string message)
         {
             var temp = Connected;
-            temp?.Invoke(this, new EventArgs());
+            temp?.Invoke(this, message);
         }
 
-        public event EventHandler<EventArgs<Error>> Disconnected;
+        public static event EventHandler<Error> Disconnected;
 
         private void OnDisconnected(Error error)
         {
             var temp = Disconnected;
-            temp?.Invoke(this, new EventArgs<Error>(error));
+            temp?.Invoke(this, error);
         }
 
         private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)

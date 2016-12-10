@@ -5,10 +5,12 @@ namespace DTCCommon.Extensions
     public static class DateTimeExtensions
     {
         public static readonly DateTime EpochStart;
+        public static readonly DateTime ExcelStart;
 
         static DateTimeExtensions()
         {
             EpochStart = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            ExcelStart = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         }
 
         /// <summary>
@@ -82,9 +84,43 @@ namespace DTCCommon.Extensions
         /// <returns></returns>
         public static double UtcToDtcDateTimeWithMilliseconds(this DateTime dateTimeUtc)
         {
-            var timeSpan = (dateTimeUtc - EpochStart);
+            var timeSpan = dateTimeUtc - EpochStart;
             var seconds = Math.Truncate(timeSpan.TotalSeconds);
             var result = seconds + timeSpan.Milliseconds / 1000.0;
+            return result;
+        }
+
+        /// <summary>
+        /// http://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html#s_IntradayRecord
+        /// Convert the double since 1/1/70 to a DateTime (UTC), which fractional milliseconds
+        /// [As of 10/20/2016 the milliseconds are just sequence numbers, but we'll pretend they've done the work they plan for 2017]
+        /// </summary>
+        /// <param name="dtDouble"></param>
+        /// <returns></returns>
+        public static DateTime DtcIntradayDateTimeWithMillisecondsToUtc(this double dtDouble)
+        {
+            var days = Math.Truncate(dtDouble);
+            var fraction = dtDouble - days;
+            var timeOfDay = TimeSpan.FromHours(24 * fraction);
+            var result = ExcelStart.AddDays(days).Add(timeOfDay);
+            return result;
+        }
+
+        /// <summary>
+        /// http://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html#s_IntradayRecord
+        /// Convert the double since 1/1/70 to a DateTime (UTC), which fractional milliseconds
+        /// Convert dateTime (UTC) to DTC t_DateTimeWithMilliseconds (8 bytes, days since 1/1/70, fractional portion is % of 24 hours)
+        /// [As of 10/20/2016 the milliseconds are just sequence numbers, but we'll pretend they've done the work they plan for 2017]
+        /// </summary>
+        /// <param name="dateTimeUtc"></param>
+        /// <returns></returns>
+        public static double UtcToDtcIntradayDateTimeWithMilliseconds(this DateTime dateTimeUtc)
+        {
+            var timeSpan = dateTimeUtc - ExcelStart;
+            var days = Math.Truncate(timeSpan.TotalDays);
+            var fractionTimeSpan = timeSpan - TimeSpan.FromDays(days);
+            var fraction = fractionTimeSpan.TotalMilliseconds / TimeSpan.FromHours(24).TotalMilliseconds;
+            var result = days + fraction;
             return result;
         }
     }

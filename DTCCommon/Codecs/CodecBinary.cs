@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
-using int32_t = System.Int32;
 using uint8_t = System.Byte;
+using int32_t = System.Int32;
 
 
 namespace DTCCommon.Codecs
