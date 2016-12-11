@@ -34,8 +34,8 @@ namespace DTCCommon
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 8)]
     public struct s_IntradayHeader
     {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 4)]
-        public string FileTypeUniqueHeaderID;  // Set to the text string: "SCID"
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)] // can't use ByValTStr because it is not null-terminated
+        public char[] FileTypeUniqueHeaderID;  // Set to the text string: "SCID"
         [MarshalAs(UnmanagedType.U4)]
         public u_int32 HeaderSize; // Set to the header size in bytes.
         [MarshalAs(UnmanagedType.U4)]
@@ -46,31 +46,32 @@ namespace DTCCommon
         public u_int16 Unused1; // Not used.
         [MarshalAs(UnmanagedType.U4)]
         public u_int32 UTCStartIndex;  // This should be 0.
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 36)]
-        public string Reserve; // Not used.
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 36)]
+        public char[] Reserve; // Not used.
 
-        public int Size => Marshal.SizeOf(this);
+        public static int Size => Marshal.SizeOf(new s_IntradayHeader());
 
-        public void CopyFrom(byte[] bytes)
+        public static s_IntradayHeader CopyFrom(byte[] bytes)
         {
-            int size = Size;
+            var size = s_IntradayHeader.Size;
             if (bytes.Length < size)
             {
                 size = bytes.Length;
             }
             IntPtr ptr = Marshal.AllocHGlobal(size);
             Marshal.Copy(bytes, 0, ptr, size);
-            this = (s_IntradayHeader)Marshal.PtrToStructure(ptr, typeof(s_IntradayHeader));
+            var result = (s_IntradayHeader)Marshal.PtrToStructure(ptr, typeof(s_IntradayHeader));
             Marshal.FreeHGlobal(ptr);
+            return result;
         }
 
-        public byte[] GetBytes(s_IntradayHeader str)
+        public byte[] GetBytes()
         {
             int size = Size;
             byte[] bytes = new byte[size];
 
             IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(str, ptr, true);
+            Marshal.StructureToPtr(this, ptr, true);
             Marshal.Copy(ptr, bytes, 0, size);
             Marshal.FreeHGlobal(ptr);
             return bytes;
@@ -102,9 +103,9 @@ namespace DTCCommon
         [MarshalAs(UnmanagedType.U4)]
         public u_int32 AskVolume;
 
-        public int Size => Marshal.SizeOf(this);
+        public static int Size => Marshal.SizeOf(new s_IntradayRecord());
 
-        public void CopyFrom(byte[] bytes)
+        public static s_IntradayRecord CopyFrom(byte[] bytes)
         {
             int size = Size;
             if (bytes.Length < size)
@@ -113,16 +114,17 @@ namespace DTCCommon
             }
             IntPtr ptr = Marshal.AllocHGlobal(size);
             Marshal.Copy(bytes, 0, ptr, size);
-            this = (s_IntradayRecord)Marshal.PtrToStructure(ptr, typeof(s_IntradayRecord));
+            var result = (s_IntradayRecord)Marshal.PtrToStructure(ptr, typeof(s_IntradayRecord));
             Marshal.FreeHGlobal(ptr);
+            return result;
         }
 
-        public byte[] GetBytes(s_IntradayRecord str)
+        public byte[] GetBytes()
         {
             byte[] bytes = new byte[Size];
 
             IntPtr ptr = Marshal.AllocHGlobal(Size);
-            Marshal.StructureToPtr(str, ptr, true);
+            Marshal.StructureToPtr(this, ptr, true);
             Marshal.Copy(ptr, bytes, 0, Size);
             Marshal.FreeHGlobal(ptr);
             return bytes;
