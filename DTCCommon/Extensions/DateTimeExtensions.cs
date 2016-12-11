@@ -5,12 +5,10 @@ namespace DTCCommon.Extensions
     public static class DateTimeExtensions
     {
         public static readonly DateTime EpochStart;
-        public static readonly DateTime ExcelStart;
 
         static DateTimeExtensions()
         {
             EpochStart = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            ExcelStart = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         }
 
         /// <summary>
@@ -99,11 +97,9 @@ namespace DTCCommon.Extensions
         /// <returns></returns>
         public static DateTime DtcIntradayDateTimeWithMillisecondsToUtc(this double dtDouble)
         {
-            var days = Math.Truncate(dtDouble);
-            var fraction = dtDouble - days;
-            var timeOfDay = TimeSpan.FromHours(24 * fraction);
-            var result = ExcelStart.AddDays(days).Add(timeOfDay);
-            return result;
+            var dateTime = DateTime.FromOADate(dtDouble);
+            dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            return dateTime;
         }
 
         /// <summary>
@@ -116,11 +112,7 @@ namespace DTCCommon.Extensions
         /// <returns></returns>
         public static double UtcToDtcIntradayDateTimeWithMilliseconds(this DateTime dateTimeUtc)
         {
-            var timeSpan = dateTimeUtc - ExcelStart;
-            var days = Math.Truncate(timeSpan.TotalDays);
-            var fractionTimeSpan = timeSpan - TimeSpan.FromDays(days);
-            var fraction = fractionTimeSpan.TotalMilliseconds / TimeSpan.FromHours(24).TotalMilliseconds;
-            var result = days + fraction;
+            var result = dateTimeUtc.ToOADate();
             return result;
         }
     }

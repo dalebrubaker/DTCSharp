@@ -70,7 +70,7 @@ namespace Tests
         [Fact]
         public void ScIntradayDateTimeWithMillisecondsTest2()
         {
-            var origDt = new DateTime(2016, 5, 18, 4, 11, 48, DateTimeKind.Utc);
+            var origDt = new DateTime(2016, 5, 16, 4, 11, 48, DateTimeKind.Utc);
             var scDt = 42506.174861111111; // SC number
             var dt = scDt.DtcIntradayDateTimeWithMillisecondsToUtc();
             Assert.Equal(origDt, dt);
