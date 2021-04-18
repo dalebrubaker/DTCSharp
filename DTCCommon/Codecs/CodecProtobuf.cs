@@ -28,7 +28,9 @@ namespace DTCCommon.Codecs
             {
 
             }
+#pragma warning disable 168
             catch (IOException ex)
+#pragma warning restore 168
             {
                 // perhaps the other side disconnected
                 throw;

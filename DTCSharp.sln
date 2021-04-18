@@ -16,6 +16,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{124924C4-23E9-411B-82C6-6BA81E672E81}"
 	ProjectSection(SolutionItems) = preProject
 		_ReadMe.md = _ReadMe.md
+		DTCProtocol.3.protoPriorVersion = DTCProtocol.3.protoPriorVersion
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestServer", "TestServer\TestServer.csproj", "{ACB16562-535A-488A-BB19-BAD950CBF8DE}"

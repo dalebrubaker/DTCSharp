@@ -60,7 +60,9 @@ namespace DTCCommon.Codecs
                     }
                 }
             }
+#pragma warning disable 168
             catch (Exception ex)
+#pragma warning restore 168
             {
                 //Log.Fatal(new CallerContext(), ex, ex.Message);
                 throw;
@@ -88,7 +90,9 @@ namespace DTCCommon.Codecs
                     deflateStream.Write(bytesToCompress, 0, bytesToCompress.Length);
                 }
             }
+#pragma warning disable 168
             catch (Exception ex)
+#pragma warning restore 168
             {
                 //Log.Fatal(new CallerContext(), ex, ex.Message);
                 throw;

@@ -118,7 +118,9 @@ namespace DTCServer
             {
                 _tcpListener = new TcpListener(_ipAddress, _port);
             }
+#pragma warning disable 168
             catch (Exception ex)
+#pragma warning restore 168
             {
                 throw;
             }
@@ -131,7 +133,9 @@ namespace DTCServer
                 // Dispose() has been called
                 CloseAllClientHandlers();
             }
+#pragma warning disable 168
             catch (Exception ex)
+#pragma warning restore 168
             {
                 // A SocketException might be thrown from here
                 throw;
@@ -166,7 +170,9 @@ namespace DTCServer
                     // Dispose() has been called
                     CloseAllClientHandlers();
                 }
+#pragma warning disable 168
                 catch (Exception ex)
+#pragma warning restore 168
                 {
                     throw;
                 }

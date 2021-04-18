@@ -151,10 +151,7 @@ namespace DTCClient
         public event EventHandler<EventArgs<MarketDepthSnapshotLevel>> MarketDepthSnapshotLevelEvent;
         public event EventHandler<EventArgs<MarketDepthSnapshotLevel_Int>> MarketDepthSnapshotLevelIntEvent;
         public event EventHandler<EventArgs<MarketDepthUpdateLevel>> MarketDepthUpdateLevelEvent;
-        public event EventHandler<EventArgs<MarketDepthUpdateLevelCompact>> MarketDepthUpdateLevelCompactEvent;
         public event EventHandler<EventArgs<MarketDepthUpdateLevel_Int>> MarketDepthUpdateLevelIntEvent;
-        public event EventHandler<EventArgs<MarketDepthFullUpdate10>> MarketDepthFullUpdate10Event;
-        public event EventHandler<EventArgs<MarketDepthFullUpdate20>> MarketDepthFullUpdate20Event;
         public event EventHandler<EventArgs<MarketDataFeedStatus>> MarketDataFeedStatusEvent;
         public event EventHandler<EventArgs<MarketDataFeedSymbolStatus>> MarketDataFeedSymbolStatusEvent;
         public event EventHandler<EventArgs<OpenOrdersReject>> OpenOrdersRejectEvent;
@@ -245,7 +242,9 @@ namespace DTCClient
             {
                 SendRequest(DTCMessageType.EncodingRequest, encodingRequest);
             }
+#pragma warning disable 168
             catch (Exception ex)
+#pragma warning restore 168
             {
                 throw;
             }
@@ -409,7 +408,7 @@ namespace DTCClient
                 MaxDaysToReturn = maxDaysToReturn,
                 UseZLibCompression = useZLibCompression ? 1U : 0,
                 RequestDividendAdjustedStockData = requestDividendAdjustedStockData ? 1U : 0,
-                Flag1 = flag1 ? 1U : 0,
+                Integer1 = flag1 ? 1U : 0,
             };
             SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
 
@@ -657,14 +656,18 @@ namespace DTCClient
 #if DEBUG
             if (messageType != DTCMessageType.Heartbeat)
             {
+#pragma warning disable 219
                 var debug = 1;
+#pragma warning restore 219
             }
             DebugHelpers.AddRequestSent(messageType, _currentCodec);
             var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
             //if (port == 49998 && messageType == DTCMessageType.LogonResponse)
             if (messageType == DTCMessageType.LogonRequest)
                 {
+#pragma warning disable 219
                     var debug2 = 1;
+#pragma warning restore 219
                 var requestsSent = DebugHelpers.RequestsSent;
                 var requestsReceived = DebugHelpers.RequestsReceived;
                 var responsesReceived = DebugHelpers.ResponsesReceived;
@@ -719,19 +722,25 @@ namespace DTCClient
 #if DEBUG
                     if (messageType != DTCMessageType.Heartbeat)
                     {
+#pragma warning disable 219
                         var debug = 1;
+#pragma warning restore 219
                     }
                     DebugHelpers.AddResponseReceived(messageType, _currentCodec, _isBinaryReaderZipped, size);
                     var requestsSent = DebugHelpers.RequestsSent;
                     var requestsReceived = DebugHelpers.RequestsReceived;
                     var responsesReceived = DebugHelpers.ResponsesReceived;
                     var responsesSent = DebugHelpers.ResponsesSent;
-                    if (ClientName.ToLower().Contains("historical"))
+                    if (ClientName.IndexOf("historical", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
+#pragma warning disable 219
                         var debug2 = 1;
+#pragma warning restore 219
                         if (messageType == DTCMessageType.Heartbeat)
                         {
+#pragma warning disable 219
                             var debug3 = 2;
+#pragma warning restore 219
                         }
                     }
 #endif
@@ -904,21 +913,9 @@ namespace DTCClient
                     var marketDepthUpdateLevel = _currentCodec.Load<MarketDepthUpdateLevel>(messageType, messageBytes);
                     ThrowEvent(marketDepthUpdateLevel, MarketDepthUpdateLevelEvent);
                     break;
-                case DTCMessageType.MarketDepthUpdateLevelCompact:
-                    var marketDepthUpdateLevelCompact = _currentCodec.Load<MarketDepthUpdateLevelCompact>(messageType, messageBytes);
-                    ThrowEvent(marketDepthUpdateLevelCompact, MarketDepthUpdateLevelCompactEvent);
-                    break;
                 case DTCMessageType.MarketDepthUpdateLevelInt:
                     var marketDepthUpdateLevelInt = _currentCodec.Load<MarketDepthUpdateLevel_Int>(messageType, messageBytes);
                     ThrowEvent(marketDepthUpdateLevelInt, MarketDepthUpdateLevelIntEvent);
-                    break;
-                case DTCMessageType.MarketDepthFullUpdate10:
-                    var marketDepthFullUpdate10 = _currentCodec.Load<MarketDepthFullUpdate10>(messageType, messageBytes);
-                    ThrowEvent(marketDepthFullUpdate10, MarketDepthFullUpdate10Event);
-                    break;
-                case DTCMessageType.MarketDepthFullUpdate20:
-                    var marketDepthFullUpdate20 = _currentCodec.Load<MarketDepthFullUpdate20>(messageType, messageBytes);
-                    ThrowEvent(marketDepthFullUpdate20, MarketDepthFullUpdate20Event);
                     break;
                 case DTCMessageType.MarketDataFeedStatus:
                     var marketDataFeedStatus = _currentCodec.Load<MarketDataFeedStatus>(messageType, messageBytes);

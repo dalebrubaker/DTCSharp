@@ -117,7 +117,7 @@ namespace Tests
                         MaxDaysToReturn = 1, // ignored in this test
                         UseZLibCompression = useZLibCompression ? 1 : 0,
                         RequestDividendAdjustedStockData = 0,
-                        Flag1 = 0,
+                        Integer1 = 0,
                     };
                     sw.Restart();
                     clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);

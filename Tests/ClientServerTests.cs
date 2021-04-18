@@ -68,17 +68,13 @@ namespace Tests
                 //TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(true));
                 var task = server.RunAsync().ConfigureAwait(true);
             }
-            catch (AggregateException aex)
+            catch (AggregateException)
             {
                 
             }
-            catch (ThreadAbortException ex)
+            catch (ThreadAbortException)
             {
                 // normal
-            }
-            catch (Exception ex)
-            {
-                throw;
             }
             return server;
         }
@@ -269,7 +265,9 @@ namespace Tests
             var server = StartExampleServer(timeoutNoActivity, port);
             using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
             {
-                bool isConnected = false;
+#pragma warning disable 219
+                var isConnected = false;
+#pragma warning restore 219
                 var sw = Stopwatch.StartNew();
                 while (!client1.IsConnected && sw.ElapsedMilliseconds < 1000)
                 {

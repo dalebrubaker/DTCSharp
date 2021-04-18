@@ -17,6 +17,6 @@ Server
 
 Warnings
 =============
--   If you request historical data using HistoricalDataIntervalEnum.IntervalTick you will only recieve ticks if the Sierra Chart server Data/Trade Services Settings
+-   If you request historical data using HistoricalDataIntervalEnum.IntervalTick you will only receive ticks if the Sierra Chart server Data/Trade Services Settings
         have Intraday Data Storage Time Unit set to 1 Tick
 - 	Request callback and event handlers must not block the thread for long; further requests can't be received until you return from this method.

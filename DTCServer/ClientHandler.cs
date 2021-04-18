@@ -112,13 +112,17 @@ namespace DTCServer
 #if DEBUG
                     if (messageType != DTCMessageType.Heartbeat)
                     {
+#pragma warning disable 219
                         var debug = 1;
+#pragma warning restore 219
                     }
                     DebugHelpers.AddRequestReceived(messageType, _currentCodec, false, size);
                     var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
                     if (port == 49998 && messageType == DTCMessageType.LogonRequest)
                     {
+#pragma warning disable 219
                         var debug2 = 1;
+#pragma warning restore 219
                         var requestsSent = DebugHelpers.RequestsSent;
                         var requestsReceived = DebugHelpers.RequestsReceived;
                         var responsesReceived = DebugHelpers.ResponsesReceived;
@@ -128,7 +132,9 @@ namespace DTCServer
                     var bytes = binaryReader.ReadBytes(size - 4); // size included the header size+type
                     ProcessRequest(messageType, bytes);
                 }
+#pragma warning disable 168
                 catch (IOException ex)
+#pragma warning restore 168
                 {
                     // Ignore this if it results from disconnected client or other socket error
                     if (!_ctsRequestReader.Token.IsCancellationRequested)
@@ -157,7 +163,9 @@ namespace DTCServer
             var port = ((IPEndPoint)_tcpClient.Client.LocalEndPoint).Port;
             if (port == 49998)
             {
+#pragma warning disable 219
                 var debug = 1;
+#pragma warning restore 219
             }
 #endif
             switch (messageType)
@@ -341,10 +349,7 @@ namespace DTCServer
                 case DTCMessageType.MarketDepthSnapshotLevel:
                 case DTCMessageType.MarketDepthSnapshotLevelInt:
                 case DTCMessageType.MarketDepthUpdateLevel:
-                case DTCMessageType.MarketDepthUpdateLevelCompact:
                 case DTCMessageType.MarketDepthUpdateLevelInt:
-                case DTCMessageType.MarketDepthFullUpdate10:
-                case DTCMessageType.MarketDepthFullUpdate20:
                 case DTCMessageType.MarketDataFeedStatus:
                 case DTCMessageType.MarketDataFeedSymbolStatus:
                 case DTCMessageType.OpenOrdersReject:
@@ -394,13 +399,18 @@ namespace DTCServer
 #if DEBUG
             if (messageType != DTCMessageType.Heartbeat)
             {
+#pragma warning disable 219
                 var debug = 1;
+#pragma warning restore 219
             }
             else
             {
+#pragma warning disable 219
                 var debug3 = 1;
+#pragma warning restore 219
             }
-            DebugHelpers.AddResponseSent(messageType, _currentCodec, _isBinaryWriterZipped);;
+
+            DebugHelpers.AddResponseSent(messageType, _currentCodec, _isBinaryWriterZipped);
 #endif
             try
             {
@@ -408,7 +418,9 @@ namespace DTCServer
                 var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
                 if (port == 49998 && messageType == DTCMessageType.LogonResponse)
                 {
+#pragma warning disable 219
                     var debug2 = 1;
+#pragma warning restore 219
                     var requestsSent = DebugHelpers.RequestsSent;
                     var requestsReceived = DebugHelpers.RequestsReceived;
                     var responsesReceived = DebugHelpers.ResponsesReceived;
@@ -430,7 +442,9 @@ namespace DTCServer
                     _useHeartbeat = false;
                 }
             }
+#pragma warning disable 168
             catch (Exception ex)
+#pragma warning restore 168
             {
                 throw;
             }

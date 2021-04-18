@@ -36,7 +36,7 @@ namespace Tests
             var loadedMessage = _codecBinary.Load<T>(messageType, bytes, 4);
             if (!loadedMessage.Equals(message))
             {
-                var debug = 1;
+                //var debug = 1;
             }
             Assert.Equal(message, loadedMessage);
         }
@@ -219,7 +219,7 @@ namespace Tests
                 MaxDaysToReturn = 7U,
                 UseZLibCompression = 8u,
                 RequestDividendAdjustedStockData = 9u,
-                Flag1 = 10u,
+                Integer1 = 10u,
             };
             GenericTest(DTCMessageType.HistoricalPriceDataRequest, historicalPriceDataRequest);
         }

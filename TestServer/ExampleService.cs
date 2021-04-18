@@ -428,10 +428,7 @@ namespace TestServer
                 case DTCMessageType.MarketDepthSnapshotLevel:
                 case DTCMessageType.MarketDepthSnapshotLevelInt:
                 case DTCMessageType.MarketDepthUpdateLevel:
-                case DTCMessageType.MarketDepthUpdateLevelCompact:
                 case DTCMessageType.MarketDepthUpdateLevelInt:
-                case DTCMessageType.MarketDepthFullUpdate10:
-                case DTCMessageType.MarketDepthFullUpdate20:
                 case DTCMessageType.MarketDataFeedStatus:
                 case DTCMessageType.MarketDataFeedSymbolStatus:
                 case DTCMessageType.OpenOrdersReject:

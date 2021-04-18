@@ -662,7 +662,7 @@ namespace TestClient
                     MessageBox.Show(message);
                 }
             }
-            catch (TaskCanceledException ex)
+            catch (TaskCanceledException)
             {
                 // ignore this exception thrown when we unsubscribe
             }
@@ -686,7 +686,7 @@ namespace TestClient
                     MessageBox.Show(message);
                 }
             }
-            catch (TaskCanceledException ex)
+            catch (TaskCanceledException)
             {
                 // ignore this exception thrown when we unsubscribe
             }
