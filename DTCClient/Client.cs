@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -36,12 +35,6 @@ namespace DTCClient
         private bool _useHeartbeat;
         private bool _isBinaryReaderZipped;
 
-        private readonly ConcurrentQueue<byte[]> _sendQueue;
-        private readonly ConcurrentQueue<byte[]> _receiveQueue;
-        private CancellationTokenSource _cts;
-        private ConfiguredTaskAwaitable<Task> _receiveTask;
-        private ConfiguredTaskAwaitable<Task> _sendTask;
-
         /// <summary>
         /// Constructor for a client
         /// </summary>
@@ -57,60 +50,6 @@ namespace DTCClient
             SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
             _currentCodec = new CodecBinary();
             _ctsResponseReader = new CancellationTokenSource();
-            _sendQueue = new ConcurrentQueue<byte[]>();
-            _receiveQueue = new ConcurrentQueue<byte[]>();
-            _cts = new CancellationTokenSource();
-            _receiveTask = Task.Factory.StartNew(ProcessReceiveQueue, TaskCreationOptions.LongRunning).ConfigureAwait(false);
-            _sendTask = Task.Factory.StartNew(ProcessSendQueue, TaskCreationOptions.LongRunning).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Send messages in _sendQueue
-        /// </summary>
-        private async Task ProcessSendQueue()
-        {
-            await Task.Delay(1).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Receive messages in _receiveQueue
-        /// </summary>
-        private async Task ProcessReceiveQueue()
-        {
-            await Task.Delay(1).ConfigureAwait(false);
-            while (_sendQueue.Count > 0)
-            {
-                // Dequeue
-                _sendQueue.TryDequeue(out var packet);
-                if (!IsConnected)
-                {
-                    return;
-                }
-
-                // // Send Data
-                // try
-                // {
-                //     _socket.SendBufferSize = packet.Length;
-                //     Thread.Sleep(100); // Delay to Prevent Overloading
-                //     _socket.Send(packet);
-                //
-                //     // Send Notification
-                //     if (_encodingCompleted)
-                //     {
-                //         var messageType = Utils.GetMessageType(packet);
-                //         OnMessageSendEvent(messageType.ToString());
-                //         OnRawMessageSendEvent(packet, messageType);
-                //     }
-                //     else
-                //     {
-                //         OnMessageSendEvent("EncodingRequest");
-                //     }
-                // }
-                // catch (Exception ex)
-                // {
-                //     OnErrorEvent(new ErrorEventArgs(ex, null));
-                // }
-            }
         }
 
         public bool IsConnected => _tcpClient?.Connected ?? false;
