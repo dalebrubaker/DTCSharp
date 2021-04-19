@@ -2,9 +2,11 @@
 using System.Diagnostics;
 using DTCCommon.Extensions;
 
+// ReSharper disable once CheckNamespace
+// ReSharper disable once IdentifierTypo
 namespace DTCPB
 {
-    [DebuggerDisplay("{MyToString}")]
+    [DebuggerDisplay("{" + nameof(MyToString) + "}")]
     public partial class HistoricalPriceDataRecordResponse
     {
         public DateTime StartDateTimeUtc

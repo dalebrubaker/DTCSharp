@@ -12,15 +12,15 @@ namespace TestClient
 {
     public partial class ClientForm : Form
     {
-        private Client _client;
-        private uint _symbolId1;
-        private List<HistoricalPriceDataRecordResponse> _historicalPriceDataRecordResponses;
-        private uint _symbolId2;
-        private List<MarketDataUpdateTradeCompact> _ticks;
         private const int MaxLevel1Rows = 100;
-        private int _numRegistrationsForMarketData;
+        private Client _client;
         private CancellationTokenSource _ctsLevel1Symbol1;
         private CancellationTokenSource _ctsLevel1Symbol2;
+        private List<HistoricalPriceDataRecordResponse> _historicalPriceDataRecordResponses;
+        private int _numRegistrationsForMarketData;
+        private uint _symbolId1;
+        private uint _symbolId2;
+        private List<MarketDataUpdateTradeCompact> _ticks;
 
         public ClientForm()
         {
@@ -31,24 +31,6 @@ namespace TestClient
             btnUnsubscribe1.Enabled = false;
             btnUnsubscribe2.Enabled = false;
             _ticks = new List<MarketDataUpdateTradeCompact>();
-        }
-
-        private async void Form1_Disposed(object sender, EventArgs e)
-        {
-            await DisposeClientAsync().ConfigureAwait(false);
-        }
-
-        private async Task DisposeClientAsync()
-        {
-            if (_client != null)
-            {
-                // Wait for pending message to finish
-                await Task.Delay(100).ConfigureAwait(false);
-                _client.Dispose(); // will throw Disconnected event
-                UnregisterClientEvents(_client);
-                _client = null;
-                toolStripStatusLabel1.Text = "Disconnected";
-            }
         }
 
         private int PortListener
@@ -68,6 +50,24 @@ namespace TestClient
                 int port;
                 int.TryParse(txtPortHistorical.Text, out port);
                 return port;
+            }
+        }
+
+        private async void Form1_Disposed(object sender, EventArgs e)
+        {
+            await DisposeClientAsync().ConfigureAwait(false);
+        }
+
+        private async Task DisposeClientAsync()
+        {
+            if (_client != null)
+            {
+                // Wait for pending message to finish
+                await Task.Delay(100).ConfigureAwait(false);
+                _client.Dispose(); // will throw Disconnected event
+                UnregisterClientEvents(_client);
+                _client = null;
+                toolStripStatusLabel1.Text = "Disconnected";
             }
         }
 
@@ -348,7 +348,7 @@ namespace TestClient
                 $"LastTradeDateTime: {response.LastTradeDateTime}",
                 $"BidAskDateTime: {response.BidAskDateTime}",
                 $"SessionSettlementDateTime: {response.SessionSettlementDateTime}",
-                $"TradingSessionDate: {response.TradingSessionDate}",
+                $"TradingSessionDate: {response.TradingSessionDate}"
             };
             logControlLevel1.LogMessagesReversed(lines);
         }
@@ -368,7 +368,7 @@ namespace TestClient
                 "Exchanges List:",
                 $"RequestID: {response.RequestID}",
                 $"Exchange: {response.Exchange}",
-                $"Description: {response.Description}",
+                $"Description: {response.Description}"
             };
             logControlSymbols.LogMessagesReversed(lines);
         }
@@ -391,7 +391,7 @@ namespace TestClient
         }
 
         /// <summary>
-        /// https://dtcprotocol.org/index.php?page=doc/DTCMessages_AuthenticationConnectionMonitoringMessages.php#Messages-LOGON_RESPONSE
+        ///     https://dtcprotocol.org/index.php?page=doc/DTCMessages_AuthenticationConnectionMonitoringMessages.php#Messages-LOGON_RESPONSE
         /// </summary>
         /// <param name="logControl"></param>
         /// <param name="client"></param>
@@ -488,7 +488,7 @@ namespace TestClient
                 $"EarningsPerShare: {response.EarningsPerShare}",
                 $"SharesOutstanding: {response.SharesOutstanding}",
                 $"IntToFloatQuantityDivisor: {response.IntToFloatQuantityDivisor}",
-                $"HasMarketDepthData: {response.HasMarketDepthData}",
+                $"HasMarketDepthData: {response.HasMarketDepthData}"
             };
             logControlSymbols.LogMessagesReversed(lines);
         }
@@ -587,8 +587,12 @@ namespace TestClient
             if (response.IsFinalRecord != 0)
             {
                 var lastTime = response.StartDateTime.DtcDateTimeToUtc();
-                logControlHistorical.LogMessage(
-                    $"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} received {_historicalPriceDataRecordResponses.Count} records through {lastTime.ToLocalTime():yyyyMMdd.HHmmss.fff} (local).");
+                var firstRecord = _historicalPriceDataRecordResponses[0];
+                var startTime = firstRecord.StartDateTime.DtcDateTimeToUtc();
+
+                logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} received "
+                                                + $"{_historicalPriceDataRecordResponses.Count} records "
+                                                + $"from {startTime.ToLocalTime()} through {lastTime.ToLocalTime():yyyyMMdd.HHmmss.fff} (local).");
             }
         }
 
@@ -721,7 +725,7 @@ namespace TestClient
                 $"LastTradeDateTime: {response.LastTradeDateTime}",
                 $"BidAskDateTime: {response.BidAskDateTime}",
                 $"SessionSettlementDateTime: {response.SessionSettlementDateTime}",
-                $"TradingSessionDate: {response.TradingSessionDate}",
+                $"TradingSessionDate: {response.TradingSessionDate}"
             };
             logControlLevel1.LogMessagesReversed(lines);
         }
@@ -745,8 +749,8 @@ namespace TestClient
         }
 
         /// <summary>
-        /// This event pulls level 1 ticks out of the list and displays them. 
-        /// Necessary to avoid overwhelming the UI in a fast market.
+        ///     This event pulls level 1 ticks out of the list and displays them.
+        ///     Necessary to avoid overwhelming the UI in a fast market.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
