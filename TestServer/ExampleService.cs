@@ -158,8 +158,7 @@ namespace TestServer
         public event EventHandler<EventArgs<HistoricalPriceDataRequest, DTCMessageType, ClientHandler>> HistoricalPriceDataRequestEvent;
 
         public event EventHandler<string> MessageEvent;
-        public event EventHandler<EventArgs<string, ClientHandler>> ConnectedEvent;
-        public event EventHandler<EventArgs<string, ClientHandler>> DisconnectedEvent;
+        
         public bool SendSymbols { get; set; }
 
         private void OnMessage(string message)

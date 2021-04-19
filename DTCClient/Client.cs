@@ -14,7 +14,6 @@ using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
-using ErrorEventArgs = System.IO.ErrorEventArgs;
 using Timer = System.Timers.Timer;
 
 namespace DTCClient
@@ -121,7 +120,7 @@ namespace DTCClient
             temp?.Invoke(this, new EventArgs<Error>(error));
         }
 
-        public event EventHandler<EventArgs<Heartbeat>> HeartbeatEvent;
+        public event EventHandler<Heartbeat> HeartbeatEvent;
         public event EventHandler<EventArgs<Logoff>> LogoffEvent;
 
         public event EventHandler<EventArgs<EncodingResponse>> EncodingResponseEvent;
@@ -677,7 +676,26 @@ namespace DTCClient
             temp?.Invoke(this, new EventArgs<T>(message));
         }
 
+        private void ThrowEventImpl<T>(T message, EventHandler<T> eventForMessage)
+        {
+            var temp = eventForMessage;
+            temp?.Invoke(this, message);
+        }
+
         private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
+        {
+            //if (_stayOnCallingThread)
+            //{
+            //    var task = new Task(() => ThrowEventImpl(message, eventForMessage));
+            //    task.RunSynchronously(_taskSchedulerCurrContext);
+            //}
+            //else
+            //{
+            ThrowEventImpl(message, eventForMessage);
+            //}
+        }
+
+        private void ThrowEvent<T>(T message, EventHandler<T> eventForMessage) where T : IMessage
         {
             //if (_stayOnCallingThread)
             //{
@@ -1072,110 +1090,6 @@ namespace DTCClient
             _tcpClient?.Close();
             _tcpClient = null;
         }
-
-        #region Events
-
-        /// <summary>
-        /// On Connect
-        /// </summary>
-        public event EventHandler<EventArgs> OnConnect;
-
-        protected void OnConnectEvent()
-        {
-            OnConnect?.Invoke(this, new EventArgs());
-        }
-
-        /// <summary>
-        /// On Disconnect
-        /// </summary>
-        public event EventHandler<EventArgs> OnDisconnect;
-
-        protected void OnDisconnectEvent()
-        {
-            OnDisconnect?.Invoke(this, new EventArgs());
-        }
-
-        /// <summary>
-        /// Error Reporting
-        /// </summary>
-        public event EventHandler<ErrorEventArgs> OnError;
-
-        protected void OnErrorEvent(ErrorEventArgs args)
-        {
-            OnError?.Invoke(this, args);
-        }
-
-        /// <summary>
-        /// On Information
-        /// </summary>
-        public event EventHandler<MessageEventArgs> OnInformation;
-
-        protected void OnInformationEvent(string message)
-        {
-            OnInformation?.Invoke(this, new MessageEventArgs(message));
-        }
-
-        /// <summary>
-        /// On Symbol Information
-        /// </summary>
-        public event EventHandler<SymbolLookupEventArgs> OnSymbolInformation;
-
-        protected void OnSymbolInformationEvent(SecurityDefinitionResponse message)
-        {
-            OnSymbolInformation?.Invoke(this, new SymbolLookupEventArgs(message));
-        }
-
-        /// <summary>
-        /// On Message Send
-        /// </summary>
-        public event EventHandler<MessageEventArgs> OnMessageSend;
-
-        protected void OnMessageSendEvent(string message)
-        {
-            OnMessageSend?.Invoke(this, new MessageEventArgs(message));
-        }
-
-        /// <summary>
-        /// On Raw Message Send
-        /// </summary>
-        public event EventHandler<RawMessageEventArgs> OnRawMessageSend;
-
-        protected void OnRawMessageSendEvent(byte[] packet, EncodingEnum messageType)
-        {
-            OnRawMessageSend?.Invoke(this, new RawMessageEventArgs(packet, messageType));
-        }
-
-        /// <summary>
-        /// On Message Receive
-        /// </summary>
-        public event EventHandler<MessageEventArgs> OnMessageReceive;
-
-        protected void OnMessageReceiveEvent(string message)
-        {
-            OnMessageReceive?.Invoke(this, new MessageEventArgs(message));
-        }
-
-        /// <summary>
-        /// On Raw Message Receive
-        /// </summary>
-        public event EventHandler<RawMessageEventArgs> OnRawMessageReceive;
-
-        protected void OnRawMessageReceiveEvent(byte[] packet, EncodingEnum messageType)
-        {
-            OnRawMessageReceive?.Invoke(this, new RawMessageEventArgs(packet, messageType));
-        }
-
-        /// <summary>
-        /// On Market Data Update (Bid/Ask)
-        /// </summary>
-        public event EventHandler<MarketDataUpdateBidAsk> OnMarketDataBidAsk;
-
-        protected void OnMarketDataBidAskEvent(MarketDataUpdateBidAsk message)
-        {
-            OnMarketDataBidAsk?.Invoke(this, message);
-        }
-
-        #endregion
 
         public override string ToString()
         {

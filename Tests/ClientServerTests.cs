@@ -232,10 +232,9 @@ namespace Tests
 
                     // Set up the handler to capture the HeartBeat event
                     var numHeartbeats = 0;
-                    EventHandler<EventArgs<Heartbeat>> heartbeatEvent = null;
+                    EventHandler<Heartbeat> heartbeatEvent = null;
                     heartbeatEvent = (s, e) =>
                     {
-                        var heartbeat = e.Data;
                         _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
                         numHeartbeats++;
                     };
@@ -290,10 +289,9 @@ namespace Tests
 
                 // Set up the handler to capture the HeartBeat event
                 var numHeartbeats = 0;
-                EventHandler<EventArgs<Heartbeat>> heartbeatEvent = null;
+                EventHandler<Heartbeat> heartbeatEvent = null;
                 heartbeatEvent = (s, e) =>
                 {
-                    var heartbeat = e.Data;
                     _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs after server shutdown.");
                     numHeartbeats++;
                 };

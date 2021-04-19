@@ -40,8 +40,7 @@ namespace TestClient
         {
             get
             {
-                int port;
-                int.TryParse(txtPortListening.Text, out port);
+                int.TryParse(txtPortListening.Text, out var port);
                 return port;
             }
         }
@@ -50,8 +49,7 @@ namespace TestClient
         {
             get
             {
-                int port;
-                int.TryParse(txtPortHistorical.Text, out port);
+                int.TryParse(txtPortHistorical.Text, out var port);
                 return port;
             }
         }
@@ -154,7 +152,7 @@ namespace TestClient
             client.UserMessageEvent -= Client_UserMessageEvent;
             client.GeneralLogMessageEvent -= Client_GeneralLogMessageEvent;
             client.ExchangeListResponseEvent -= Client_ExchangeListResponseEvent;
-            client.HeartbeatEvent -= Client_HeartbeatEvent;
+            client.HeartbeatEvent -= Client_OnHeartbeatEvent;
             client.Connected -= Client_Connected;
             client.Disconnected -= Client_Disconnected;
         }
@@ -185,9 +183,14 @@ namespace TestClient
             client.UserMessageEvent += Client_UserMessageEvent;
             client.GeneralLogMessageEvent += Client_GeneralLogMessageEvent;
             client.ExchangeListResponseEvent += Client_ExchangeListResponseEvent;
-            client.HeartbeatEvent += Client_HeartbeatEvent;
+            client.HeartbeatEvent += Client_OnHeartbeatEvent;
             client.Connected += Client_Connected;
             client.Disconnected += Client_Disconnected;
+        }
+
+        private void Client_OnHeartbeatEvent(object sender, Heartbeat e)
+        {
+            logControlConnect.LogMessage("Heartbeat received from server.");
         }
 
         private void Client_Disconnected(object sender, EventArgs<Error> e)
@@ -218,10 +221,6 @@ namespace TestClient
             logControlConnect.LogMessage($"Connected to client:{client.ClientName}");
         }
 
-        private void Client_HeartbeatEvent(object sender, EventArgs<Heartbeat> e)
-        {
-            logControlConnect.LogMessage("Heartbeat received from server.");
-        }
 
         private void RegisterClientEventsMarketData(Client client)
         {

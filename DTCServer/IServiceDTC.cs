@@ -41,9 +41,6 @@ namespace DTCServer
         event EventHandler<EventArgs<SymbolSearchRequest, DTCMessageType, ClientHandler>> SymbolSearchRequestEvent;
         event EventHandler<EventArgs<AccountBalanceRequest, DTCMessageType, ClientHandler>> AccountBalanceRequestEvent;
         event EventHandler<EventArgs<HistoricalPriceDataRequest, DTCMessageType, ClientHandler>> HistoricalPriceDataRequestEvent;
-        event EventHandler<string> MessageEvent;
-        event EventHandler<EventArgs<string, ClientHandler>> ConnectedEvent;
-        event EventHandler<EventArgs<string, ClientHandler>> DisconnectedEvent;
 
         /// <summary>
         /// This method is called for every request received by a client connected to this server.
