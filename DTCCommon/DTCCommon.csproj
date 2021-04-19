@@ -141,7 +141,6 @@
     <Compile Include="Partials\MarketDataReject.cs" />
     <Compile Include="Partials\MarketDepthRequest.cs" />
     <Compile Include="Partials\MarketDataRequest.cs" />
-    <Compile Include="Partials\MarketDataFeedSymbolStatus.cs" />
     <Compile Include="Partials\Heartbeat.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TaskHelper.cs" />

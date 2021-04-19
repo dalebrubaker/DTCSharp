@@ -4,7 +4,7 @@ using DTCCommon.Extensions;
 
 namespace DTCPB
 {
-    [DebuggerDisplay("{MyToString}")]
+    [DebuggerDisplay("{" + nameof(MyToString) + "}")]
     public partial class HistoricalPriceDataRequest
     {
         public DateTime StartDateTimeUtc
