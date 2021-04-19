@@ -21,7 +21,6 @@ namespace DTCCommon.Codecs
         /// <param name="binaryWriter"></param>
         void Write<T>(T message, BinaryWriter binaryWriter) where T : IMessage;
 
-
         /// <summary>
         /// Load the message represented by bytes into the IMessage
         /// </summary>

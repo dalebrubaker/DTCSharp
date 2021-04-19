@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
-using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
 using TestServer;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace Tests
 {
@@ -62,7 +59,7 @@ namespace Tests
             {
                 exampleService = new ExampleService();
             }
-            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: timeoutNoActivity);
+            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, timeoutNoActivity);
             try
             {
                 //TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(true));
@@ -70,7 +67,6 @@ namespace Tests
             }
             catch (AggregateException)
             {
-                
             }
             catch (ThreadAbortException)
             {
@@ -79,9 +75,10 @@ namespace Tests
             return server;
         }
 
-        private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port, EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
+        private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port,
+            EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
         {
-            var client = new Client(IPAddress.Loopback.ToString(), serverPort: port, timeoutNoActivity: timeoutNoActivity);
+            var client = new Client(IPAddress.Loopback.ToString(), port, timeoutNoActivity);
             var encodingResponse = await client.ConnectAsync(encoding, "TestClient" + port, timeoutForConnect).ConfigureAwait(false);
             Assert.Equal(encoding, encodingResponse.Encoding);
             return client;
@@ -191,7 +188,6 @@ namespace Tests
             }
         }
 
-
         [Fact]
         public async Task ClientLogonAndHeartbeatTest()
         {
@@ -231,7 +227,7 @@ namespace Tests
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
-                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
+                    var loginResponse = await client1.LogonAsync(1, true, 5000).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     // Set up the handler to capture the HeartBeat event
@@ -276,7 +272,7 @@ namespace Tests
                 }
 
                 // Set up the handler to capture the Connected event
-                EventHandler  connected = (s, e) =>
+                EventHandler connected = (s, e) =>
                 {
                     _output.WriteLine($"Client is connected to {server.Address}");
                     isConnected = true;
@@ -307,11 +303,10 @@ namespace Tests
                 server.Dispose();
 
                 sw.Restart();
-                var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
+                var loginResponse = await client1.LogonAsync(1, true, 5000).ConfigureAwait(true);
                 Assert.Null(loginResponse);
             }
         }
-
 
         /// <summary>
         /// see ClientForm.btnSubscribeCallbacks1_Click() for a WinForms example
@@ -326,7 +321,7 @@ namespace Tests
             // Set up the exampleService responses
             var exampleService = new ExampleService();
             var port = NextServerPort;
-            
+
             using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
             {
                 using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
@@ -339,7 +334,7 @@ namespace Tests
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
-                    var loginResponse = await client1.LogonAsync(heartbeatIntervalInSeconds: 1, useHeartbeat: true, timeout: 5000).ConfigureAwait(true);
+                    var loginResponse = await client1.LogonAsync(1, true, 5000).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     var numSnapshots = 0;
@@ -390,8 +385,5 @@ namespace Tests
                 }
             }
         }
-
-     
-
     }
 }

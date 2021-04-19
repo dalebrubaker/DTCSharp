@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -15,10 +14,10 @@ namespace TestClient
     {
         private Client _client;
         private uint _symbolId1;
-        List<HistoricalPriceDataRecordResponse> _historicalPriceDataRecordResponses;
+        private List<HistoricalPriceDataRecordResponse> _historicalPriceDataRecordResponses;
         private uint _symbolId2;
         private List<MarketDataUpdateTradeCompact> _ticks;
-        const int MaxLevel1Rows = 100;
+        private const int MaxLevel1Rows = 100;
         private int _numRegistrationsForMarketData;
         private CancellationTokenSource _ctsLevel1Symbol1;
         private CancellationTokenSource _ctsLevel1Symbol2;
@@ -27,7 +26,7 @@ namespace TestClient
         {
             InitializeComponent();
             btnDisconnect.Enabled = false;
-            this.Disposed += Form1_Disposed;
+            Disposed += Form1_Disposed;
             toolStripStatusLabel1.Text = "Disconnected";
             btnUnsubscribe1.Enabled = false;
             btnUnsubscribe2.Enabled = false;
@@ -77,7 +76,7 @@ namespace TestClient
             await DisposeClientAsync().ConfigureAwait(true); // remove the old client just in case it was missed elsewhere
             btnConnect.Enabled = false;
             btnDisconnect.Enabled = true;
-            _client = new Client(txtServer.Text, PortListener, timeoutNoActivity:30000);
+            _client = new Client(txtServer.Text, PortListener, 30000);
             RegisterClientEvents(_client);
             var clientName = "TestClient";
             try
@@ -95,7 +94,8 @@ namespace TestClient
                     MessageBox.Show("Timed out trying to connect.");
                     return;
                 }
-                var response = await _client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
+                var response = await _client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, txtUsername.Text, txtPassword.Text)
+                    .ConfigureAwait(true);
                 if (response == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
@@ -119,7 +119,8 @@ namespace TestClient
                         await DisposeClientAsync().ConfigureAwait(false);
                         break;
                     case LogonStatusEnum.LogonReconnectNewAddress:
-                        logControlConnect.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
+                        logControlConnect.LogMessage(
+                            $"{_client} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
                         await DisposeClientAsync().ConfigureAwait(false);
                         break;
                     default:
@@ -231,28 +232,28 @@ namespace TestClient
             client.MarketDataUpdateSessionLowEvent += Client_MarketDataUpdateSessionLowEvent;
         }
 
-        private void Client_MarketDataUpdateSessionLowEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateSessionLow> e)
+        private void Client_MarketDataUpdateSessionLowEvent(object sender, EventArgs<MarketDataUpdateSessionLow> e)
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data new session low for {combo}: {response.Price}");
         }
 
-        private void Client_MarketDataUpdateSessionHighEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateSessionHigh> e)
+        private void Client_MarketDataUpdateSessionHighEvent(object sender, EventArgs<MarketDataUpdateSessionHigh> e)
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data new session high for {combo}: {response.Price}");
         }
 
-        private void Client_MarketDataUpdateSessionVolumeEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateSessionVolume> e)
+        private void Client_MarketDataUpdateSessionVolumeEvent(object sender, EventArgs<MarketDataUpdateSessionVolume> e)
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data session volume correction for {combo}: {response.Volume}");
         }
 
-        private void Client_MarketDataUpdateBidAskIntEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateBidAsk_Int> e)
+        private void Client_MarketDataUpdateBidAskIntEvent(object sender, EventArgs<MarketDataUpdateBidAsk_Int> e)
         {
             if (!cbShowBidAsk1.Checked)
             {
@@ -265,7 +266,7 @@ namespace TestClient
                 $"Market Data Update Bid/Ask Int for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime:yyyyMMdd.HHmmss.fff}");
         }
 
-        private void Client_MarketDataUpdateBidAskEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateBidAsk> e)
+        private void Client_MarketDataUpdateBidAskEvent(object sender, EventArgs<MarketDataUpdateBidAsk> e)
         {
             if (!cbShowBidAsk1.Checked)
             {
@@ -278,12 +279,12 @@ namespace TestClient
                 $"Market Data Update Bid/Ask for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime:yyyyMMdd.HHmmss.fff}");
         }
 
-        private void Client_MarketDataUpdateBidAskCompactEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateBidAskCompact> e)
+        private void Client_MarketDataUpdateBidAskCompactEvent(object sender, EventArgs<MarketDataUpdateBidAskCompact> e)
         {
             MarketDataUpdateBidAskCompactCallback(e.Data);
         }
 
-        private void Client_MarketDataUpdateTradeIntEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateTrade_Int> e)
+        private void Client_MarketDataUpdateTradeIntEvent(object sender, EventArgs<MarketDataUpdateTrade_Int> e)
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
@@ -292,38 +293,39 @@ namespace TestClient
                 $"Market Data Update Trade Int for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}");
         }
 
-        private void Client_MarketDataUpdateTradeEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateTrade> e)
+        private void Client_MarketDataUpdateTradeEvent(object sender, EventArgs<MarketDataUpdateTrade> e)
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
-            logControlLevel1.LogMessage($"Market Data Update Trade for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}");
+            logControlLevel1.LogMessage(
+                $"Market Data Update Trade for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}");
         }
 
-        private void Client_MarketDataUpdateTradeCompactEvent(object sender, DTCCommon.EventArgs<MarketDataUpdateTradeCompact> e)
+        private void Client_MarketDataUpdateTradeCompactEvent(object sender, EventArgs<MarketDataUpdateTradeCompact> e)
         {
             MarketDataUpdateTradeCompactCallback(e.Data);
         }
 
-        private void Client_MarketDataFeedSymbolStatusEvent(object sender, DTCCommon.EventArgs<MarketDataFeedSymbolStatus> e)
+        private void Client_MarketDataFeedSymbolStatusEvent(object sender, EventArgs<MarketDataFeedSymbolStatus> e)
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data Feed status for {combo}: {response.Status}");
         }
 
-        private void Client_MarketDataFeedStatusEvent(object sender, DTCCommon.EventArgs<MarketDataFeedStatus> e)
+        private void Client_MarketDataFeedStatusEvent(object sender, EventArgs<MarketDataFeedStatus> e)
         {
             var response = e.Data;
             logControlLevel1.LogMessage($"Market Data Feed status: {response.Status}");
         }
 
-        private void Client_MarketDataSnapshotEvent(object sender, DTCCommon.EventArgs<MarketDataSnapshot> e)
+        private void Client_MarketDataSnapshotEvent(object sender, EventArgs<MarketDataSnapshot> e)
         {
             MarketDataSnapshotCallback(e.Data);
         }
 
-        private void Client_MarketDataSnapshotIntEvent(object sender, DTCCommon.EventArgs<MarketDataSnapshot_Int> e)
+        private void Client_MarketDataSnapshotIntEvent(object sender, EventArgs<MarketDataSnapshot_Int> e)
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
@@ -351,14 +353,14 @@ namespace TestClient
             logControlLevel1.LogMessagesReversed(lines);
         }
 
-        private void Client_MarketDataRejectEvent(object sender, DTCCommon.EventArgs<MarketDataReject> e)
+        private void Client_MarketDataRejectEvent(object sender, EventArgs<MarketDataReject> e)
         {
             var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market data request rejected for {combo} because {response.RejectText}");
         }
 
-        private void Client_ExchangeListResponseEvent(object sender, DTCCommon.EventArgs<ExchangeListResponse> e)
+        private void Client_ExchangeListResponseEvent(object sender, EventArgs<ExchangeListResponse> e)
         {
             var response = e.Data;
             var lines = new List<string>
@@ -371,17 +373,17 @@ namespace TestClient
             logControlSymbols.LogMessagesReversed(lines);
         }
 
-        private void Client_GeneralLogMessageEvent(object sender, DTCCommon.EventArgs<GeneralLogMessage> e)
+        private void Client_GeneralLogMessageEvent(object sender, EventArgs<GeneralLogMessage> e)
         {
             logControlConnect.LogMessage($"GeneralLogMessage: {e.Data.MessageText}");
         }
 
-        private void Client_UserMessageEvent(object sender, DTCCommon.EventArgs<UserMessage> e)
+        private void Client_UserMessageEvent(object sender, EventArgs<UserMessage> e)
         {
             logControlConnect.LogMessage($"UserMessage: {e.Data.UserMessage_}");
         }
 
-        private void Client_EncodingResponseEvent(object sender, DTCCommon.EventArgs<DTCPB.EncodingResponse> e)
+        private void Client_EncodingResponseEvent(object sender, EventArgs<EncodingResponse> e)
         {
             var client = (Client)sender;
             var response = e.Data;
@@ -509,8 +511,10 @@ namespace TestClient
                 return;
             }
             _historicalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>();
-            var timeoutNoActivity = (int)TimeSpan.FromMinutes(5).TotalMilliseconds; // "several minutes" per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData
-            using (var clientHistorical = new Client(txtServer.Text, PortHistorical, timeoutNoActivity: timeoutNoActivity))
+            var timeoutNoActivity =
+                (int)TimeSpan.FromMinutes(5)
+                    .TotalMilliseconds; // "several minutes" per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData
+            using (var clientHistorical = new Client(txtServer.Text, PortHistorical, timeoutNoActivity))
             {
                 const int timeout = 5000;
                 try
@@ -527,7 +531,8 @@ namespace TestClient
                         MessageBox.Show("Timed out trying to connect.");
                         return;
                     }
-                    var response = await clientHistorical.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, txtUsername.Text, txtPassword.Text).ConfigureAwait(true);
+                    var response = await clientHistorical.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, txtUsername.Text, txtPassword.Text)
+                        .ConfigureAwait(true);
                     if (response == null)
                     {
                         logControlHistorical.LogMessage("Null logon response from logon attempt to " + clientName);
@@ -541,13 +546,15 @@ namespace TestClient
                             DisplayLogonResponse(logControlHistorical, clientHistorical, response);
                             break;
                         case LogonStatusEnum.LogonErrorNoReconnect:
-                            logControlHistorical.LogMessage($"{clientHistorical} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
+                            logControlHistorical.LogMessage(
+                                $"{clientHistorical} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
                             return;
                         case LogonStatusEnum.LogonError:
                             logControlHistorical.LogMessage($"{clientHistorical} Login failed: {response.Result} {response.ResultText}.");
                             return;
                         case LogonStatusEnum.LogonReconnectNewAddress:
-                            logControlHistorical.LogMessage($"{clientHistorical} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
+                            logControlHistorical.LogMessage(
+                                $"{clientHistorical} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
                             return;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -718,6 +725,7 @@ namespace TestClient
             };
             logControlLevel1.LogMessagesReversed(lines);
         }
+
         private void MarketDataUpdateBidAskCompactCallback(MarketDataUpdateBidAskCompact response)
         {
             if (!cbShowBidAsk1.Checked)
@@ -762,7 +770,8 @@ namespace TestClient
             {
                 var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
                 var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
-                var line = $"Market Data Update Trade Compact for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}";
+                var line =
+                    $"Market Data Update Trade Compact for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}";
                 lines.Add(line);
             }
             logControlLevel1.LogMessages(lines);
@@ -770,7 +779,7 @@ namespace TestClient
 
         private void ClientForm_Load(object sender, EventArgs e)
         {
-            WindowConfig.WindowPlacement.SetPlacement(this.Handle, Settings1.Default.ClientWindowPlacement);
+            WindowConfig.WindowPlacement.SetPlacement(Handle, Settings1.Default.ClientWindowPlacement);
             txtServer.Text = Settings1.Default.Server;
             txtPortListening.Text = Settings1.Default.PortListening;
             txtPortHistorical.Text = Settings1.Default.PortHistorical;
@@ -786,7 +795,7 @@ namespace TestClient
 
         private void ClientForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            Settings1.Default.ClientWindowPlacement = WindowConfig.WindowPlacement.GetPlacement(this.Handle);
+            Settings1.Default.ClientWindowPlacement = WindowConfig.WindowPlacement.GetPlacement(Handle);
             Settings1.Default.Server = txtServer.Text;
             Settings1.Default.PortListening = txtPortListening.Text;
             Settings1.Default.PortHistorical = txtPortHistorical.Text;

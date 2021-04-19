@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using DTCCommon.Codecs;
 using DTCPB;
 
@@ -23,7 +22,6 @@ namespace DTCCommon
             RepeatCount = 1;
             ThreadId = Thread.CurrentThread.ManagedThreadId;
         }
-
 
         public int RepeatCount { get; set; }
 

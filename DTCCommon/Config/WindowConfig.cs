@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
 
@@ -27,10 +24,10 @@ namespace DTCCommon
 
             public RECT(int left, int top, int right, int bottom)
             {
-                this.Left = left;
-                this.Top = top;
-                this.Right = right;
-                this.Bottom = bottom;
+                Left = left;
+                Top = top;
+                Right = right;
+                Bottom = bottom;
             }
         }
 
@@ -44,8 +41,8 @@ namespace DTCCommon
 
             public POINT(int x, int y)
             {
-                this.X = x;
-                this.Y = y;
+                X = x;
+                Y = y;
             }
         }
 
@@ -64,8 +61,8 @@ namespace DTCCommon
 
         public static class WindowPlacement
         {
-            private static Encoding encoding = new UTF8Encoding();
-            private static XmlSerializer serializer = new XmlSerializer(typeof(WINDOWPLACEMENT));
+            private static readonly Encoding encoding = new UTF8Encoding();
+            private static readonly XmlSerializer serializer = new XmlSerializer(typeof(WINDOWPLACEMENT));
 
             [DllImport("user32.dll")]
             private static extern bool SetWindowPlacement(IntPtr hWnd, [In] ref WINDOWPLACEMENT lpwndpl);

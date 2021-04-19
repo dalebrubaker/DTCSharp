@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 
@@ -50,22 +49,12 @@ namespace DTCCommon.Codecs
         /// <returns>the compressed bytes</returns>
         public static void CompressToFile(byte[] bytesToCompress, string filePath, CompressionLevel compressionLevel = CompressionLevel.Optimal)
         {
-            try
+            using (var stream = File.Create(filePath))
             {
-                using (var stream = File.Create(filePath))
+                using (var deflateStream = new DeflateStream(stream, compressionLevel))
                 {
-                    using (var deflateStream = new DeflateStream(stream, compressionLevel))
-                    {
-                        deflateStream.Write(bytesToCompress, 0, bytesToCompress.Length);
-                    }
+                    deflateStream.Write(bytesToCompress, 0, bytesToCompress.Length);
                 }
-            }
-#pragma warning disable 168
-            catch (Exception ex)
-#pragma warning restore 168
-            {
-                //Log.Fatal(new CallerContext(), ex, ex.Message);
-                throw;
             }
         }
 
@@ -83,19 +72,9 @@ namespace DTCCommon.Codecs
         /// <returns>the compressed bytes</returns>
         public static void CompressToStream(byte[] bytesToCompress, Stream stream, CompressionLevel compressionLevel = CompressionLevel.Optimal)
         {
-            try
+            using (var deflateStream = new DeflateStream(stream, compressionLevel))
             {
-                using (var deflateStream = new DeflateStream(stream, compressionLevel))
-                {
-                    deflateStream.Write(bytesToCompress, 0, bytesToCompress.Length);
-                }
-            }
-#pragma warning disable 168
-            catch (Exception ex)
-#pragma warning restore 168
-            {
-                //Log.Fatal(new CallerContext(), ex, ex.Message);
-                throw;
+                deflateStream.Write(bytesToCompress, 0, bytesToCompress.Length);
             }
         }
 
@@ -162,7 +141,6 @@ namespace DTCCommon.Codecs
         {
             return Task.Run(() => CompressToFile(bytesToCompress, filePath, compressionLevel));
         }
-
 
         /// <summary>
         /// Deflate (zlib compress) the bytesToCompress.

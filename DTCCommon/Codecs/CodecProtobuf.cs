@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.IO;
 using DTCPB;
 using Google.Protobuf;
 
@@ -24,17 +19,6 @@ namespace DTCCommon.Codecs
                 return;
             }
             var bytes = message.ToByteArray();
-            try
-            {
-
-            }
-#pragma warning disable 168
-            catch (IOException ex)
-#pragma warning restore 168
-            {
-                // perhaps the other side disconnected
-                throw;
-            }
             Utility.WriteHeader(binaryWriter, bytes.Length, messageType);
             binaryWriter.Write(bytes);
         }
@@ -72,7 +56,6 @@ namespace DTCCommon.Codecs
 
         public void Load<T>(ref T message, byte[] bytes)
         {
-            
         }
     }
 }

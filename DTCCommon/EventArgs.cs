@@ -14,7 +14,6 @@ namespace DTCCommon
 
     public class EventArgs<T1, T2> : EventArgs
     {
-
         public EventArgs(T1 data1, T2 data2)
         {
             Data1 = data1;
@@ -25,10 +24,8 @@ namespace DTCCommon
         public T2 Data2 { get; }
     }
 
-
     public class EventArgs<T1, T2, T3> : EventArgs
     {
-
         public EventArgs(T1 data1, T2 data2, T3 data3)
         {
             Data1 = data1;
@@ -43,7 +40,6 @@ namespace DTCCommon
 
     public class EventArgs<T1, T2, T3, T4> : EventArgs
     {
-
         public EventArgs(T1 data1, T2 data2, T3 data3, T4 data4)
         {
             Data1 = data1;
@@ -58,10 +54,8 @@ namespace DTCCommon
         public T4 Data4 { get; }
     }
 
-
     public class EventArgs<T1, T2, T3, T4, T5> : EventArgs
     {
-
         public EventArgs(T1 data1, T2 data2, T3 data3, T4 data4, T5 data5)
         {
             Data1 = data1;
@@ -80,7 +74,6 @@ namespace DTCCommon
 
     public class EventArgs<T1, T2, T3, T4, T5, T6> : EventArgs
     {
-
         public EventArgs(T1 data1, T2 data2, T3 data3, T4 data4, T5 data5, T6 data6)
         {
             Data1 = data1;
@@ -101,7 +94,6 @@ namespace DTCCommon
 
     public class EventArgs<T1, T2, T3, T4, T5, T6, T7> : EventArgs
     {
-
         public EventArgs(T1 data1, T2 data2, T3 data3, T4 data4, T5 data5, T6 data6, T7 data7)
         {
             Data1 = data1;
@@ -121,5 +113,4 @@ namespace DTCCommon
         public T6 Data6 { get; }
         public T7 Data7 { get; }
     }
-
 }

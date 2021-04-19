@@ -15,7 +15,6 @@ namespace Tests
 {
     public class ClientServerNotZippedTests : IDisposable
     {
-
         private readonly ITestOutputHelper _output;
 
         public ClientServerNotZippedTests(ITestOutputHelper output)
@@ -34,14 +33,15 @@ namespace Tests
             {
                 exampleService = new ExampleService();
             }
-            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: timeoutNoActivity);
+            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, timeoutNoActivity);
             TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
 
-        private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port, EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
+        private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port,
+            EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
         {
-            var client = new Client(IPAddress.Loopback.ToString(), serverPort: port, timeoutNoActivity: timeoutNoActivity);
+            var client = new Client(IPAddress.Loopback.ToString(), port, timeoutNoActivity);
             var encodingResponse = await client.ConnectAsync(encoding, "TestClient" + port, timeoutForConnect).ConfigureAwait(false);
             Assert.Equal(encoding, encodingResponse.Encoding);
             return client;
@@ -66,7 +66,8 @@ namespace Tests
 
             using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
             {
-                using (var clientHistorical = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port, EncodingEnum.BinaryEncoding).ConfigureAwait(false))
+                using (var clientHistorical =
+                    await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port, EncodingEnum.BinaryEncoding).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
                     while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
@@ -77,7 +78,7 @@ namespace Tests
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
                     // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
-                    var loginResponse = await clientHistorical.LogonAsync(heartbeatIntervalInSeconds: 0, useHeartbeat: false, timeout: 5000).ConfigureAwait(true);
+                    var loginResponse = await clientHistorical.LogonAsync(0, false, 5000).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     var numHistoricalPriceDataResponseHeader = 0;
@@ -132,6 +133,5 @@ namespace Tests
                 }
             }
         }
-
     }
 }

@@ -46,7 +46,6 @@ namespace DTCServer
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
             _isBinaryWriterZipped = false;
-
         }
 
         public string RemoteEndPoint { get; }
@@ -412,41 +411,32 @@ namespace DTCServer
 
             DebugHelpers.AddResponseSent(messageType, _currentCodec, _isBinaryWriterZipped);
 #endif
-            try
-            {
 #if DEBUG
-                var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
-                if (port == 49998 && messageType == DTCMessageType.LogonResponse)
-                {
-#pragma warning disable 219
-                    var debug2 = 1;
-#pragma warning restore 219
-                    var requestsSent = DebugHelpers.RequestsSent;
-                    var requestsReceived = DebugHelpers.RequestsReceived;
-                    var responsesReceived = DebugHelpers.ResponsesReceived;
-                    var responsesSent = DebugHelpers.ResponsesSent;
-                }
-#endif
-                _currentCodec.Write(messageType, message, _binaryWriter);
-                if (thenSwitchToZipped)
-                {
-                    // Switch to writing zipped
-                    // Write the 2-byte header that Sierra Chart has coming from ZLib. See https://tools.ietf.org/html/rfc1950
-                    _binaryWriter.Write((byte)120); // zlibCmf 120 = 0111 1000 means Deflate 
-                    _binaryWriter.Write((byte)156); // zlibFlg 156 = 1001 1100
-
-                    _deflateStream = new DeflateStream(_networkStream, CompressionMode.Compress, true);
-                    _deflateStream.Flush();
-                    _binaryWriter = new BinaryWriter(_deflateStream);
-                    _isBinaryWriterZipped = true;
-                    _useHeartbeat = false;
-                }
-            }
-#pragma warning disable 168
-            catch (Exception ex)
-#pragma warning restore 168
+            var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
+            if (port == 49998 && messageType == DTCMessageType.LogonResponse)
             {
-                throw;
+#pragma warning disable 219
+                var debug2 = 1;
+#pragma warning restore 219
+                var requestsSent = DebugHelpers.RequestsSent;
+                var requestsReceived = DebugHelpers.RequestsReceived;
+                var responsesReceived = DebugHelpers.ResponsesReceived;
+                var responsesSent = DebugHelpers.ResponsesSent;
+            }
+#endif
+            _currentCodec.Write(messageType, message, _binaryWriter);
+            if (thenSwitchToZipped)
+            {
+                // Switch to writing zipped
+                // Write the 2-byte header that Sierra Chart has coming from ZLib. See https://tools.ietf.org/html/rfc1950
+                _binaryWriter.Write((byte)120); // zlibCmf 120 = 0111 1000 means Deflate 
+                _binaryWriter.Write((byte)156); // zlibFlg 156 = 1001 1100
+
+                _deflateStream = new DeflateStream(_networkStream, CompressionMode.Compress, true);
+                _deflateStream.Flush();
+                _binaryWriter = new BinaryWriter(_deflateStream);
+                _isBinaryWriterZipped = true;
+                _useHeartbeat = false;
             }
         }
 

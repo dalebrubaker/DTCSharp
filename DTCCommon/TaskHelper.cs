@@ -13,7 +13,6 @@ namespace DTCCommon
     /// </summary>
     public static class TaskHelper
     {
-
         /// <summary>
         /// Runs a TPL Task fire-and-forget style, the right way - in the
         /// background, separate from the current thread, with no risk
@@ -42,8 +41,7 @@ namespace DTCCommon
         /// </summary>
         public static void RunBgLong(Func<Task> fn)
         {
-            Task.Factory.StartNew(fn, TaskCreationOptions.LongRunning)
-                .ConfigureAwait(false);
+            Task.Factory.StartNew(fn, TaskCreationOptions.LongRunning).ConfigureAwait(false);
         }
     }
 }

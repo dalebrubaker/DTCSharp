@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -174,7 +173,6 @@ namespace DTCClient
         public event EventHandler<EventArgs<HistoricalPriceDataRecordResponse_Int>> HistoricalPriceDataRecordResponseIntEvent;
         public event EventHandler<EventArgs<HistoricalPriceDataTickRecordResponse_Int>> HistoricalPriceDataTickRecordResponseIntEvent;
 
-
         #endregion events
 
         /// <summary>
@@ -206,10 +204,6 @@ namespace DTCClient
             {
                 OnDisconnected(new Error(sex.Message));
             }
-            catch (Exception)
-            {
-                throw;
-            }
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
             _currentCodec = new CodecBinary();
@@ -238,16 +232,7 @@ namespace DTCClient
 
             // Give the server a bit to be able to respond
             //await Task.Delay(100).ConfigureAwait(true);
-            try
-            {
-                SendRequest(DTCMessageType.EncodingRequest, encodingRequest);
-            }
-#pragma warning disable 168
-            catch (Exception ex)
-#pragma warning restore 168
-            {
-                throw;
-            }
+            SendRequest(DTCMessageType.EncodingRequest, encodingRequest);
 
             // Wait until the response is received or until timeout
             var startTime = DateTime.Now;
@@ -279,9 +264,9 @@ namespace DTCClient
         /// <param name="tradeAccount">optional identifier if that is required to login</param>
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
         /// <returns>The LogonResponse, or null if not received before timeout</returns>
-        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, bool useHeartbeat = true,
-            int timeout = 1000, string userName = "", string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0,
-            TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset, string tradeAccount = "", string hardwareIdentifier = "")
+        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, bool useHeartbeat = true, int timeout = 1000, string userName = "",
+            string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset,
+            string tradeAccount = "", string hardwareIdentifier = "")
         {
             if (_isDisposed)
             {
@@ -575,16 +560,12 @@ namespace DTCClient
         /// <param name="sessionVolumeCallback">Won't be used if null</param>
         /// <param name="openInterestCallback">Won't be used if null</param>
         /// <returns>rejection, or null if not rejected</returns>
-        public async Task<MarketDataReject> GetMarketDataUpdateTradeCompactAsync(CancellationToken cancellationToken, int timeout, string symbol, string exchange,
-            Action<MarketDataSnapshot> snapshotCallback, Action<MarketDataUpdateTradeCompact> tradeCallback,
-            Action<MarketDataUpdateBidAskCompact> bidAskCallback = null,
-            Action<MarketDataUpdateSessionOpen> sessionOpenCallback = null,
-            Action<MarketDataUpdateSessionHigh> sessionHighCallback = null,
-            Action<MarketDataUpdateSessionLow> sessionLowCallback = null,
-            Action<MarketDataUpdateSessionSettlement> sessionSettlementCallback = null,
-            Action<MarketDataUpdateSessionVolume> sessionVolumeCallback = null,
-            Action<MarketDataUpdateOpenInterest> openInterestCallback = null
-        )
+        public async Task<MarketDataReject> GetMarketDataUpdateTradeCompactAsync(CancellationToken cancellationToken, int timeout, string symbol,
+            string exchange, Action<MarketDataSnapshot> snapshotCallback, Action<MarketDataUpdateTradeCompact> tradeCallback,
+            Action<MarketDataUpdateBidAskCompact> bidAskCallback = null, Action<MarketDataUpdateSessionOpen> sessionOpenCallback = null,
+            Action<MarketDataUpdateSessionHigh> sessionHighCallback = null, Action<MarketDataUpdateSessionLow> sessionLowCallback = null,
+            Action<MarketDataUpdateSessionSettlement> sessionSettlementCallback = null, Action<MarketDataUpdateSessionVolume> sessionVolumeCallback = null,
+            Action<MarketDataUpdateOpenInterest> openInterestCallback = null)
         {
             var symbolId = RequireSymbolId(symbol, exchange);
             MarketDataReject marketDataReject = null;
@@ -619,7 +600,8 @@ namespace DTCClient
             using (var handleSessionLow = new EventToCallbackForSymbol<MarketDataUpdateSessionLow>(symbolId, symbol, exchange,
                 handler => MarketDataUpdateSessionLowEvent += handler, handler => MarketDataUpdateSessionLowEvent -= handler, sessionLowCallback))
             using (var handleSessionSettlement = new EventToCallbackForSymbol<MarketDataUpdateSessionSettlement>(symbolId, symbol, exchange,
-                handler => MarketDataUpdateSessionSettlementEvent += handler, handler => MarketDataUpdateSessionSettlementEvent -= handler, sessionSettlementCallback))
+                handler => MarketDataUpdateSessionSettlementEvent += handler, handler => MarketDataUpdateSessionSettlementEvent -= handler,
+                sessionSettlementCallback))
             using (var handleSessionVolume = new EventToCallbackForSymbol<MarketDataUpdateSessionVolume>(symbolId, symbol, exchange,
                 handler => MarketDataUpdateSessionVolumeEvent += handler, handler => MarketDataUpdateSessionVolumeEvent -= handler, sessionVolumeCallback))
             using (var handleOpenInterest = new EventToCallbackForSymbol<MarketDataUpdateOpenInterest>(symbolId, symbol, exchange,
@@ -637,8 +619,7 @@ namespace DTCClient
 
                 // Wait until timeout or cancellation
                 var startTime = DateTime.Now; // for checking timeout
-                while ((DateTime.Now - startTime).TotalMilliseconds < timeout
-                       && !cancellationToken.IsCancellationRequested)
+                while ((DateTime.Now - startTime).TotalMilliseconds < timeout && !cancellationToken.IsCancellationRequested)
                 {
                     if (handleSnapshot.IsDataReceived || handleTrade.IsDataReceived)
                     {
@@ -664,9 +645,9 @@ namespace DTCClient
             var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
             //if (port == 49998 && messageType == DTCMessageType.LogonResponse)
             if (messageType == DTCMessageType.LogonRequest)
-                {
+            {
 #pragma warning disable 219
-                    var debug2 = 1;
+                var debug2 = 1;
 #pragma warning restore 219
                 var requestsSent = DebugHelpers.RequestsSent;
                 var requestsReceived = DebugHelpers.RequestsReceived;
@@ -704,7 +685,6 @@ namespace DTCClient
             ThrowEventImpl(message, eventForMessage);
             //}
         }
-
 
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
@@ -1098,6 +1078,5 @@ namespace DTCClient
         {
             return $"{ClientName} {ServerAddress} {ServerPort}";
         }
-
     }
 }

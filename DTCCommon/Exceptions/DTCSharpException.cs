@@ -10,19 +10,16 @@ namespace DTCCommon.Exceptions
         {
         }
 
-        public DTCSharpException(string message)
-            : base(message)
+        public DTCSharpException(string message) : base(message)
         {
         }
 
-        public DTCSharpException(string message, Exception inner)
-                    : base(message, inner)
+        public DTCSharpException(string message, Exception inner) : base(message, inner)
         {
         }
 
         // Ensure Exception is Serializable
-        protected DTCSharpException(SerializationInfo info, StreamingContext ctxt)
-            : base(info, ctxt)
+        protected DTCSharpException(SerializationInfo info, StreamingContext ctxt) : base(info, ctxt)
         {
         }
     }

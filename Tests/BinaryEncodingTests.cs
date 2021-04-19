@@ -11,7 +11,7 @@ namespace Tests
 {
     public class BinaryEncodingTests : IDisposable
     {
-        private CodecBinary _codecBinary;
+        private readonly CodecBinary _codecBinary;
 
         public BinaryEncodingTests()
         {
@@ -68,7 +68,7 @@ namespace Tests
         [Fact]
         public void EncodingResponseTest()
         {
-            var encodingResponse = new EncodingResponse()
+            var encodingResponse = new EncodingResponse
             {
                 ProtocolVersion = 1,
                 Encoding = EncodingEnum.ProtocolBuffers,
@@ -93,7 +93,6 @@ namespace Tests
                 TradeAccount = "demo",
                 HardwareIdentifier = "hwi",
                 ClientName = "testClient"
-
             };
             GenericTest(DTCMessageType.LogonRequest, logonRequest);
         }
@@ -101,7 +100,7 @@ namespace Tests
         [Fact]
         public void LogonResponseTest()
         {
-            var logonResponse = new LogonResponse()
+            var logonResponse = new LogonResponse
             {
                 ProtocolVersion = 1,
                 Result = LogonStatusEnum.LogonSuccess,
@@ -151,7 +150,7 @@ namespace Tests
         [Fact]
         public void SecurityDefinitionForSymbolRequestTest()
         {
-            var securityDefinitionForSymbolRequest = new SecurityDefinitionForSymbolRequest()
+            var securityDefinitionForSymbolRequest = new SecurityDefinitionForSymbolRequest
             {
                 RequestID = 1,
                 Symbol = "ESZ6",
@@ -197,7 +196,7 @@ namespace Tests
         [Fact]
         public void SecurityDefinitionRejectTest()
         {
-            var securityDefinitionReject = new SecurityDefinitionReject()
+            var securityDefinitionReject = new SecurityDefinitionReject
             {
                 RequestID = 1,
                 RejectText = "shucks, no",
@@ -208,7 +207,7 @@ namespace Tests
         [Fact]
         public void HistoricalPriceDataRequestTest()
         {
-            var historicalPriceDataRequest = new HistoricalPriceDataRequest()
+            var historicalPriceDataRequest = new HistoricalPriceDataRequest
             {
                 RequestID = 1,
                 Symbol = "ESZ6",
@@ -227,7 +226,7 @@ namespace Tests
         [Fact]
         public void HistoricalPriceDataResponseHeaderTest()
         {
-            var historicalPriceDataResponseHeader = new HistoricalPriceDataResponseHeader()
+            var historicalPriceDataResponseHeader = new HistoricalPriceDataResponseHeader
             {
                 RequestID = 1,
                 RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
@@ -241,7 +240,7 @@ namespace Tests
         [Fact]
         public void HistoricalPriceDataRejectTest()
         {
-            var historicalPriceDataReject = new HistoricalPriceDataReject()
+            var historicalPriceDataReject = new HistoricalPriceDataReject
             {
                 RequestID = 1,
                 RejectText = "shucks, no",
@@ -254,7 +253,7 @@ namespace Tests
         [Fact]
         public void HistoricalPriceDataRecordResponseTest()
         {
-            var historicalPriceDataRecordResponse = new HistoricalPriceDataRecordResponse()
+            var historicalPriceDataRecordResponse = new HistoricalPriceDataRecordResponse
             {
                 RequestID = 1,
                 StartDateTime = DateTime.UtcNow.UtcToDtcDateTime(),

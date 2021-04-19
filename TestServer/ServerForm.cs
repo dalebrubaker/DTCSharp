@@ -53,7 +53,7 @@ namespace TestServer
         {
             btnStartPrimary.Enabled = false;
             btnStopPrimary.Enabled = true;
-            _serverPrimary = new Server(_exampleService.HandleRequest, _ipAddress, PortListener, timeoutNoActivity: 30000);
+            _serverPrimary = new Server(_exampleService.HandleRequest, _ipAddress, PortListener, 30000);
             try
             {
                 await _serverPrimary.RunAsync().ConfigureAwait(false);
@@ -75,7 +75,7 @@ namespace TestServer
         {
             btnStartHistorical.Enabled = false;
             btnStopHistorical.Enabled = true;
-            _serverHistorical = new Server(_exampleService.HandleRequest, _ipAddress, PortHistorical, timeoutNoActivity: 30000);
+            _serverHistorical = new Server(_exampleService.HandleRequest, _ipAddress, PortHistorical, 30000);
             try
             {
                 await _serverHistorical.RunAsync().ConfigureAwait(false);
@@ -112,7 +112,7 @@ namespace TestServer
 
         private void LoadConfig()
         {
-            WindowPlacement.SetPlacement(this.Handle, Settings1.Default.MainWindowPlacement);
+            WindowPlacement.SetPlacement(Handle, Settings1.Default.MainWindowPlacement);
             txtServer.Text = string.IsNullOrEmpty(Settings1.Default.ServerName) ? "localhost" : Settings1.Default.ServerName;
             txtPortListening.Text = Settings1.Default.PortListening == 0 ? "49999" : Settings1.Default.PortListening.ToString();
             txtPortHistorical.Text = Settings1.Default.PortHistorical == 0 ? "49998" : Settings1.Default.PortHistorical.ToString();
@@ -125,7 +125,7 @@ namespace TestServer
 
         private void SaveConfig()
         {
-            Settings1.Default.MainWindowPlacement = WindowPlacement.GetPlacement(this.Handle);
+            Settings1.Default.MainWindowPlacement = WindowPlacement.GetPlacement(Handle);
             Settings1.Default.ServerName = txtServer.Text;
             Settings1.Default.PortListening = txtPortListening.Text.ToInt32();
             Settings1.Default.PortHistorical = txtPortHistorical.Text.ToInt32();

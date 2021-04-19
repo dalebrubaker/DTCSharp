@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
 using DTCCommon;
 using DTCServer;
@@ -19,7 +15,6 @@ namespace Tests
     /// </summary>
     public class ServerThrowTests : IDisposable
     {
-
         private readonly ITestOutputHelper _output;
 
         public ServerThrowTests(ITestOutputHelper output)
@@ -37,7 +32,7 @@ namespace Tests
         {
             var exampleService = new ExampleService();
             var port = ClientServerTests.NextServerPort;
-            using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: 1000))
+            using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, 1000))
             {
                 try
                 {
@@ -49,7 +44,7 @@ namespace Tests
                     throw;
                 }
                 await Task.Delay(200).ConfigureAwait(false);
-                using (var server2 = new Server(exampleService.HandleRequest, IPAddress.Loopback, port: port, timeoutNoActivity: 1000))
+                using (var server2 = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, 1000))
                 {
                     await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync()).ConfigureAwait(false);
                     await Task.Delay(100).ConfigureAwait(false);
@@ -57,7 +52,5 @@ namespace Tests
                 }
             }
         }
-
-
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using DTCCommon;
 using DTCCommon.Extensions;
 using DTCPB;
@@ -89,7 +88,6 @@ namespace TestServer
                 };
                 HistoricalPriceDataRecordResponses.Add(response);
             }
-
         }
 
         public List<HistoricalPriceDataRecordResponse> HistoricalPriceDataRecordResponses { get; set; }
@@ -99,7 +97,6 @@ namespace TestServer
         public int NumHistoricalPriceDataRecordsToSend { get; set; }
 
         #region PropertiesForTesting
-
 
         /// <summary>
         /// Set this to the trades to be sent as the result of a MarketDataRequest
@@ -124,7 +121,8 @@ namespace TestServer
         #endregion PropertiesForTesting
 
         // These events just show a mechanism for having other parts of your server application hook up to client requests.
-        #region  events
+
+        #region events
 
         public event EventHandler<EventArgs<Heartbeat, DTCMessageType, ClientHandler>> HeartbeatEvent;
         public event EventHandler<EventArgs<Logoff, DTCMessageType, ClientHandler>> LogoffEvent;
@@ -135,7 +133,6 @@ namespace TestServer
         /// So do NOT respond to this event.
         /// </summary>
         public event EventHandler<EventArgs<EncodingRequest, DTCMessageType, ClientHandler>> EncodingRequestEvent;
-
 
         public event EventHandler<EventArgs<LogonRequest, DTCMessageType, ClientHandler>> LogonRequestEvent;
         public event EventHandler<EventArgs<MarketDataRequest, DTCMessageType, ClientHandler>> MarketDataRequestEvent;
@@ -171,7 +168,8 @@ namespace TestServer
             temp?.Invoke(this, message);
         }
 
-        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T, DTCMessageType, ClientHandler>> eventForMessage, DTCMessageType messageType, ClientHandler clientHandler) where T : IMessage
+        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T, DTCMessageType, ClientHandler>> eventForMessage, DTCMessageType messageType,
+            ClientHandler clientHandler) where T : IMessage
         {
             var temp = eventForMessage; // for thread safety
             temp?.Invoke(this, new EventArgs<T, DTCMessageType, ClientHandler>(message, messageType, clientHandler));
@@ -235,7 +233,7 @@ namespace TestServer
                     OnMessage($"Sent MarketDataSnapshot to client {clientHandler}");
                     foreach (var marketDataUpdateTradeCompact in MarketDataUpdateTradeCompacts)
                     {
-                        clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact,  marketDataUpdateTradeCompact);
+                        clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact, marketDataUpdateTradeCompact);
                     }
                     OnMessage($"Sent MarketDataUpdateTradeCompact records to client {clientHandler}");
                     foreach (var marketDataUpdateBidAskCompact in MarketDataUpdateBidAskCompacts)
@@ -332,7 +330,7 @@ namespace TestServer
                         var securityDefinitionReject = new SecurityDefinitionReject
                         {
                             RequestID = securityDefinitionForSymbolRequest.RequestID,
-                            RejectText = "Only ES?? is supported by TestServer"   
+                            RejectText = "Only ES?? is supported by TestServer"
                         };
                         clientHandler.SendResponse(DTCMessageType.SecurityDefinitionReject, securityDefinitionReject);
                         OnMessage($"Sent SecurityDefinitionReject to client {clientHandler}");
@@ -376,7 +374,7 @@ namespace TestServer
                     HistoricalPriceDataResponseHeader.RequestID = historicalPriceDataRequest.RequestID;
                     HistoricalPriceDataResponseHeader.UseZLibCompression = historicalPriceDataRequest.UseZLibCompression;
                     var zip = historicalPriceDataRequest.UseZLibCompression != 0;
-                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader, thenSwitchToZipped: zip);
+                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader, zip);
                     OnMessage($"Sent HistoricalPriceDataResponseHeader to client {clientHandler}");
                     for (int i = 0; i < NumHistoricalPriceDataRecordsToSend; i++)
                     {
@@ -454,6 +452,5 @@ namespace TestServer
                     throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(HandleRequest)}.");
             }
         }
-
     }
 }

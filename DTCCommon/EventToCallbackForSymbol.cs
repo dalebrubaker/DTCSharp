@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DTCPB;
-using Google.Protobuf;
 
 namespace DTCCommon
 {
-    public class EventToCallbackForSymbol<T> : IDisposable
-        where T: IMessageSymbolId, new()
+    public class EventToCallbackForSymbol<T> : IDisposable where T : IMessageSymbolId, new()
     {
         private readonly uint _symbolId;
         private readonly string _symbol;
@@ -27,7 +21,7 @@ namespace DTCCommon
         /// <param name="add"></param>
         /// <param name="remove"></param>
         /// <param name="callback">the callback for the event, or ignored if null</param>
-        public EventToCallbackForSymbol(uint symbolId, string symbol, string exchange, Action<EventHandler<EventArgs<T>>> add, 
+        public EventToCallbackForSymbol(uint symbolId, string symbol, string exchange, Action<EventHandler<EventArgs<T>>> add,
             Action<EventHandler<EventArgs<T>>> remove, Action<T> callback)
         {
             _symbolId = symbolId;

@@ -1,20 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DTCCommon.Extensions;
-using TestServer;
 using Xunit;
 
 namespace Tests
 {
     public class UnitTests : IDisposable
     {
-        public UnitTests()
-        {
-        }
-
         public void Dispose()
         {
             Console.WriteLine("Disposing");
@@ -67,6 +58,7 @@ namespace Tests
             var dt = scDt.DtcIntradayDateTimeWithMillisecondsToUtc();
             Assert.Equal(origDt, dt);
         }
+
         [Fact]
         public void ScIntradayDateTimeWithMillisecondsTest2()
         {

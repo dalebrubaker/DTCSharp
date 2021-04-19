@@ -12,8 +12,8 @@ namespace TestServer
         /// </summary>
         public string Title
         {
-            get { return groupBoxLog.Text; }
-            set { groupBoxLog.Text = value; }
+            get => groupBoxLog.Text;
+            set => groupBoxLog.Text = value;
         }
 
         public LogControl()

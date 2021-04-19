@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DTCPB;
 
 namespace DTCCommon
@@ -18,17 +14,8 @@ namespace DTCCommon
         /// <param name="messageType"></param>
         public static void WriteHeader(BinaryWriter binaryWriter, int sizeExcludingHeader, DTCMessageType messageType)
         {
-            try
-            {
-                binaryWriter?.Write((ushort)(sizeExcludingHeader + 4));
-                binaryWriter?.Write((ushort)messageType);
-            }
-            catch (IOException)
-            {
-                // unable to write to stream
-                // perhaps the other side disconnected
-                throw;
-            }
+            binaryWriter?.Write((ushort)(sizeExcludingHeader + 4));
+            binaryWriter?.Write((ushort)messageType);
         }
 
         /// <summary>

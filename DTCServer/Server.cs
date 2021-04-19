@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using DTCCommon;
 using DTCPB;
 using Google.Protobuf;
@@ -50,9 +49,9 @@ namespace DTCServer
             Address = new IPEndPoint(_ipAddress, _port).ToString();
         }
 
-        public string Address { get;  }
+        public string Address { get; }
 
-        private void TimerCheckForDisconnects_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private void TimerCheckForDisconnects_Elapsed(object sender, ElapsedEventArgs e)
         {
             RemoveDisconnectedClientHandlers();
         }
@@ -77,6 +76,7 @@ namespace DTCServer
                 }
             }
         }
+
         public int NumberOfClientHandlers
         {
             get
@@ -89,7 +89,6 @@ namespace DTCServer
         public bool IsConnected { get; private set; }
 
         #region events
-
 
         public event EventHandler<EventArgs<ClientHandler>> ClientConnected;
 
@@ -114,16 +113,7 @@ namespace DTCServer
         /// </summary>
         public async Task RunAsync()
         {
-            try
-            {
-                _tcpListener = new TcpListener(_ipAddress, _port);
-            }
-#pragma warning disable 168
-            catch (Exception ex)
-#pragma warning restore 168
-            {
-                throw;
-            }
+            _tcpListener = new TcpListener(_ipAddress, _port);
             try
             {
                 _tcpListener.Start();
@@ -134,12 +124,6 @@ namespace DTCServer
                 CloseAllClientHandlers();
             }
 #pragma warning disable 168
-            catch (Exception ex)
-#pragma warning restore 168
-            {
-                // A SocketException might be thrown from here
-                throw;
-            }
             IsConnected = true;
             while (!_cts.Token.IsCancellationRequested)
             {
@@ -171,11 +155,6 @@ namespace DTCServer
                     CloseAllClientHandlers();
                 }
 #pragma warning disable 168
-                catch (Exception ex)
-#pragma warning restore 168
-                {
-                    throw;
-                }
             }
             await Task.WhenAll(_clientHandlerTasks).ConfigureAwait(false);
             CloseAllClientHandlers();
