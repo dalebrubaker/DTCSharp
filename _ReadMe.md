@@ -1,3 +1,10 @@
+TO DO NEXT TIME
+Use ConcurrentQueues like DTC-Client does
+Implement protocol buffers, use them
+Don't send login request every time
+Don't do encoding request, SC handles it automatically?
+
+
 Documentation
 =============
 

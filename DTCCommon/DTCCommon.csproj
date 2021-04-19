@@ -150,7 +150,6 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
-    <None Include="protos\DTCProtocol.3.proto" />
     <None Include="protos\DTCProtocol.proto" />
     <None Include="_ReadMe.md" />
   </ItemGroup>

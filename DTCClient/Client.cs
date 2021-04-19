@@ -191,7 +191,7 @@ namespace DTCClient
                 return null;
             }
             ClientName = clientName;
-            _tcpClient = new TcpClient {NoDelay = true};
+            _tcpClient = new TcpClient {NoDelay = true, ReceiveBufferSize = int.MaxValue};
             if (_timeoutNoActivity != 0)
             {
                 _tcpClient.ReceiveTimeout = _timeoutNoActivity;
@@ -1042,17 +1042,12 @@ namespace DTCClient
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing && !_isDisposed)
+            if (!_isDisposed)
             {
                 Disconnect(new Error("Disposing"));
                 _isDisposed = true;
             }
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
