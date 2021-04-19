@@ -206,6 +206,8 @@ namespace DTCClient
             }
             _networkStream = _tcpClient.GetStream();
             _binaryWriter = new BinaryWriter(_networkStream);
+
+            // We must use CodecBinary to make the encoding request, then we can change it
             _currentCodec = new CodecBinary();
             TaskHelper.RunBgLong(async () =>
             {

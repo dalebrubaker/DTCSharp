@@ -31,6 +31,8 @@ namespace TestClient
             btnUnsubscribe1.Enabled = false;
             btnUnsubscribe2.Enabled = false;
             _ticks = new List<MarketDataUpdateTradeCompact>();
+            cbxEncoding.DataSource = Enum.GetValues(typeof(EncodingEnum));
+            cbxEncoding.SelectedItem = EncodingEnum.ProtocolBuffers;
         }
 
         private int PortListener
@@ -85,8 +87,10 @@ namespace TestClient
                 const int timeout = 5000;
                 const bool useHeartbeat = true;
 
+                var encoding = (EncodingEnum)cbxEncoding.SelectedItem;
+
                 // Make a connection
-                var encodingResponse = await _client.ConnectAsync(EncodingEnum.BinaryEncoding, "TestClientPrimary", timeout).ConfigureAwait(true);
+                var encodingResponse = await _client.ConnectAsync(encoding, "TestClientPrimary", timeout).ConfigureAwait(true);
                 //var encodingResponse = await _client.ConnectAsync(EncodingEnum.ProtocolBuffers, "TestClientPrimary", timeout).ConfigureAwait(true);
                 if (encodingResponse == null)
                 {
@@ -94,6 +98,7 @@ namespace TestClient
                     MessageBox.Show("Timed out trying to connect.");
                     return;
                 }
+                DisplayEncodingResponse(logControlConnect, _client, encodingResponse);
                 var response = await _client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, txtUsername.Text, txtPassword.Text)
                     .ConfigureAwait(true);
                 if (response == null)
@@ -135,6 +140,11 @@ namespace TestClient
             {
                 MessageBox.Show(ex.Message);
             }
+        }
+
+        private void DisplayEncodingResponse(LogControl logControl, Client client, EncodingResponse encodingResponse)
+        {
+            logControl.LogMessage($"Encoding is set to {encodingResponse.Encoding}");
         }
 
         private void UnregisterClientEvents(Client client)
