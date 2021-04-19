@@ -1,6 +1,6 @@
 using System;
 
-namespace DTCCommon
+namespace DTCCommon.EventArgsF
 {
     public sealed class EventArgs<T> : EventArgs
     {

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
+using DTCCommon.EventArgsF;
 using DTCPB;
 using DTCServer;
 using TestServer;
@@ -15,12 +16,16 @@ namespace Tests
 {
     public class ClientServerTests : IDisposable
     {
-        private readonly ITestOutputHelper _output;
-
         // ReSharper disable once InconsistentNaming
         private static int _nextServerPort = 54321;
 
         private static readonly object Lock = new object();
+        private readonly ITestOutputHelper _output;
+
+        public ClientServerTests(ITestOutputHelper output)
+        {
+            _output = output;
+        }
 
         public static int NextServerPort
         {
@@ -31,11 +36,6 @@ namespace Tests
                     return _nextServerPort++;
                 }
             }
-        }
-
-        public ClientServerTests(ITestOutputHelper output)
-        {
-            _output = output;
         }
 
         public void Dispose()
@@ -87,8 +87,8 @@ namespace Tests
         [Fact]
         public async Task StartServerAddRemoveOneClientTest()
         {
-            int numConnects = 0;
-            int numDisconnects = 0;
+            var numConnects = 0;
+            var numDisconnects = 0;
             const int timeoutNoActivity = 1000;
             const int timeoutForConnect = 1000;
             var port = NextServerPort;
@@ -138,8 +138,8 @@ namespace Tests
         [Fact]
         public async Task StartServerAddRemoveTwoClientsTest()
         {
-            int numConnects = 0;
-            int numDisconnects = 0;
+            var numConnects = 0;
+            var numDisconnects = 0;
             const int timeoutNoActivity = 100;
             const int timeoutForConnect = 1000;
             var port = NextServerPort;
@@ -192,8 +192,8 @@ namespace Tests
         public async Task ClientLogonAndHeartbeatTest()
         {
             await Task.Delay(1000).ConfigureAwait(false);
-            int numConnects = 0;
-            int numDisconnects = 0;
+            var numConnects = 0;
+            var numDisconnects = 0;
             const int timeoutNoActivity = 30000;
             const int timeoutForConnect = 5000;
             var port = NextServerPort;
@@ -309,7 +309,7 @@ namespace Tests
         }
 
         /// <summary>
-        /// see ClientForm.btnSubscribeCallbacks1_Click() for a WinForms example
+        ///     see ClientForm.btnSubscribeCallbacks1_Click() for a WinForms example
         /// </summary>
         /// <returns></returns>
         [Fact]

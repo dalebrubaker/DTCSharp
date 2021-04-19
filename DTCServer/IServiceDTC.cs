@@ -1,5 +1,5 @@
 ﻿using System;
-using DTCCommon;
+using DTCCommon.EventArgsF;
 using DTCPB;
 using Google.Protobuf;
 
@@ -7,11 +7,13 @@ namespace DTCServer
 {
     public interface IServiceDTC
     {
+        bool SendSymbols { get; set; }
         event EventHandler<EventArgs<Heartbeat, DTCMessageType, ClientHandler>> HeartbeatEvent;
+
         event EventHandler<EventArgs<Logoff, DTCMessageType, ClientHandler>> LogoffEvent;
 
         /// <summary>
-        /// This event is only thrown for informational purposes. 
+        /// This event is only thrown for informational purposes.
         /// HandleMessage() takes care of changing the current encoding and responding.
         /// So do NOT respond to this event.
         /// </summary>
@@ -42,8 +44,6 @@ namespace DTCServer
         event EventHandler<string> MessageEvent;
         event EventHandler<EventArgs<string, ClientHandler>> ConnectedEvent;
         event EventHandler<EventArgs<string, ClientHandler>> DisconnectedEvent;
-
-        bool SendSymbols { get; set; }
 
         /// <summary>
         /// This method is called for every request received by a client connected to this server.

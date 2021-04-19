@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using DTCCommon;
+using DTCCommon.EventArgsF;
 using DTCPB;
 using Google.Protobuf;
 using Timer = System.Timers.Timer;

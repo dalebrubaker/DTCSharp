@@ -4,6 +4,7 @@ using System.Net;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
+using DTCCommon.EventArgsF;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;

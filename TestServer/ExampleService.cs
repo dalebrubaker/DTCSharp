@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using DTCCommon;
+using DTCCommon.EventArgsF;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
@@ -32,7 +32,7 @@ namespace TestServer
                     DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
                     Price = 2000f + i,
                     SymbolID = 1u,
-                    Volume = i + 1,
+                    Volume = i + 1
                 };
                 MarketDataUpdateTradeCompacts.Add(trade);
                 var bidAsk = new MarketDataUpdateBidAskCompact
@@ -42,7 +42,7 @@ namespace TestServer
                     AskQuantity = i,
                     BidQuantity = i + 1,
                     DateTime = DateTime.UtcNow.UtcToDtcDateTime4Byte(),
-                    SymbolID = 1u,
+                    SymbolID = 1u
                 };
                 MarketDataUpdateBidAskCompacts.Add(bidAsk);
             }
@@ -58,7 +58,7 @@ namespace TestServer
                 LastTradeVolume = 6,
                 OpenInterest = 7,
                 SessionHighPrice = 8,
-                SymbolID = 1,
+                SymbolID = 1
             };
 
             HistoricalPriceDataResponseHeader = new HistoricalPriceDataResponseHeader
@@ -84,7 +84,7 @@ namespace TestServer
                     OpenPrice = 2002,
                     RequestID = 1,
                     StartDateTime = DateTime.UtcNow.UtcToDtcDateTime(),
-                    Volume = i + 1,
+                    Volume = i + 1
                 };
                 HistoricalPriceDataRecordResponses.Add(response);
             }
@@ -128,7 +128,7 @@ namespace TestServer
         public event EventHandler<EventArgs<Logoff, DTCMessageType, ClientHandler>> LogoffEvent;
 
         /// <summary>
-        /// This event is only thrown for informational purposes. 
+        /// This event is only thrown for informational purposes.
         /// HandleMessage() takes care of changing the current encoding and responding.
         /// So do NOT respond to this event.
         /// </summary>
@@ -175,282 +175,11 @@ namespace TestServer
             temp?.Invoke(this, new EventArgs<T, DTCMessageType, ClientHandler>(message, messageType, clientHandler));
         }
 
-        #endregion events
-
-        /// <summary>
-        /// This method is called for every request received by a client connected to this server.
-        /// WARNING! You must not block this thread for long, as further requests can't be received until you return from this method.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="clientHandler">The handler for a particular client connected to this server</param>
-        /// <param name="messageType">the message type</param>
-        /// <param name="message">the message (a Google.Protobuf message)</param>
-        /// <returns></returns>
         public void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage
         {
-            var clientHandlerId = clientHandler.RemoteEndPoint;
-            OnMessage($"Received {messageType} from client {clientHandlerId}");
-            switch (messageType)
-            {
-                case DTCMessageType.LogonRequest:
-                    var logonRequest = message as LogonRequest;
-                    var logonResponse = new LogonResponse
-                    {
-                        ProtocolVersion = logonRequest.ProtocolVersion,
-                        Result = LogonStatusEnum.LogonSuccess,
-                        ResultText = "Logon Successful",
-                        ServerName = Environment.MachineName,
-                        SecurityDefinitionsSupported = 1,
-                        HistoricalPriceDataSupported = 1,
-                        MarketDataSupported = 1,
-                    };
-                    clientHandler.SendResponse(DTCMessageType.LogonResponse, logonResponse);
-                    OnMessage($"Sent LogonResponse to client {clientHandler}");
-                    ThrowEvent(logonRequest, LogonRequestEvent, messageType, clientHandler);
-                    break;
-                case DTCMessageType.Heartbeat:
-                    // Don't respond. ClientHandler takes care of it.
-                    var heartbeat = message as Heartbeat;
-                    ThrowEvent(heartbeat, HeartbeatEvent, messageType, clientHandler);
-                    break;
-                case DTCMessageType.Logoff:
-                    // no response required
-                    var logoff = message as Logoff;
-                    ThrowEvent(logoff, LogoffEvent, messageType, clientHandler);
-                    break;
-                case DTCMessageType.EncodingRequest:
-                    // Don't respond. ClientHandler takes care of it.
-                    // In this SPECIAL CASE the response has already been sent to the client.
-                    // The request is then sent here for informational purposes
-                    var encodingRequest = message as EncodingRequest;
-                    ThrowEvent(encodingRequest, EncodingRequestEvent, messageType, clientHandler);
-                    OnMessage($"Received encodingRequest for {encodingRequest.Encoding} encoding from {clientHandler}");
-                    break;
-                case DTCMessageType.MarketDataRequest:
-                    var marketDataRequest = message as MarketDataRequest;
-                    ThrowEvent(marketDataRequest, MarketDataRequestEvent, messageType, clientHandler);
-                    clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, MarketDataSnapshot);
-                    OnMessage($"Sent MarketDataSnapshot to client {clientHandler}");
-                    foreach (var marketDataUpdateTradeCompact in MarketDataUpdateTradeCompacts)
-                    {
-                        clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact, marketDataUpdateTradeCompact);
-                    }
-                    OnMessage($"Sent MarketDataUpdateTradeCompact records to client {clientHandler}");
-                    foreach (var marketDataUpdateBidAskCompact in MarketDataUpdateBidAskCompacts)
-                    {
-                        clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
-                    }
-                    OnMessage($"Sent marketDataUpdateBidAskCompact records to client {clientHandler}");
-                    break;
-                case DTCMessageType.MarketDepthRequest:
-                    var marketDepthRequest = message as MarketDepthRequest;
-                    ThrowEvent(marketDepthRequest, MarketDepthRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.SubmitNewSingleOrder:
-                    var submitNewSingleOrder = message as SubmitNewSingleOrder;
-                    ThrowEvent(submitNewSingleOrder, SubmitNewSingleOrderEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.SubmitNewSingleOrderInt:
-                    var submitNewSingleOrderInt = message as SubmitNewSingleOrderInt;
-                    ThrowEvent(submitNewSingleOrderInt, SubmitNewSingleOrderIntEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.SubmitNewOcoOrder:
-                    var submitNewOcoOrder = message as SubmitNewOCOOrder;
-                    ThrowEvent(submitNewOcoOrder, SubmitNewOcoOrderEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.SubmitNewOcoOrderInt:
-                    var submitNewOcoOrderInt = message as SubmitNewOCOOrderInt;
-                    ThrowEvent(submitNewOcoOrderInt, SubmitNewOcoOrderIntEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.CancelOrder:
-                    var cancelOrder = message as CancelOrder;
-                    ThrowEvent(cancelOrder, CancelOrderEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.CancelReplaceOrder:
-                    var cancelReplaceOrder = message as CancelReplaceOrder;
-                    ThrowEvent(cancelReplaceOrder, CancelReplaceOrderEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.CancelReplaceOrderInt:
-                    var cancelReplaceOrderInt = message as CancelReplaceOrderInt;
-                    ThrowEvent(cancelReplaceOrderInt, CancelReplaceOrderIntEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.OpenOrdersRequest:
-                    var openOrdersRequest = message as OpenOrdersRequest;
-                    ThrowEvent(openOrdersRequest, OpenOrdersRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.HistoricalOrderFillsRequest:
-                    var historicalOrderFillsRequest = message as HistoricalOrderFillsRequest;
-                    ThrowEvent(historicalOrderFillsRequest, HistoricalOrderFillsRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.CurrentPositionsRequest:
-                    var currentPositionsRequest = message as CurrentPositionsRequest;
-                    ThrowEvent(currentPositionsRequest, CurrentPositionsRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.TradeAccountsRequest:
-                    var tradeAccountsRequest = message as TradeAccountsRequest;
-                    ThrowEvent(tradeAccountsRequest, TradeAccountsRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.ExchangeListRequest:
-                    var exchangeListRequest = message as ExchangeListRequest;
-                    ThrowEvent(exchangeListRequest, ExchangeListRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.SymbolsForExchangeRequest:
-                    var symbolsForExchangeRequest = message as SymbolsForExchangeRequest;
-                    ThrowEvent(symbolsForExchangeRequest, SymbolsForExchangeRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
-                    var underlyingSymbolsForExchangeRequest = message as UnderlyingSymbolsForExchangeRequest;
-                    ThrowEvent(underlyingSymbolsForExchangeRequest, UnderlyingSymbolsForExchangeRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.SymbolsForUnderlyingRequest:
-                    var symbolsForUnderlyingRequest = message as SymbolsForUnderlyingRequest;
-                    ThrowEvent(symbolsForUnderlyingRequest, SymbolsForUnderlyingRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    var securityDefinitionForSymbolRequest = message as SecurityDefinitionForSymbolRequest;
-                    ThrowEvent(securityDefinitionForSymbolRequest, SecurityDefinitionForSymbolRequestEvent, messageType, clientHandler);
-                    if (!securityDefinitionForSymbolRequest.Symbol.ToUpper().StartsWith("ES"))
-                    {
-                        var securityDefinitionReject = new SecurityDefinitionReject
-                        {
-                            RequestID = securityDefinitionForSymbolRequest.RequestID,
-                            RejectText = "Only ES?? is supported by TestServer"
-                        };
-                        clientHandler.SendResponse(DTCMessageType.SecurityDefinitionReject, securityDefinitionReject);
-                        OnMessage($"Sent SecurityDefinitionReject to client {clientHandler}");
-                    }
-                    else
-                    {
-                        var securityDefinitionResponse = new SecurityDefinitionResponse
-                        {
-                            RequestID = securityDefinitionForSymbolRequest.RequestID,
-                            Symbol = securityDefinitionForSymbolRequest.Symbol,
-                            Exchange = securityDefinitionForSymbolRequest.Exchange,
-                            Description = "E-mini S&P 500 - CME",
-                            MinPriceIncrement = 0.25f,
-                            PriceDisplayFormat = PriceDisplayFormatEnum.PriceDisplayFormatDecimal2,
-                            DisplayPriceMultiplier = 1,
-                            CurrencyValuePerIncrement = 12.5f,
-                            IsFinalMessage = 1,
-                            FloatToIntPriceMultiplier = 1,
-                            IntToFloatPriceDivisor = 1,
-                            UpdatesBidAskOnly = 0,
-                            HasMarketDepthData = 0,
-                        };
-                        clientHandler.SendResponse(DTCMessageType.SecurityDefinitionResponse, securityDefinitionResponse);
-                        OnMessage($"Sent SecurityDefinitionResponse to client {clientHandler}");
-                    }
-                    break;
-                case DTCMessageType.SymbolSearchRequest:
-                    var symbolSearchRequest = message as SymbolSearchRequest;
-                    ThrowEvent(symbolSearchRequest, SymbolSearchRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.AccountBalanceRequest:
-                    var accountBalanceRequest = message as AccountBalanceRequest;
-                    ThrowEvent(accountBalanceRequest, AccountBalanceRequestEvent, messageType, clientHandler);
-                    throw new NotImplementedException($"{messageType} in {nameof(HandleRequest)}.");
-                    break;
-                case DTCMessageType.HistoricalPriceDataRequest:
-                    var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
-                    ThrowEvent(historicalPriceDataRequest, HistoricalPriceDataRequestEvent, messageType, clientHandler);
-
-                    HistoricalPriceDataResponseHeader.RequestID = historicalPriceDataRequest.RequestID;
-                    HistoricalPriceDataResponseHeader.UseZLibCompression = historicalPriceDataRequest.UseZLibCompression;
-                    var zip = historicalPriceDataRequest.UseZLibCompression != 0;
-                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader, zip);
-                    OnMessage($"Sent HistoricalPriceDataResponseHeader to client {clientHandler}");
-                    for (int i = 0; i < NumHistoricalPriceDataRecordsToSend; i++)
-                    {
-                        var response = HistoricalPriceDataRecordResponses[i];
-                        //if ((i + 1) % ushort.MaxValue == 0)
-                        //{
-                        //    // I think Sierra Chart sends 16,384 records max in a batch TODO check this
-                        //    response.IsFinalRecord = 1;
-                        //}
-                        if (i == NumHistoricalPriceDataRecordsToSend - 1)
-                        {
-                            response.IsFinalRecord = 1;
-                        }
-                        response.RequestID = historicalPriceDataRequest.RequestID;
-                        clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, response);
-                    }
-                    if (zip)
-                    {
-                        clientHandler.EndZippedWriting(); // MUST do this to flush the compressed bytes
-                    }
-                    OnMessage($"Sent HistoricalPriceDataRecordResponse records to client {clientHandler}");
-                    break;
-                case DTCMessageType.MessageTypeUnset:
-                case DTCMessageType.LogonResponse:
-                case DTCMessageType.EncodingResponse:
-                case DTCMessageType.MarketDataReject:
-                case DTCMessageType.MarketDataSnapshot:
-                case DTCMessageType.MarketDataSnapshotInt:
-                case DTCMessageType.MarketDataUpdateTrade:
-                case DTCMessageType.MarketDataUpdateTradeCompact:
-                case DTCMessageType.MarketDataUpdateTradeInt:
-                case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
-                case DTCMessageType.MarketDataUpdateBidAsk:
-                case DTCMessageType.MarketDataUpdateBidAskCompact:
-                case DTCMessageType.MarketDataUpdateBidAskInt:
-                case DTCMessageType.MarketDataUpdateSessionOpen:
-                case DTCMessageType.MarketDataUpdateSessionOpenInt:
-                case DTCMessageType.MarketDataUpdateSessionHigh:
-                case DTCMessageType.MarketDataUpdateSessionHighInt:
-                case DTCMessageType.MarketDataUpdateSessionLow:
-                case DTCMessageType.MarketDataUpdateSessionLowInt:
-                case DTCMessageType.MarketDataUpdateSessionVolume:
-                case DTCMessageType.MarketDataUpdateOpenInterest:
-                case DTCMessageType.MarketDataUpdateSessionSettlement:
-                case DTCMessageType.MarketDataUpdateSessionSettlementInt:
-                case DTCMessageType.MarketDataUpdateSessionNumTrades:
-                case DTCMessageType.MarketDataUpdateTradingSessionDate:
-                case DTCMessageType.MarketDepthReject:
-                case DTCMessageType.MarketDepthSnapshotLevel:
-                case DTCMessageType.MarketDepthSnapshotLevelInt:
-                case DTCMessageType.MarketDepthUpdateLevel:
-                case DTCMessageType.MarketDepthUpdateLevelInt:
-                case DTCMessageType.MarketDataFeedStatus:
-                case DTCMessageType.MarketDataFeedSymbolStatus:
-                case DTCMessageType.OpenOrdersReject:
-                case DTCMessageType.OrderUpdate:
-                case DTCMessageType.HistoricalOrderFillResponse:
-                case DTCMessageType.CurrentPositionsReject:
-                case DTCMessageType.PositionUpdate:
-                case DTCMessageType.TradeAccountResponse:
-                case DTCMessageType.ExchangeListResponse:
-                case DTCMessageType.SecurityDefinitionResponse:
-                case DTCMessageType.SecurityDefinitionReject:
-                case DTCMessageType.AccountBalanceReject:
-                case DTCMessageType.AccountBalanceUpdate:
-                case DTCMessageType.UserMessage:
-                case DTCMessageType.GeneralLogMessage:
-                case DTCMessageType.HistoricalPriceDataResponseHeader:
-                case DTCMessageType.HistoricalPriceDataReject:
-                case DTCMessageType.HistoricalPriceDataRecordResponse:
-                case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                case DTCMessageType.HistoricalPriceDataRecordResponseInt:
-                case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
-                default:
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(HandleRequest)}.");
-            }
+            throw new NotImplementedException();
         }
+
+        #endregion events
     }
 }
