@@ -98,33 +98,33 @@ namespace TestClient
                     return;
                 }
                 DisplayEncodingResponse(logControlConnect, _client, encodingResponse);
-                var response = await _client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, txtUsername.Text, txtPassword.Text)
+                var logonResponse = await _client.LogonAsync(heartbeatIntervalInSeconds, useHeartbeat, timeout, txtUsername.Text, txtPassword.Text)
                     .ConfigureAwait(true);
-                if (response == null)
+                if (logonResponse == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
                     logControlConnect.LogMessage("Null logon response from logon attempt to " + clientName);
                     return;
                 }
-                toolStripStatusLabel1.Text = response.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
-                switch (response.Result)
+                toolStripStatusLabel1.Text = logonResponse.Result == LogonStatusEnum.LogonSuccess ? "Connected" : "Disconnected";
+                switch (logonResponse.Result)
                 {
                     case LogonStatusEnum.LogonStatusUnset:
                         throw new ArgumentException("Unexpected logon result");
                     case LogonStatusEnum.LogonSuccess:
-                        DisplayLogonResponse(logControlConnect, _client, response);
+                        DisplayLogonResponse(logControlConnect, _client, logonResponse);
                         break;
                     case LogonStatusEnum.LogonErrorNoReconnect:
-                        logControlConnect.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}. Reconnect not allowed.");
+                        logControlConnect.LogMessage($"{_client} Login failed: {logonResponse.Result} {logonResponse.ResultText}. Reconnect not allowed.");
                         await DisposeClientAsync().ConfigureAwait(false);
                         break;
                     case LogonStatusEnum.LogonError:
-                        logControlConnect.LogMessage($"{_client} Login failed: {response.Result} {response.ResultText}.");
+                        logControlConnect.LogMessage($"{_client} Login failed: {logonResponse.Result} {logonResponse.ResultText}.");
                         await DisposeClientAsync().ConfigureAwait(false);
                         break;
                     case LogonStatusEnum.LogonReconnectNewAddress:
                         logControlConnect.LogMessage(
-                            $"{_client} Login failed: {response.Result} {response.ResultText}\nReconnect to: {response.ReconnectAddress}");
+                            $"{_client} Login failed: {logonResponse.Result} {logonResponse.ResultText}\nReconnect to: {logonResponse.ReconnectAddress}");
                         await DisposeClientAsync().ConfigureAwait(false);
                         break;
                     default:
@@ -220,7 +220,6 @@ namespace TestClient
             var client = (Client)sender;
             logControlConnect.LogMessage($"Connected to client:{client.ClientName}");
         }
-
 
         private void RegisterClientEventsMarketData(Client client)
         {
@@ -521,9 +520,8 @@ namespace TestClient
                 return;
             }
             _historicalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>();
-            var timeoutNoActivity =
-                (int)TimeSpan.FromMinutes(5)
-                    .TotalMilliseconds; // "several minutes" per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData
+            var timeoutNoActivity = (int)TimeSpan.FromMinutes(5)
+                .TotalMilliseconds; // "several minutes" per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData
             using (var clientHistorical = new Client(txtServer.Text, PortHistorical, timeoutNoActivity))
             {
                 const int timeout = 5000;

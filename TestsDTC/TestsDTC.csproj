@@ -10,7 +10,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Tests</RootNamespace>
-    <AssemblyName>Tests</AssemblyName>
+    <AssemblyName>TestsDTC</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <NuGetPackageImportStamp>
@@ -95,9 +95,9 @@
       <Project>{ed55fc12-c152-4644-9427-7ef6cc11365e}</Project>
       <Name>DTCServer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\TestServer\TestServer.csproj">
+    <ProjectReference Include="..\TestServerDTC\TestServerDTC.csproj">
       <Project>{acb16562-535a-488a-bb19-bad950cbf8de}</Project>
-      <Name>TestServer</Name>
+      <Name>TestServerDTC</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

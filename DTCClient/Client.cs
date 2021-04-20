@@ -349,14 +349,14 @@ namespace DTCClient
             HistoricalPriceDataReject historicalPriceDataReject = null;
 
             // Set up handler to capture the reject event
-            EventHandler<EventArgs<HistoricalPriceDataReject>> handlerReject = null;
-            handlerReject = (s, e) =>
+            void HandlerReject(object s, EventArgs<HistoricalPriceDataReject> e)
             {
-                HistoricalPriceDataRejectEvent -= handlerReject; // unregister to avoid a potential memory leak
+                HistoricalPriceDataRejectEvent -= HandlerReject; // unregister to avoid a potential memory leak
                 historicalPriceDataReject = e.Data;
                 timeout = 0; // force immediate return
-            };
-            HistoricalPriceDataRejectEvent += handlerReject;
+            }
+
+            HistoricalPriceDataRejectEvent += HandlerReject;
 
             // Set up handler to capture the header event
             EventHandler<EventArgs<HistoricalPriceDataResponseHeader>> handlerHeader = null;
