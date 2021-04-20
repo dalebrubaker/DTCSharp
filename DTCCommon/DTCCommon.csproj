@@ -93,7 +93,6 @@
     <Compile Include="Codecs\CodecBinary.cs" />
     <Compile Include="Codecs\CodecProtobuf.cs" />
     <Compile Include="Codecs\ICodecDTC.cs" />
-    <Compile Include="Codecs\ZipCodec.cs" />
     <Compile Include="Config\WindowConfig.cs" />
     <Compile Include="Debugging\DebugHelpers.cs" />
     <Compile Include="Debugging\DebugMessageRow.cs" />
