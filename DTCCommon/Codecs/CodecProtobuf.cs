@@ -53,9 +53,5 @@ namespace DTCCommon.Codecs
             result.MergeFrom(bytes);
             return result;
         }
-
-        public void Load<T>(ref T message, byte[] bytes)
-        {
-        }
     }
 }
