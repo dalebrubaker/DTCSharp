@@ -273,8 +273,8 @@ namespace DTCCommon.Codecs
                     binaryWriter.Write((byte)historicalPriceDataRecordResponse.IsFinalRecord);
                     return;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                    // Probably no longer used after version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}");
+                    // Probably no longer used after version SierraChart version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
+                    throw new NotSupportedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}");
                 default:
                     throw new ArgumentOutOfRangeException(messageType.ToString(), messageType, null);
             }

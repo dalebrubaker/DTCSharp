@@ -24,30 +24,14 @@ namespace DTCCommon.Codecs
         }
 
         /// <summary>
-        /// Write the message using binaryWriter
+        /// Load the bytes into a new protobuf IMessage
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="message"></param>
-        /// <param name="binaryWriter"></param>
-        public void Write<T>(T message, BinaryWriter binaryWriter) where T : IMessage
-        {
-            var messageType = MessageTypes.MessageTypeByMessage[typeof(T)];
-            Write(messageType, message, binaryWriter);
-        }
-
-        public T Load<T>(DTCMessageType messageType, byte[] bytes, int index = 0) where T : IMessage<T>, new()
-        {
-            // For protobuf we don't need the messageType
-            return Load<T>(bytes);
-        }
-
-        /// <summary>
-        /// Load the message represented by bytes into the IMessage
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <param name="messageType">For protobuf we don't need the messageType</param>
         /// <param name="bytes"></param>
+        /// <param name="index"></param>
+        /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public T Load<T>(byte[] bytes) where T : IMessage<T>, new()
+        public T Load<T>(DTCMessageType messageType, byte[] bytes, int index = 0) where T : IMessage<T>, new()
         {
             var result = new T();
             result.MergeFrom(bytes);

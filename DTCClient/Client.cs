@@ -482,8 +482,7 @@ namespace DTCClient
         /// <param name="exchange"></param>
         public void GetSymbolExchangeForSymbolId(uint symbolId, out string symbol, out string exchange)
         {
-            string combo;
-            SymbolExchangeComboBySymbolId.TryGetValue(symbolId, out combo);
+            SymbolExchangeComboBySymbolId.TryGetValue(symbolId, out var combo);
             SplitSymbolExchange(combo, out symbol, out exchange);
         }
 
@@ -493,11 +492,10 @@ namespace DTCClient
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
         /// <returns></returns>
-        public uint RequireSymbolId(string symbol, string exchange)
+        private uint RequireSymbolId(string symbol, string exchange)
         {
             var combo = CombineSymbolExchange(symbol, exchange);
-            uint symbolId;
-            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out symbolId))
+            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out var symbolId))
             {
                 symbolId = NextSymbolId;
                 SymbolIdBySymbolExchangeCombo[combo] = symbolId;
