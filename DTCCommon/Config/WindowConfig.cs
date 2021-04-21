@@ -10,7 +10,7 @@ namespace DTCCommon
     /// <summary>
     /// Thanks to https://blogs.msdn.microsoft.com/davidrickard/2010/03/08/saving-window-size-and-location-in-wpf-and-winforms/
     /// </summary>
-    public class WindowConfig
+    public static class WindowConfig
     {
         // RECT structure required by WINDOWPLACEMENT structure
         [Serializable]
