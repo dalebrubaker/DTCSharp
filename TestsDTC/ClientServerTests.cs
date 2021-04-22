@@ -89,30 +89,33 @@ namespace Tests
         {
             var numConnects = 0;
             var numDisconnects = 0;
-            const int timeoutNoActivity = 1000;
-            const int timeoutForConnect = 1000;
+            const int TimeoutNoActivity = 10000;
+            const int TimeoutForConnect = 10000;
             var port = NextServerPort;
-            using (var server = StartExampleServer(timeoutNoActivity, port))
+            using (var server = StartExampleServer(TimeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = (s, e) =>
+                void ClientHandlerConnected(object s, EventArgs<ClientHandler> e)
                 {
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
                     numConnects++;
-                };
-                server.ClientConnected += clientHandlerConnected;
+                }
+
+                server.ClientConnected += ClientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = (s, e) =>
+                void ClientHandlerDisconnected(object s, EventArgs<ClientHandler> e)
                 {
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
                     numDisconnects++;
-                };
-                server.ClientDisconnected += clientHandlerDisconnected;
+                }
+
+                server.ClientDisconnected += ClientHandlerDisconnected;
+
                 var sw = Stopwatch.StartNew();
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
                 {
                     while (numConnects != 1 && sw.ElapsedMilliseconds < 10000)
                     {
@@ -120,17 +123,17 @@ namespace Tests
                         await Task.Delay(1).ConfigureAwait(false);
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
+                    Assert.Equal(1, server.NumberOfClientHandlersConnected);
                     var elapsed1 = sw.ElapsedMilliseconds;
                     _output.WriteLine($"Elapsed msecs:{elapsed1}");
                 }
-                while (server.NumberOfClientHandlers > 0)
+                while (server.NumberOfClientHandlersConnected > 0 && server.NumberOfClientHandlers > 0)
                 {
                     // Wait for the client to be disconnected by the server
                     await Task.Delay(1).ConfigureAwait(true);
                 }
                 var elapsed2 = sw.ElapsedMilliseconds;
                 _output.WriteLine($"Elapsed msecs:{elapsed2}");
-                Assert.Equal(numDisconnects, numConnects);
                 Assert.Equal(0, server.NumberOfClientHandlers);
             }
         }
@@ -140,34 +143,36 @@ namespace Tests
         {
             var numConnects = 0;
             var numDisconnects = 0;
-            const int timeoutNoActivity = 100;
-            const int timeoutForConnect = 1000;
+            const int TimeoutNoActivity = 1000;
+            const int TimeoutForConnect = 10000;
             var port = NextServerPort;
-            using (var server = StartExampleServer(timeoutNoActivity, port))
+            using (var server = StartExampleServer(TimeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerConnected = (s, e) =>
+                void ClientHandlerConnected(object s, EventArgs<ClientHandler> e)
                 {
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
                     numConnects++;
-                };
-                server.ClientConnected += clientHandlerConnected;
+                }
+
+                server.ClientConnected += ClientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
-                EventHandler<EventArgs<ClientHandler>> clientHandlerDisconnected = (s, e) =>
+                void ClientHandlerDisconnected(object s, EventArgs<ClientHandler> e)
                 {
                     var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
                     numDisconnects++;
-                };
-                server.ClientDisconnected += clientHandlerDisconnected;
+                }
+
+                server.ClientDisconnected += ClientHandlerDisconnected;
                 var sw = Stopwatch.StartNew();
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
-                using (var client2 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
+                using (var client2 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
                 {
                     //while (numConnects != 2 && sw.ElapsedMilliseconds < 1000)
-                    while (server.NumberOfClientHandlers != 2) // && sw.ElapsedMilliseconds < 1000)
+                    while (server.NumberOfClientHandlersConnected != 2) // && sw.ElapsedMilliseconds < 1000)
                     {
                         // Wait for the clients to connect
                         await Task.Delay(1).ConfigureAwait(false);
@@ -176,14 +181,19 @@ namespace Tests
                     var elapsed1 = sw.ElapsedMilliseconds;
                     _output.WriteLine($"Elapsed msecs:{elapsed1}");
                 }
-                while (server.NumberOfClientHandlers > 0)
+                while (server.NumberOfClientHandlersConnected > 0)
                 {
                     // Wait for the client to be disconnected by the server
                     await Task.Delay(1).ConfigureAwait(true);
                 }
                 var elapsed2 = sw.ElapsedMilliseconds;
                 _output.WriteLine($"Elapsed msecs:{elapsed2}");
-                Assert.Equal(numDisconnects, numConnects);
+                Assert.Equal(0, server.NumberOfClientHandlersConnected);
+                while (server.NumberOfClientHandlers > 0)
+                {
+                    // Wait longer to be sure they really go away
+                    await Task.Delay(1).ConfigureAwait(true);
+                }
                 Assert.Equal(0, server.NumberOfClientHandlers);
             }
         }
@@ -254,11 +264,11 @@ namespace Tests
         [Fact]
         public async Task ClientDisconnectedServerDownTest()
         {
-            const int timeoutNoActivity = 1000;
-            const int timeoutForConnect = 1000;
+            const int TimeoutNoActivity = 10000;
+            const int TimeoutForConnect = 10000;
             var port = NextServerPort;
-            var server = StartExampleServer(timeoutNoActivity, port);
-            using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
+            var server = StartExampleServer(TimeoutNoActivity, port);
+            using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
             {
 #pragma warning disable 219
                 var isConnected = false;
@@ -271,35 +281,39 @@ namespace Tests
                 }
 
                 // Set up the handler to capture the Connected event
-                EventHandler connected = (s, e) =>
+                void Connected(object s, EventArgs e)
                 {
                     _output.WriteLine($"Client is connected to {server.Address}");
                     isConnected = true;
-                };
-                client1.Connected += connected;
+                }
+
+                client1.Connected += Connected;
 
                 // Set up the handler to capture the Disconnected event
-                EventHandler<EventArgs<Error>> disconnected = (s, e) =>
+                void Disconnected(object s, EventArgs<Error> e)
                 {
                     var error = e.Data;
                     _output.WriteLine($"Client is disconnected from {server.Address} due to {error}");
                     isConnected = false;
-                };
-                client1.Disconnected += disconnected;
+                }
+
+                client1.Disconnected += Disconnected;
 
                 // Set up the handler to capture the HeartBeat event
                 var numHeartbeats = 0;
-                EventHandler<Heartbeat> heartbeatEvent = null;
-                heartbeatEvent = (s, e) =>
+
+                void HeartbeatEvent(object s, Heartbeat e)
                 {
                     _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs after server shutdown.");
                     numHeartbeats++;
-                };
-                client1.HeartbeatEvent += heartbeatEvent;
+                }
+
+                client1.HeartbeatEvent += HeartbeatEvent;
+
+                client1.Dispose(); // So it won't error trying to read
 
                 // Now kill the server
                 server.Dispose();
-
                 sw.Restart();
                 var loginResponse = await client1.LogonAsync(1, true, 5000).ConfigureAwait(true);
                 Assert.Null(loginResponse);
@@ -340,29 +354,32 @@ namespace Tests
                     var numTrades = 0;
 
                     // Set up the handler to capture the MarketDataSnapshot event
-                    EventHandler<EventArgs<MarketDataSnapshot>> marketDataSnapshotEvent = (s, e) =>
+                    void MarketDataSnapshotEvent(object s, EventArgs<MarketDataSnapshot> e)
                     {
                         var snapshot = e.Data;
                         _output.WriteLine($"Client1 received a MarketDataSnapshot after {sw.ElapsedMilliseconds} msecs");
                         numSnapshots++;
-                    };
-                    client1.MarketDataSnapshotEvent += marketDataSnapshotEvent;
+                    }
+
+                    client1.MarketDataSnapshotEvent += MarketDataSnapshotEvent;
 
                     // Set up the handler to capture the MarketDataUpdateTradeCompact events
-                    EventHandler<EventArgs<MarketDataUpdateTradeCompact>> marketDataUpdateTradeCompactEvent = (s, e) =>
+                    void MarketDataUpdateTradeCompactEvent(object s, EventArgs<MarketDataUpdateTradeCompact> e)
                     {
                         var trade = e.Data;
                         numTrades++;
-                    };
-                    client1.MarketDataUpdateTradeCompactEvent += marketDataUpdateTradeCompactEvent;
+                    }
+
+                    client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
 
                     // Set up the handler to capture the MarketDataUpdateBidAskCompact events
-                    EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> marketDataUpdateBidAskCompactEvent = (s, e) =>
+                    void MarketDataUpdateBidAskCompactEvent(object s, EventArgs<MarketDataUpdateBidAskCompact> e)
                     {
                         var bidAsk = e.Data;
                         numBidAsks++;
-                    };
-                    client1.MarketDataUpdateBidAskCompactEvent += marketDataUpdateBidAskCompactEvent;
+                    }
+
+                    client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;
 
                     // Now subscribe to the data
                     sw.Restart();

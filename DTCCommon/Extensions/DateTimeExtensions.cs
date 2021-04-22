@@ -19,6 +19,11 @@ namespace DTCCommon.Extensions
         /// <returns></returns>
         public static DateTime DtcDateTimeToUtc(this long unixSeconds)
         {
+            var largest = (DateTime.MaxValue - EpochStart).TotalSeconds;
+            if (unixSeconds >= largest)
+            {
+                return DateTime.MaxValue;
+            }
             var result = EpochStart.AddSeconds(unixSeconds);
             return result;
         }

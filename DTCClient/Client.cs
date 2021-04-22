@@ -1,38 +1,40 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.IO.Compression;
-using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
+using DTCCommon.Enums;
 using DTCCommon.EventArgsF;
-using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
+using NLog;
 using Timer = System.Timers.Timer;
 
 namespace DTCClient
 {
     public class Client : IDisposable
     {
+        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+
         private readonly int _timeoutNoActivity;
         private Timer _timerHeartbeat;
         private bool _isDisposed;
-        private BinaryWriter _binaryWriter;
         private TcpClient _tcpClient;
         private DateTime _lastHeartbeatReceivedTime;
         private NetworkStream _networkStream;
-        private ICodecDTC _currentCodec;
-        private readonly CancellationTokenSource _ctsResponseReader;
+        private Codec _currentCodec;
+        private CancellationTokenSource _ctsResponseReader;
         private int _nextRequestId;
         private uint _nextSymbolId;
         private bool _useHeartbeat;
-        private bool _isBinaryReaderZipped;
+        private bool _isConnected;
+        private ConfiguredTaskAwaitable _tasKReceiveLoop;
 
         /// <summary>
         /// Constructor for a client
@@ -47,11 +49,9 @@ namespace DTCClient
             ServerPort = serverPort;
             SymbolIdBySymbolExchangeCombo = new ConcurrentDictionary<string, uint>();
             SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
-            _currentCodec = new CodecBinary();
-            _ctsResponseReader = new CancellationTokenSource();
         }
 
-        public bool IsConnected => _tcpClient?.Connected ?? false;
+        public bool IsConnected => _isConnected;
 
         /// <summary>
         /// The most recent _logonResponse.
@@ -108,6 +108,7 @@ namespace DTCClient
 
         private void OnConnected()
         {
+            _isConnected = true;
             var temp = Connected;
             temp?.Invoke(this, new EventArgs());
         }
@@ -116,6 +117,7 @@ namespace DTCClient
 
         private void OnDisconnected(Error error)
         {
+            _isConnected = false;
             var temp = Disconnected;
             temp?.Invoke(this, new EventArgs<Error>(error));
         }
@@ -192,7 +194,7 @@ namespace DTCClient
                 return null;
             }
             ClientName = clientName;
-            _tcpClient = new TcpClient {NoDelay = true, ReceiveBufferSize = int.MaxValue};
+            _tcpClient = new TcpClient {NoDelay = true, ReceiveBufferSize = int.MaxValue, LingerState = new LingerOption(true, 5)};
             if (_timeoutNoActivity != 0)
             {
                 _tcpClient.ReceiveTimeout = _timeoutNoActivity;
@@ -205,15 +207,12 @@ namespace DTCClient
             {
                 OnDisconnected(new Error(sex.Message));
             }
+            // Every Codec must write the encoding request as binary
             _networkStream = _tcpClient.GetStream();
-            _binaryWriter = new BinaryWriter(_networkStream);
-
-            // We must use CodecBinary to make the encoding request, then we can change it
-            _currentCodec = new CodecBinary();
-            TaskHelper.RunBgLong(async () =>
-            {
-                await ResponseReaderAsync().ConfigureAwait(false);
-            });
+            _currentCodec = new CodecProtobuf(_networkStream, ClientOrServer.Client);
+            _ctsResponseReader = new CancellationTokenSource();
+            _tasKReceiveLoop = Task.Factory.StartNew(ResponseReader, _ctsResponseReader.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current)
+                .ConfigureAwait(false);
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
@@ -636,14 +635,14 @@ namespace DTCClient
         public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
 #if DEBUG
-            if (messageType != DTCMessageType.Heartbeat)
-            {
-#pragma warning disable 219
-                var debug = 1;
-#pragma warning restore 219
-            }
+//            if (messageType != DTCMessageType.Heartbeat)
+//            {
+//#pragma warning disable 219
+//                var debug = 1;
+//#pragma warning restore 219
+//            }
             DebugHelpers.AddRequestSent(messageType, _currentCodec);
-            var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
+            //var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
             //if (port == 49998 && messageType == DTCMessageType.LogonResponse)
             if (messageType == DTCMessageType.LogonRequest)
             {
@@ -659,7 +658,7 @@ namespace DTCClient
 #endif
             try
             {
-                _currentCodec.Write(messageType, message, _binaryWriter);
+                _currentCodec.Write(messageType, message);
             }
             catch (Exception ex)
             {
@@ -709,59 +708,40 @@ namespace DTCClient
         /// <summary>
         /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
         /// </summary>
-        private Task ResponseReaderAsync()
+        private void ResponseReader()
         {
-            var binaryReader = new BinaryReader(_networkStream); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
-            _isBinaryReaderZipped = false;
             while (!_ctsResponseReader.Token.IsCancellationRequested)
             {
                 try
                 {
-                    var size = binaryReader.ReadUInt16();
-                    var messageType = (DTCMessageType)binaryReader.ReadUInt16();
-#if DEBUG
-                    if (messageType != DTCMessageType.Heartbeat)
-                    {
-#pragma warning disable 219
-                        var debug = 1;
-#pragma warning restore 219
-                    }
-                    DebugHelpers.AddResponseReceived(messageType, _currentCodec, _isBinaryReaderZipped, size);
-                    var requestsSent = DebugHelpers.RequestsSent;
-                    var requestsReceived = DebugHelpers.RequestsReceived;
-                    var responsesReceived = DebugHelpers.ResponsesReceived;
-                    var responsesSent = DebugHelpers.ResponsesSent;
-                    if (ClientName.IndexOf("historical", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-#pragma warning disable 219
-                        var debug2 = 1;
-#pragma warning restore 219
-                        if (messageType == DTCMessageType.Heartbeat)
-                        {
-#pragma warning disable 219
-                            var debug3 = 2;
-#pragma warning restore 219
-                        }
-                    }
-#endif
-                    var messageBytes = binaryReader.ReadBytes(size - 4); // size includes the header size+type
-                    ProcessResponse(messageType, messageBytes, ref binaryReader);
+                    // if (!_networkStream.DataAvailable)
+                    // {
+                    //     await Task.Delay(1).ConfigureAwait(false);
+                    //     continue;
+                    // }
+                    s_logger.Debug($"Waiting in {nameof(Client)}.{nameof(ResponseReader)} to read a message");
+                    var (messageType, messageBytes) = _currentCodec.ReadMessage();
+                    ProcessResponseBytes(messageType, messageBytes);
+                    //await Task.Delay(1).ConfigureAwait(false);
                 }
                 catch (IOException ex)
                 {
                     // Ignore this if it results from disconnect (cancellation)
-                    if (!_ctsResponseReader.Token.IsCancellationRequested)
+                    if (_ctsResponseReader.Token.IsCancellationRequested)
                     {
                         Disconnect(new Error("Read error.", ex));
+                        return;
                     }
+                    s_logger.Error(ex, ex.Message);
+                    throw;
                 }
                 catch (Exception ex)
                 {
                     var typeName = ex.GetType().Name;
                     Disconnect(new Error($"Read error {typeName}.", ex));
+                    s_logger.Error(ex, ex.Message);
                 }
             }
-            return Task.WhenAll(); // fake return
         }
 
         /// <summary>
@@ -770,9 +750,9 @@ namespace DTCClient
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="messageBytes"></param>
-        /// <param name="binaryReader">may be changed to use a new DeflateStream if we change to zipped</param>
-        private void ProcessResponse(DTCMessageType messageType, byte[] messageBytes, ref BinaryReader binaryReader)
+        private void ProcessResponseBytes(DTCMessageType messageType, byte[] messageBytes)
         {
+            s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
             switch (messageType)
             {
                 case DTCMessageType.LogonResponse:
@@ -786,6 +766,7 @@ namespace DTCClient
                     break;
                 case DTCMessageType.Logoff:
                     var logoff = _currentCodec.Load<Logoff>(messageType, messageBytes);
+                    OnDisconnected(new Error("User logoff"));
                     ThrowEvent(logoff, LogoffEvent);
                     break;
                 case DTCMessageType.EncodingResponse:
@@ -795,14 +776,14 @@ namespace DTCClient
                     switch (encodingResponse.Encoding)
                     {
                         case EncodingEnum.BinaryEncoding:
-                            _currentCodec = new CodecBinary();
+                            _currentCodec = new CodecBinary(_networkStream, ClientOrServer.Client);
                             break;
                         case EncodingEnum.BinaryWithVariableLengthStrings:
                         case EncodingEnum.JsonEncoding:
                         case EncodingEnum.JsonCompactEncoding:
-                            throw new NotImplementedException($"Not implemented in {nameof(ProcessResponse)}: {nameof(encodingResponse.Encoding)}");
+                            throw new NotImplementedException($"Not implemented in {nameof(ProcessResponseBytes)}: {nameof(encodingResponse.Encoding)}");
                         case EncodingEnum.ProtocolBuffers:
-                            _currentCodec = new CodecProtobuf();
+                            _currentCodec = new CodecProtobuf(_networkStream, ClientOrServer.Client);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -982,19 +963,7 @@ namespace DTCClient
                     if (historicalPriceDataResponseHeader.UseZLibCompression == 1)
                     {
                         // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
-                        var zlibCmf = binaryReader.ReadByte(); // 120 = 0111 1000 means Deflate 
-                        if (zlibCmf != 120)
-                        {
-                            throw new DTCSharpException($"Unexpected zlibCmf header byte {zlibCmf}, expected 120");
-                        }
-                        var zlibFlg = binaryReader.ReadByte(); // 156 = 1001 1100
-                        if (zlibFlg != 156)
-                        {
-                            throw new DTCSharpException($"Unexpected zlibFlg header byte {zlibFlg}, expected 156");
-                        }
-                        var deflateStream = new DeflateStream(_networkStream, CompressionMode.Decompress);
-                        binaryReader = new BinaryReader(deflateStream);
-                        _isBinaryReaderZipped = true;
+                        _currentCodec.ReadSwitchToZipped();
                         _useHeartbeat = false;
                     }
                     ThrowEvent(historicalPriceDataResponseHeader, HistoricalPriceDataResponseHeaderEvent);
@@ -1025,6 +994,32 @@ namespace DTCClient
                     var historicalPriceDataTickRecordResponseInt = _currentCodec.Load<HistoricalPriceDataTickRecordResponse_Int>(messageType, messageBytes);
                     ThrowEvent(historicalPriceDataTickRecordResponseInt, HistoricalPriceDataTickRecordResponseIntEvent);
                     break;
+                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator:
+                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator2:
+                case DTCMessageType.MarketDataUpdateTradeNoTimestamp:
+                case DTCMessageType.MarketDataUpdateBidAskNoTimestamp:
+                case DTCMessageType.MarketDepthSnapshotLevelFloat:
+                case DTCMessageType.MarketDepthUpdateLevelFloatWithMilliseconds:
+                case DTCMessageType.MarketDepthUpdateLevelNoTimestamp:
+                case DTCMessageType.TradingSymbolStatus:
+                case DTCMessageType.SubmitFlattenPositionOrder:
+                case DTCMessageType.HistoricalOrderFillsReject:
+                case DTCMessageType.AccountBalanceAdjustment:
+                case DTCMessageType.AccountBalanceAdjustmentReject:
+                case DTCMessageType.AccountBalanceAdjustmentComplete:
+                case DTCMessageType.HistoricalAccountBalancesRequest:
+                case DTCMessageType.HistoricalAccountBalancesReject:
+                case DTCMessageType.HistoricalAccountBalanceResponse:
+                case DTCMessageType.AlertMessage:
+                case DTCMessageType.JournalEntryAdd:
+                case DTCMessageType.JournalEntriesRequest:
+                case DTCMessageType.JournalEntriesReject:
+                case DTCMessageType.JournalEntryResponse:
+                case DTCMessageType.HistoricalPriceDataResponseTrailer:
+                case DTCMessageType.HistoricalMarketDepthDataRequest:
+                case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
+                case DTCMessageType.HistoricalMarketDepthDataReject:
+                case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
                 case DTCMessageType.MessageTypeUnset:
                 case DTCMessageType.LogonRequest:
                 case DTCMessageType.EncodingRequest:
@@ -1049,6 +1044,7 @@ namespace DTCClient
                 case DTCMessageType.SymbolSearchRequest:
                 case DTCMessageType.AccountBalanceRequest:
                 case DTCMessageType.HistoricalPriceDataRequest:
+                    throw new NotImplementedException($"{messageType}");
                 default:
 #if DEBUG
                     var requestsSent = DebugHelpers.RequestsSent;
@@ -1056,7 +1052,7 @@ namespace DTCClient
                     var responsesReceived = DebugHelpers.ResponsesReceived;
                     var responsesSent = DebugHelpers.ResponsesSent;
 #endif
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {ClientName} {nameof(ProcessResponse)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {ClientName} {nameof(ProcessResponseBytes)}.");
             }
         }
 
@@ -1064,6 +1060,13 @@ namespace DTCClient
         {
             if (!_isDisposed)
             {
+                _currentCodec.Write(DTCMessageType.Logoff, new Logoff
+                {
+                    DoNotReconnect = 1u,
+                    Reason = "Client Disposed"
+                });
+                _ctsResponseReader.Cancel();
+                _currentCodec.Close();
                 Disconnect(new Error("Disposing"));
                 _isDisposed = true;
             }
@@ -1080,11 +1083,6 @@ namespace DTCClient
 
             _timerHeartbeat?.Dispose();
             _ctsResponseReader?.Cancel();
-            _networkStream?.Close();
-            _networkStream?.Dispose();
-            _networkStream = null;
-            _binaryWriter?.Dispose();
-            _binaryWriter = null;
             _tcpClient?.Close();
             _tcpClient = null;
         }

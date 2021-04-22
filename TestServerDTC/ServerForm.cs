@@ -106,7 +106,7 @@ namespace TestServer
             var hostEntry = Dns.GetHostEntry(serverName);
             var ipAddress = hostEntry.AddressList.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
             lblServerIPAddress.Text = $"Server IP Address: {ipAddress}";
-            _ipAddress = txtServer.Text.Trim().ToLower() == "localhost" ? IPAddress.Loopback : ipAddress;
+            _ipAddress = string.Equals(txtServer.Text.Trim(), "localhost", StringComparison.OrdinalIgnoreCase) ? IPAddress.Loopback : ipAddress;
             lblUsingIpAddress.Text = $"Using IP Address: {_ipAddress}";
         }
 

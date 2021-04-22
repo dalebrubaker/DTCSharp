@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TestServer</RootNamespace>
     <AssemblyName>TestServerDTC</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFrameworkProfile />
@@ -102,19 +102,23 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Google.Protobuf">
+      <Version>3.15.8</Version>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DTCClient\DTCClient.csproj">
+      <Project>{5eac8139-46c7-4573-bf60-4010633d2628}</Project>
+      <Name>DTCClient</Name>
+    </ProjectReference>
     <ProjectReference Include="..\DTCCommon\DTCCommon.csproj">
       <Project>{aaed8291-2b78-4048-89dd-e866f4a23ae3}</Project>
       <Name>DTCCommon</Name>
     </ProjectReference>
     <ProjectReference Include="..\DTCServer\DTCServer.csproj">
-      <Project>{ED55FC12-C152-4644-9427-7EF6CC11365E}</Project>
+      <Project>{ed55fc12-c152-4644-9427-7ef6cc11365e}</Project>
       <Name>DTCServer</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Google.Protobuf">
-      <Version>3.15.8</Version>
-    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

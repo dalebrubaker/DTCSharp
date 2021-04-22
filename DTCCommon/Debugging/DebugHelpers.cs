@@ -16,12 +16,12 @@ namespace DTCCommon
         public static readonly List<DebugMessageRow> ResponsesReceived = new List<DebugMessageRow>();
         public static readonly List<DebugMessageRow> RequestsSent = new List<DebugMessageRow>();
 
-        public static void AddRequestReceived(DTCMessageType messageType, ICodecDTC currentCodec, bool isZipped, int size)
+        public static void AddRequestReceived(DTCMessageType messageType, Codec currentCodec,int size)
         {
             var lastRow = RequestsReceived.LastOrDefault();
             if (lastRow == null || lastRow.MessageType != messageType)
             {
-                RequestsReceived.Add(new DebugMessageRow(messageType, currentCodec, isZipped, size));
+                RequestsReceived.Add(new DebugMessageRow(messageType, currentCodec, size));
             }
             else
             {
@@ -29,7 +29,7 @@ namespace DTCCommon
             }
         }
 
-        public static void AddRequestSent(DTCMessageType messageType, ICodecDTC currentCodec)
+        public static void AddRequestSent(DTCMessageType messageType, Codec currentCodec)
         {
             var lastRow = RequestsSent.LastOrDefault();
             if (lastRow == null || lastRow.MessageType != messageType)
@@ -42,12 +42,12 @@ namespace DTCCommon
             }
         }
 
-        public static void AddResponseReceived(DTCMessageType messageType, ICodecDTC currentCodec, bool isZipped, int size)
+        public static void AddResponseReceived(DTCMessageType messageType, Codec currentCodec, int size)
         {
             var lastRow = ResponsesReceived.LastOrDefault();
             if (lastRow == null || lastRow.MessageType != messageType)
             {
-                ResponsesReceived.Add(new DebugMessageRow(messageType, currentCodec, isZipped, size));
+                ResponsesReceived.Add(new DebugMessageRow(messageType, currentCodec, size));
             }
             else
             {
@@ -55,12 +55,12 @@ namespace DTCCommon
             }
         }
 
-        public static void AddResponseSent(DTCMessageType messageType, ICodecDTC currentCodec, bool isZipped)
+        public static void AddResponseSent(DTCMessageType messageType, Codec currentCodec, bool isZipped = false)
         {
             var lastRow = ResponsesSent.LastOrDefault();
             if (lastRow == null || lastRow.MessageType != messageType)
             {
-                ResponsesSent.Add(new DebugMessageRow(messageType, currentCodec, isZipped));
+                ResponsesSent.Add(new DebugMessageRow(messageType, currentCodec));
             }
             else
             {

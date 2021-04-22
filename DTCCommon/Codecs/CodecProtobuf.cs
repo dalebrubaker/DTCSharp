@@ -1,39 +1,62 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Net.Sockets;
+using DTCCommon.Enums;
+using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
 
 namespace DTCCommon.Codecs
 {
-    public class CodecProtobuf : ICodecDTC
+    public class CodecProtobuf : Codec
     {
-        /// <summary>
-        /// Write the message using binaryWriter
-        /// </summary>
-        /// <param name="messageType"></param>
-        /// <param name="message"></param>
-        /// <param name="binaryWriter">It's possible for this to become null because of stream failure and a Dispose()</param>
-        public void Write<T>(DTCMessageType messageType, T message, BinaryWriter binaryWriter) where T : IMessage
+        public CodecProtobuf(Stream stream, ClientOrServer clientOrServer) : base(stream, clientOrServer)
         {
-            if (binaryWriter == null)
+            
+        }
+        
+        public override void Write<T>(DTCMessageType messageType, T message)
+        {
+            if (_binaryWriter == null)
             {
                 return;
             }
+            if (_disabledHeartbeats && messageType == DTCMessageType.Heartbeat)
+            {
+                return;
+            }
+            if (messageType is DTCMessageType.EncodingRequest)
+            {
+                // EncodingRequest goes as binary for all protocol versions
+                WriteEncodingRequest(messageType, message);
+                return;
+            }
+            if (messageType == DTCMessageType.EncodingResponse)
+            {
+                // EncodingResponse goes as binary for all protocol versions
+                WriteEncodingResponse(messageType, message);
+                return;
+            }
             var bytes = message.ToByteArray();
-            Utility.WriteHeader(binaryWriter, bytes.Length, messageType);
-            binaryWriter.Write(bytes);
+            Utility.WriteHeader(_binaryWriter, bytes.Length, messageType);
+            _binaryWriter.Write(bytes);
         }
 
-        /// <summary>
-        /// Load the bytes into a new protobuf IMessage
-        /// </summary>
-        /// <param name="messageType">For protobuf we don't need the messageType</param>
-        /// <param name="bytes"></param>
-        /// <param name="index"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public T Load<T>(DTCMessageType messageType, byte[] bytes, int index = 0) where T : IMessage<T>, new()
+        public override T Load<T>(DTCMessageType messageType, byte[] bytes, int index = 0)
         {
             var result = new T();
+            if (messageType == DTCMessageType.EncodingRequest)
+            {
+                // EncodingRequest comes back as binary for all protocol versions
+                LoadEncodingRequest<T>(bytes, index, ref result);
+                return result;
+            }
+            if (messageType == DTCMessageType.EncodingResponse)
+            {
+                // EncodingResponse comes back as binary for all protocol versions
+                LoadEncodingResponse<T>(bytes, index, ref result);
+                return result;
+            }
             result.MergeFrom(bytes);
             return result;
         }

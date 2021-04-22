@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
 using DTCCommon.EventArgsF;
+using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
@@ -35,7 +36,7 @@ namespace Tests
                 exampleService = new ExampleService();
             }
             var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, timeoutNoActivity);
-            TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
+            Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
 
@@ -44,7 +45,10 @@ namespace Tests
         {
             var client = new Client(IPAddress.Loopback.ToString(), port, timeoutNoActivity);
             var encodingResponse = await client.ConnectAsync(encoding, "TestClient" + port, timeoutForConnect).ConfigureAwait(false);
-            Assert.Equal(encoding, encodingResponse.Encoding);
+            if (encodingResponse == null)
+            {
+                throw new DTCSharpException("Encoding response is null");
+            }
             return client;
         }
 
@@ -56,19 +60,19 @@ namespace Tests
         [Fact]
         public async Task HistoricalPriceDataRecordResponseTickNotZippedTest()
         {
-            const int timeoutNoActivity = 10000;
-            const int timeoutForConnect = 10000;
-            const bool useZLibCompression = false;
+            const int TimeoutNoActivity = 10000;
+            const int TimeoutForConnect = 10000;
+            const bool UseZLibCompression = false;
             var isFinalRecordReceived = false;
 
             // Set up the exampleService responses
             var exampleService = new ExampleService();
             var port = ClientServerTests.NextServerPort;
 
-            using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
+            using (var server = StartExampleServer(TimeoutNoActivity, port, exampleService))
             {
-                using (var clientHistorical =
-                    await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port, EncodingEnum.BinaryEncoding).ConfigureAwait(false))
+                using (var clientHistorical = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port, EncodingEnum.BinaryEncoding)
+                    .ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
                     while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
@@ -77,25 +81,31 @@ namespace Tests
                         await Task.Delay(1).ConfigureAwait(false);
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
+                    while (server.NumberOfClientHandlersConnected == 0 && sw.ElapsedMilliseconds < 1000)
+                    {
+                        await Task.Delay(1).ConfigureAwait(false);
+                    }
+                    Assert.Equal(1, server.NumberOfClientHandlersConnected);
 
                     // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
-                    var loginResponse = await clientHistorical.LogonAsync(0, false, 5000).ConfigureAwait(true);
+                    var loginResponse = await clientHistorical.LogonAsync(0, false, TimeoutForConnect).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     var numHistoricalPriceDataResponseHeader = 0;
                     var numTrades = 0;
 
                     // Set up the handler to capture the HistoricalPriceDataResponseHeader event
-                    EventHandler<EventArgs<HistoricalPriceDataResponseHeader>> responseHeaderEvent = (s, e) =>
+                    void ResponseHeaderEvent(object s, EventArgs<HistoricalPriceDataResponseHeader> e)
                     {
                         var header = e.Data;
                         _output.WriteLine($"Client1 received a HistoricalPriceDataResponseHeader after {sw.ElapsedMilliseconds} msecs");
                         numHistoricalPriceDataResponseHeader++;
-                    };
-                    clientHistorical.HistoricalPriceDataResponseHeaderEvent += responseHeaderEvent;
+                    }
+
+                    clientHistorical.HistoricalPriceDataResponseHeaderEvent += ResponseHeaderEvent;
 
                     // Set up the handler to capture the HistoricalPriceDataRecordResponse events
-                    EventHandler<EventArgs<HistoricalPriceDataRecordResponse>> historicalPriceDataRecordResponseEvent = (s, e) =>
+                    void HistoricalPriceDataRecordResponseEvent(object s, EventArgs<HistoricalPriceDataRecordResponse> e)
                     {
                         var trade = e.Data;
                         numTrades++;
@@ -103,8 +113,9 @@ namespace Tests
                         {
                             isFinalRecordReceived = true;
                         }
-                    };
-                    clientHistorical.HistoricalPriceDataRecordResponseEvent += historicalPriceDataRecordResponseEvent;
+                    }
+
+                    clientHistorical.HistoricalPriceDataRecordResponseEvent += HistoricalPriceDataRecordResponseEvent;
 
                     // Now request the data
                     var request = new HistoricalPriceDataRequest
@@ -113,13 +124,14 @@ namespace Tests
                         Symbol = "ESZ6",
                         Exchange = "",
                         RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
-                        StartDateTime = DateTime.UtcNow.UtcToDtcDateTime(), // ignored in this test
-                        EndDateTime = DateTime.UtcNow.UtcToDtcDateTime(), // ignored in this test
+                        StartDateTime = DateTime.MinValue.UtcToDtcDateTime(), 
+                        EndDateTime = DateTime.MaxValue.UtcToDtcDateTime(),
                         MaxDaysToReturn = 1, // ignored in this test
-                        UseZLibCompression = useZLibCompression ? 1 : 0,
+                        UseZLibCompression = UseZLibCompression ? 1 : 0,
                         RequestDividendAdjustedStockData = 0,
                         Integer1 = 0,
                     };
+                    var endDateTime = request.EndDateTimeUtc;
                     sw.Restart();
                     clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
                     while (!isFinalRecordReceived)
@@ -130,7 +142,7 @@ namespace Tests
                     _output.WriteLine($"Client1 received all {numTrades} historical trades in {elapsed} msecs");
 
                     Assert.Equal(1, numHistoricalPriceDataResponseHeader);
-                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend, numTrades);
+                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend +1, numTrades); // Add 1 for the 0's FinalRecord
                 }
             }
         }

@@ -35,7 +35,7 @@ namespace Tests
                 exampleService = new ExampleService();
             }
             var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, timeoutNoActivity);
-            TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
+            Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
 
@@ -56,19 +56,19 @@ namespace Tests
         [Fact]
         public async Task HistoricalPriceDataRecordResponseTickZippedTest()
         {
-            const int timeoutNoActivity = 10000;
-            const int timeoutForConnect = 10000;
-            const bool useZLibCompression = true;
+            const int TimeoutNoActivity = 10000;
+            const int TimeoutForConnect = 10000;
+            const bool UseZLibCompression = true;
             var isFinalRecordReceived = false;
 
             // Set up the exampleService responses
             var exampleService = new ExampleService();
             var port = ClientServerTests.NextServerPort;
 
-            using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
+            using (var server = StartExampleServer(TimeoutNoActivity, port, exampleService))
             {
                 using (var clientHistorical =
-                    await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port, EncodingEnum.BinaryEncoding).ConfigureAwait(false))
+                    await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port, EncodingEnum.BinaryEncoding).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
                     while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
@@ -77,6 +77,11 @@ namespace Tests
                         await Task.Delay(1).ConfigureAwait(false);
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
+                    while (server.NumberOfClientHandlersConnected == 0 && sw.ElapsedMilliseconds < 1000)
+                    {
+                        await Task.Delay(1).ConfigureAwait(false);
+                    }
+                    Assert.Equal(1, server.NumberOfClientHandlersConnected);
 
                     // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
                     var loginResponse = await clientHistorical.LogonAsync(0, false, 5000).ConfigureAwait(true);
@@ -113,10 +118,10 @@ namespace Tests
                         Symbol = "ESZ6",
                         Exchange = "",
                         RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
-                        StartDateTime = DateTime.UtcNow.UtcToDtcDateTime(), // ignored in this test
-                        EndDateTime = DateTime.UtcNow.UtcToDtcDateTime(), // ignored in this test
+                        StartDateTime = DateTime.MinValue.UtcToDtcDateTime(), 
+                        EndDateTime = DateTime.MaxValue.UtcToDtcDateTime(),
                         MaxDaysToReturn = 1, // ignored in this test
-                        UseZLibCompression = useZLibCompression ? 1 : 0,
+                        UseZLibCompression = UseZLibCompression ? 1 : 0,
                         RequestDividendAdjustedStockData = 0,
                         Integer1 = 0,
                     };

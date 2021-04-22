@@ -36,7 +36,7 @@ namespace Tests
             {
                 try
                 {
-                    TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(false));
+                    await Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
                 }
                 catch (Exception exception)
                 {

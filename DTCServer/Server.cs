@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using DTCCommon;
 using DTCCommon.EventArgsF;
 using DTCPB;
 using Google.Protobuf;
@@ -19,12 +21,10 @@ namespace DTCServer
         private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
         private readonly IPAddress _ipAddress;
         private TcpListener _tcpListener;
-        private readonly Timer _timerCheckForDisconnects;
         private bool _isDisposed;
         private readonly CancellationTokenSource _cts;
 
         private readonly object _lock;
-        private readonly List<Task> _clientHandlerTasks;
         private readonly List<ClientHandler> _clientHandlers; // parallel list to _clientHandlerTasks
 
         /// <summary>
@@ -40,49 +40,33 @@ namespace DTCServer
             _ipAddress = ipAddress;
             _port = port;
             _timeoutNoActivity = timeoutNoActivity;
-            _clientHandlerTasks = new List<Task>();
             _clientHandlers = new List<ClientHandler>();
             _lock = new object();
-            _timerCheckForDisconnects = new Timer(1000);
-            _timerCheckForDisconnects.Elapsed += TimerCheckForDisconnects_Elapsed;
             _cts = new CancellationTokenSource();
             Address = new IPEndPoint(_ipAddress, _port).ToString();
         }
 
         public string Address { get; }
 
-        private void TimerCheckForDisconnects_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            RemoveDisconnectedClientHandlers();
-        }
-
-        private void RemoveDisconnectedClientHandlers()
-        {
-            lock (_lock)
-            {
-                for (int i = 0; i < _clientHandlerTasks.Count; i++)
-                {
-                    var task = _clientHandlerTasks[i];
-                    if (!task.IsCompleted)
-                    {
-                        continue;
-                    }
-                    var clientHandler = _clientHandlers[i];
-                    clientHandler?.Dispose(); // ClientHandler.Dispose() also closes tcpClient
-                    OnClientDisconnected(clientHandler);
-                    _clientHandlerTasks.RemoveAt(i);
-                    _clientHandlers.RemoveAt(i);
-                    i--;
-                }
-            }
-        }
-
         public int NumberOfClientHandlers
         {
             get
             {
-                RemoveDisconnectedClientHandlers();
-                return _clientHandlerTasks.Count;
+                lock (_lock)
+                {
+                    return _clientHandlers.Count;
+                }
+            }
+        }
+
+        public int NumberOfClientHandlersConnected
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _clientHandlers.Count(x => x.IsConnected);
+                }
             }
         }
 
@@ -94,6 +78,7 @@ namespace DTCServer
 
         private void OnClientConnected(ClientHandler clientHandler)
         {
+            clientHandler.OnConnected("Connected");
             var temp = ClientConnected;
             temp?.Invoke(this, new EventArgs<ClientHandler>(clientHandler));
         }
@@ -102,6 +87,10 @@ namespace DTCServer
 
         private void OnClientDisconnected(ClientHandler clientHandler)
         {
+            lock (_lock)
+            {
+                _clientHandlers.Remove(clientHandler);
+            }
             var temp = ClientDisconnected;
             temp?.Invoke(this, new EventArgs<ClientHandler>(clientHandler));
         }
@@ -125,6 +114,7 @@ namespace DTCServer
             }
 #pragma warning disable 168
             IsConnected = true;
+            var tasks = new List<Task>();
             while (!_cts.Token.IsCancellationRequested)
             {
                 try
@@ -135,12 +125,14 @@ namespace DTCServer
                     {
                         tcpClient.ReceiveTimeout = _timeoutNoActivity;
                     }
+                    tcpClient.LingerState = new LingerOption(true, 5);
                     var clientHandler = new ClientHandler(_callback, tcpClient);
-                    var task = Task.Factory.StartNew(() => clientHandler.RequestReaderAsync(), TaskCreationOptions.LongRunning);
+                    var task = Task.Factory.StartNew(clientHandler.RequestReaderLoop, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+                    tasks.Add(task);
                     lock (_lock)
                     {
-                        _clientHandlerTasks.Add(task);
                         _clientHandlers.Add(clientHandler);
+                        clientHandler.Disconnected += ClientHandlerOnDisconnected;
                     }
                     OnClientConnected(clientHandler);
                 }
@@ -156,20 +148,30 @@ namespace DTCServer
                 }
 #pragma warning disable 168
             }
-            await Task.WhenAll(_clientHandlerTasks).ConfigureAwait(false);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
             CloseAllClientHandlers();
+        }
+
+        private void ClientHandlerOnDisconnected(object sender, Error error)
+        {
+            var clientHandler = sender as ClientHandler;
+            clientHandler.OnDisconnected(error);
+            _clientHandlers.Remove(clientHandler);
         }
 
         private void CloseAllClientHandlers()
         {
             lock (_lock)
             {
-                foreach (var clientHandler in _clientHandlers)
+                // foreach can give collection modified error
+                for (int i = 0; i < _clientHandlers.Count; i++)
                 {
+                    var clientHandler = _clientHandlers[i];
+                    
+                    // OnClientDisconnected removes the clientHandler from _clientHandlers
+                    OnClientDisconnected(clientHandler);
                     clientHandler.Dispose();
                 }
-                _clientHandlerTasks.Clear();
-                _clientHandlers.Clear();
             }
         }
 
@@ -180,23 +182,17 @@ namespace DTCServer
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing && !_isDisposed)
+            if (!_isDisposed)
             {
-                CloseAllClientHandlers();
+                _cts.Cancel();
+                IsConnected = false;
+                _isDisposed = true;
                 _tcpListener?.Stop();
                 _tcpListener?.Server.Dispose();
                 _tcpListener = null;
-                IsConnected = false;
-                _cts.Cancel();
-                _timerCheckForDisconnects?.Dispose();
-                _isDisposed = true;
+                CloseAllClientHandlers();
             }
+            GC.SuppressFinalize(this);
         }
     }
 }

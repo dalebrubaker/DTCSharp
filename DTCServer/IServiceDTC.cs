@@ -8,6 +8,18 @@ namespace DTCServer
     public interface IServiceDTC
     {
         bool SendSymbols { get; set; }
+        
+        /// <summary>
+        /// This method is called for every request received by a client connected to this server.
+        /// WARNING! You must not block this thread for long, as further requests can't be received until you return from this method.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="clientHandler">The handler for a particular client connected to this server</param>
+        /// <param name="messageType">the message type</param>
+        /// <param name="message">the message (a Google.Protobuf message)</param>
+        /// <returns></returns>
+        void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage;
+
         event EventHandler<EventArgs<Heartbeat, DTCMessageType, ClientHandler>> HeartbeatEvent;
 
         event EventHandler<EventArgs<Logoff, DTCMessageType, ClientHandler>> LogoffEvent;
@@ -41,16 +53,5 @@ namespace DTCServer
         event EventHandler<EventArgs<SymbolSearchRequest, DTCMessageType, ClientHandler>> SymbolSearchRequestEvent;
         event EventHandler<EventArgs<AccountBalanceRequest, DTCMessageType, ClientHandler>> AccountBalanceRequestEvent;
         event EventHandler<EventArgs<HistoricalPriceDataRequest, DTCMessageType, ClientHandler>> HistoricalPriceDataRequestEvent;
-
-        /// <summary>
-        /// This method is called for every request received by a client connected to this server.
-        /// WARNING! You must not block this thread for long, as further requests can't be received until you return from this method.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="clientHandler">The handler for a particular client connected to this server</param>
-        /// <param name="messageType">the message type</param>
-        /// <param name="message">the message (a Google.Protobuf message)</param>
-        /// <returns></returns>
-        void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage;
     }
 }

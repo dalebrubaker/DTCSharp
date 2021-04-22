@@ -2,6 +2,7 @@
 using System.IO;
 using DTCCommon;
 using DTCCommon.Codecs;
+using DTCCommon.Enums;
 using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
@@ -11,13 +12,6 @@ namespace Tests
 {
     public class BinaryEncodingTests : IDisposable
     {
-        private readonly CodecBinary _codecBinary;
-
-        public BinaryEncodingTests()
-        {
-            _codecBinary = new CodecBinary();
-        }
-
         public void Dispose()
         {
             Console.WriteLine("Disposing");
@@ -27,13 +21,14 @@ namespace Tests
         {
             var ms = new MemoryStream();
             var bw = new BinaryWriter(ms);
-            _codecBinary.Write(messageType, message, bw);
+            var codec = new CodecBinary(ms, ClientOrServer.Client);
+            codec.Write(messageType, message);
             var bytes = ms.ToArray();
             int sizeExcludingHeader;
             DTCMessageType messageTypeHeader;
             Utility.ReadHeader(bytes, out sizeExcludingHeader, out messageTypeHeader);
             Assert.Equal(messageType, messageTypeHeader);
-            var loadedMessage = _codecBinary.Load<T>(messageType, bytes, 4);
+            var loadedMessage = codec.Load<T>(messageType, bytes, 4);
             if (!loadedMessage.Equals(message))
             {
                 //var debug = 1;
