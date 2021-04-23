@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using DTCClient;
-using DTCCommon.EventArgsF;
 using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
@@ -97,19 +96,17 @@ namespace Tests
                     var numTrades = 0;
 
                     // Set up the handler to capture the HistoricalPriceDataResponseHeader event
-                    void ResponseHeaderEvent(object s, EventArgs<HistoricalPriceDataResponseHeader> e)
+                    void ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent(object sender, HistoricalPriceDataResponseHeader e)
                     {
-                        var header = e.Data;
                         _output.WriteLine($"Client1 received a HistoricalPriceDataResponseHeader after {sw.ElapsedMilliseconds} msecs");
                         numHistoricalPriceDataResponseHeader++;
                     }
 
-                    clientHistorical.HistoricalPriceDataResponseHeaderEvent += ResponseHeaderEvent;
+                    clientHistorical.HistoricalPriceDataResponseHeaderEvent += ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent;
 
                     // Set up the handler to capture the HistoricalPriceDataRecordResponse events
-                    void HistoricalPriceDataRecordResponseEvent(object s, EventArgs<HistoricalPriceDataRecordResponse> e)
+                    void ClientHistoricalOnHistoricalPriceDataResponseEvent(object sender, HistoricalPriceDataRecordResponse trade)
                     {
-                        var trade = e.Data;
                         numTrades++;
                         if (trade.IsFinalRecord != 0)
                         {
@@ -117,7 +114,7 @@ namespace Tests
                         }
                     }
 
-                    clientHistorical.HistoricalPriceDataRecordResponseEvent += HistoricalPriceDataRecordResponseEvent;
+                    clientHistorical.HistoricalPriceDataRecordResponseEvent += ClientHistoricalOnHistoricalPriceDataResponseEvent;
 
                     // Now request the data
                     var request = new HistoricalPriceDataRequest

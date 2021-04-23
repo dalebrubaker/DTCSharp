@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using DTCClient;
 using DTCCommon;
-using DTCCommon.EventArgsF;
 using DTCCommon.Extensions;
 using DTCPB;
 
@@ -193,9 +192,8 @@ namespace TestClient
             logControlConnect.LogMessage("Heartbeat received from server.");
         }
 
-        private void Client_Disconnected(object sender, EventArgs<Error> e)
+        private void Client_Disconnected(object sender, Error error)
         {
-            var error = e.Data;
             logControlConnect.LogMessage(error.ResultText, "Disconnected");
             var client = (Client)sender;
             logControlConnect.LogMessage($"Disconnected from client:{client.ClientName} due to {error.ResultText}");
@@ -241,102 +239,92 @@ namespace TestClient
             client.MarketDataUpdateSessionLowEvent += Client_MarketDataUpdateSessionLowEvent;
         }
 
-        private void Client_MarketDataUpdateSessionLowEvent(object sender, EventArgs<MarketDataUpdateSessionLow> e)
+        private void Client_MarketDataUpdateSessionLowEvent(object sender, MarketDataUpdateSessionLow response)
         {
-            var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data new session low for {combo}: {response.Price}");
         }
 
-        private void Client_MarketDataUpdateSessionHighEvent(object sender, EventArgs<MarketDataUpdateSessionHigh> e)
+        private void Client_MarketDataUpdateSessionHighEvent(object sender, MarketDataUpdateSessionHigh response)
         {
-            var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data new session high for {combo}: {response.Price}");
         }
 
-        private void Client_MarketDataUpdateSessionVolumeEvent(object sender, EventArgs<MarketDataUpdateSessionVolume> e)
+        private void Client_MarketDataUpdateSessionVolumeEvent(object sender, MarketDataUpdateSessionVolume response)
         {
-            var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data session volume correction for {combo}: {response.Volume}");
         }
 
-        private void Client_MarketDataUpdateBidAskIntEvent(object sender, EventArgs<MarketDataUpdateBidAsk_Int> e)
+        private void Client_MarketDataUpdateBidAskIntEvent(object sender, MarketDataUpdateBidAsk_Int response)
         {
             if (!cbShowBidAsk1.Checked)
             {
                 return;
             }
-            var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
             logControlLevel1.LogMessage(
                 $"Market Data Update Bid/Ask Int for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime:yyyyMMdd.HHmmss.fff}");
         }
 
-        private void Client_MarketDataUpdateBidAskEvent(object sender, EventArgs<MarketDataUpdateBidAsk> e)
+        private void Client_MarketDataUpdateBidAskEvent(object sender, MarketDataUpdateBidAsk response)
         {
             if (!cbShowBidAsk1.Checked)
             {
                 return;
             }
-            var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
             logControlLevel1.LogMessage(
                 $"Market Data Update Bid/Ask for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime:yyyyMMdd.HHmmss.fff}");
         }
 
-        private void Client_MarketDataUpdateBidAskCompactEvent(object sender, EventArgs<MarketDataUpdateBidAskCompact> e)
+        private void Client_MarketDataUpdateBidAskCompactEvent(object sender, MarketDataUpdateBidAskCompact e)
         {
-            MarketDataUpdateBidAskCompactCallback(e.Data);
+            MarketDataUpdateBidAskCompactCallback(e);
         }
 
-        private void Client_MarketDataUpdateTradeIntEvent(object sender, EventArgs<MarketDataUpdateTrade_Int> e)
+        private void Client_MarketDataUpdateTradeIntEvent(object sender, MarketDataUpdateTrade_Int response)
         {
-            var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
             logControlLevel1.LogMessage(
                 $"Market Data Update Trade Int for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}");
         }
 
-        private void Client_MarketDataUpdateTradeEvent(object sender, EventArgs<MarketDataUpdateTrade> e)
+        private void Client_MarketDataUpdateTradeEvent(object sender, MarketDataUpdateTrade response)
         {
-            var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
             logControlLevel1.LogMessage(
                 $"Market Data Update Trade for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}");
         }
 
-        private void Client_MarketDataUpdateTradeCompactEvent(object sender, EventArgs<MarketDataUpdateTradeCompact> e)
+        private void Client_MarketDataUpdateTradeCompactEvent(object sender, MarketDataUpdateTradeCompact e)
         {
-            MarketDataUpdateTradeCompactCallback(e.Data);
+            MarketDataUpdateTradeCompactCallback(e);
         }
 
-        private void Client_MarketDataFeedSymbolStatusEvent(object sender, EventArgs<MarketDataFeedSymbolStatus> e)
+        private void Client_MarketDataFeedSymbolStatusEvent(object sender, MarketDataFeedSymbolStatus response)
         {
-            var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data Feed status for {combo}: {response.Status}");
         }
 
-        private void Client_MarketDataFeedStatusEvent(object sender, EventArgs<MarketDataFeedStatus> e)
+        private void Client_MarketDataFeedStatusEvent(object sender, MarketDataFeedStatus response)
         {
-            var response = e.Data;
             logControlLevel1.LogMessage($"Market Data Feed status: {response.Status}");
         }
 
-        private void Client_MarketDataSnapshotEvent(object sender, EventArgs<MarketDataSnapshot> e)
+        private void Client_MarketDataSnapshotEvent(object sender, MarketDataSnapshot e)
         {
-            MarketDataSnapshotCallback(e.Data);
+            MarketDataSnapshotCallback(e);
         }
 
-        private void Client_MarketDataSnapshotIntEvent(object sender, EventArgs<MarketDataSnapshot_Int> e)
+        private void Client_MarketDataSnapshotIntEvent(object sender, MarketDataSnapshot_Int response)
         {
-            var response = e.Data;
             var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
             var lines = new List<string>
             {
@@ -362,16 +350,14 @@ namespace TestClient
             logControlLevel1.LogMessagesReversed(lines);
         }
 
-        private void Client_MarketDataRejectEvent(object sender, EventArgs<MarketDataReject> e)
+        private void Client_MarketDataRejectEvent(object sender, MarketDataReject marketDataReject)
         {
-            var response = e.Data;
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
-            logControlLevel1.LogMessage($"Market data request rejected for {combo} because {response.RejectText}");
+            var combo = _client.SymbolExchangeComboBySymbolId[marketDataReject.SymbolID];
+            logControlLevel1.LogMessage($"Market data request rejected for {combo} because {marketDataReject.RejectText}");
         }
 
-        private void Client_ExchangeListResponseEvent(object sender, EventArgs<ExchangeListResponse> e)
+        private void Client_ExchangeListResponseEvent(object sender, ExchangeListResponse response)
         {
-            var response = e.Data;
             var lines = new List<string>
             {
                 "Exchanges List:",
@@ -382,20 +368,19 @@ namespace TestClient
             logControlSymbols.LogMessagesReversed(lines);
         }
 
-        private void Client_GeneralLogMessageEvent(object sender, EventArgs<GeneralLogMessage> e)
+        private void Client_GeneralLogMessageEvent(object sender, GeneralLogMessage e)
         {
-            logControlConnect.LogMessage($"GeneralLogMessage: {e.Data.MessageText}");
+            logControlConnect.LogMessage($"GeneralLogMessage: {e.MessageText}");
         }
 
-        private void Client_UserMessageEvent(object sender, EventArgs<UserMessage> e)
+        private void Client_UserMessageEvent(object sender, UserMessage e)
         {
-            logControlConnect.LogMessage($"UserMessage: {e.Data.UserMessage_}");
+            logControlConnect.LogMessage($"UserMessage: {e.UserMessage_}");
         }
 
-        private void Client_EncodingResponseEvent(object sender, EventArgs<EncodingResponse> e)
+        private void Client_EncodingResponseEvent(object sender, EncodingResponse response)
         {
             var client = (Client)sender;
-            var response = e.Data;
             logControlConnect.LogMessage($"{client.ClientName} encoding is {response.Encoding}");
         }
 

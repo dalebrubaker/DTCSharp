@@ -9,7 +9,6 @@ using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
 using DTCCommon.Enums;
-using DTCCommon.EventArgsF;
 using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
@@ -113,68 +112,68 @@ namespace DTCClient
             temp?.Invoke(this, new EventArgs());
         }
 
-        public event EventHandler<EventArgs<Error>> Disconnected;
+        public event EventHandler<Error> Disconnected;
 
         private void OnDisconnected(Error error)
         {
             _isConnected = false;
             var temp = Disconnected;
-            temp?.Invoke(this, new EventArgs<Error>(error));
+            temp?.Invoke(this, error);
         }
 
         public event EventHandler<Heartbeat> HeartbeatEvent;
-        public event EventHandler<EventArgs<Logoff>> LogoffEvent;
+        public event EventHandler<Logoff> LogoffEvent;
 
-        public event EventHandler<EventArgs<EncodingResponse>> EncodingResponseEvent;
-        public event EventHandler<EventArgs<LogonResponse>> LogonResponseEvent;
-        public event EventHandler<EventArgs<MarketDataReject>> MarketDataRejectEvent;
-        public event EventHandler<EventArgs<MarketDataSnapshot>> MarketDataSnapshotEvent;
-        public event EventHandler<EventArgs<MarketDataSnapshot_Int>> MarketDataSnapshotIntEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateTrade>> MarketDataUpdateTradeEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateTradeCompact>> MarketDataUpdateTradeCompactEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateTrade_Int>> MarketDataUpdateTradeIntEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateLastTradeSnapshot>> MarketDataUpdateLastTradeSnapshotEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateBidAsk>> MarketDataUpdateBidAskEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateBidAskCompact>> MarketDataUpdateBidAskCompactEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateBidAsk_Int>> MarketDataUpdateBidAskIntEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionOpen>> MarketDataUpdateSessionOpenEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionOpen_Int>> MarketDataUpdateSessionOpenIntEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionHigh>> MarketDataUpdateSessionHighEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionHigh_Int>> MarketDataUpdateSessionHighIntEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionLow>> MarketDataUpdateSessionLowEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionLow_Int>> MarketDataUpdateSessionLowIntEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionVolume>> MarketDataUpdateSessionVolumeEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateOpenInterest>> MarketDataUpdateOpenInterestEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionSettlement>> MarketDataUpdateSessionSettlementEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionSettlement_Int>> MarketDataUpdateSessionSettlementIntEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateSessionNumTrades>> MarketDataUpdateSessionNumTradesEvent;
-        public event EventHandler<EventArgs<MarketDataUpdateTradingSessionDate>> MarketDataUpdateTradingSessionDateEvent;
-        public event EventHandler<EventArgs<MarketDepthReject>> MarketDepthRejectEvent;
-        public event EventHandler<EventArgs<MarketDepthSnapshotLevel>> MarketDepthSnapshotLevelEvent;
-        public event EventHandler<EventArgs<MarketDepthSnapshotLevel_Int>> MarketDepthSnapshotLevelIntEvent;
-        public event EventHandler<EventArgs<MarketDepthUpdateLevel>> MarketDepthUpdateLevelEvent;
-        public event EventHandler<EventArgs<MarketDepthUpdateLevel_Int>> MarketDepthUpdateLevelIntEvent;
-        public event EventHandler<EventArgs<MarketDataFeedStatus>> MarketDataFeedStatusEvent;
-        public event EventHandler<EventArgs<MarketDataFeedSymbolStatus>> MarketDataFeedSymbolStatusEvent;
-        public event EventHandler<EventArgs<OpenOrdersReject>> OpenOrdersRejectEvent;
-        public event EventHandler<EventArgs<OrderUpdate>> OrderUpdateEvent;
-        public event EventHandler<EventArgs<HistoricalOrderFillResponse>> HistoricalOrderFillResponseEvent;
-        public event EventHandler<EventArgs<CurrentPositionsReject>> CurrentPositionsRejectEvent;
-        public event EventHandler<EventArgs<PositionUpdate>> PositionUpdateEvent;
-        public event EventHandler<EventArgs<TradeAccountResponse>> TradeAccountResponseEvent;
-        public event EventHandler<EventArgs<ExchangeListResponse>> ExchangeListResponseEvent;
-        public event EventHandler<EventArgs<SecurityDefinitionResponse>> SecurityDefinitionResponseEvent;
-        public event EventHandler<EventArgs<SecurityDefinitionReject>> SecurityDefinitionRejectEvent;
-        public event EventHandler<EventArgs<AccountBalanceReject>> AccountBalanceRejectEvent;
-        public event EventHandler<EventArgs<AccountBalanceUpdate>> AccountBalanceUpdateEvent;
-        public event EventHandler<EventArgs<UserMessage>> UserMessageEvent;
-        public event EventHandler<EventArgs<GeneralLogMessage>> GeneralLogMessageEvent;
-        public event EventHandler<EventArgs<HistoricalPriceDataResponseHeader>> HistoricalPriceDataResponseHeaderEvent;
-        public event EventHandler<EventArgs<HistoricalPriceDataReject>> HistoricalPriceDataRejectEvent;
-        public event EventHandler<EventArgs<HistoricalPriceDataRecordResponse>> HistoricalPriceDataRecordResponseEvent;
-        public event EventHandler<EventArgs<HistoricalPriceDataTickRecordResponse>> HistoricalPriceDataTickRecordResponseEvent;
-        public event EventHandler<EventArgs<HistoricalPriceDataRecordResponse_Int>> HistoricalPriceDataRecordResponseIntEvent;
-        public event EventHandler<EventArgs<HistoricalPriceDataTickRecordResponse_Int>> HistoricalPriceDataTickRecordResponseIntEvent;
+        public event EventHandler<EncodingResponse> EncodingResponseEvent;
+        public event EventHandler<LogonResponse> LogonResponseEvent;
+        public event EventHandler<MarketDataReject> MarketDataRejectEvent;
+        public event EventHandler<MarketDataSnapshot> MarketDataSnapshotEvent;
+        public event EventHandler<MarketDataSnapshot_Int> MarketDataSnapshotIntEvent;
+        public event EventHandler<MarketDataUpdateTrade> MarketDataUpdateTradeEvent;
+        public event EventHandler<MarketDataUpdateTradeCompact> MarketDataUpdateTradeCompactEvent;
+        public event EventHandler<MarketDataUpdateTrade_Int> MarketDataUpdateTradeIntEvent;
+        public event EventHandler<MarketDataUpdateLastTradeSnapshot> MarketDataUpdateLastTradeSnapshotEvent;
+        public event EventHandler<MarketDataUpdateBidAsk> MarketDataUpdateBidAskEvent;
+        public event EventHandler<MarketDataUpdateBidAskCompact> MarketDataUpdateBidAskCompactEvent;
+        public event EventHandler<MarketDataUpdateBidAsk_Int> MarketDataUpdateBidAskIntEvent;
+        public event EventHandler<MarketDataUpdateSessionOpen> MarketDataUpdateSessionOpenEvent;
+        public event EventHandler<MarketDataUpdateSessionOpen_Int> MarketDataUpdateSessionOpenIntEvent;
+        public event EventHandler<MarketDataUpdateSessionHigh> MarketDataUpdateSessionHighEvent;
+        public event EventHandler<MarketDataUpdateSessionHigh_Int> MarketDataUpdateSessionHighIntEvent;
+        public event EventHandler<MarketDataUpdateSessionLow> MarketDataUpdateSessionLowEvent;
+        public event EventHandler<MarketDataUpdateSessionLow_Int> MarketDataUpdateSessionLowIntEvent;
+        public event EventHandler<MarketDataUpdateSessionVolume> MarketDataUpdateSessionVolumeEvent;
+        public event EventHandler<MarketDataUpdateOpenInterest> MarketDataUpdateOpenInterestEvent;
+        public event EventHandler<MarketDataUpdateSessionSettlement> MarketDataUpdateSessionSettlementEvent;
+        public event EventHandler<MarketDataUpdateSessionSettlement_Int> MarketDataUpdateSessionSettlementIntEvent;
+        public event EventHandler<MarketDataUpdateSessionNumTrades> MarketDataUpdateSessionNumTradesEvent;
+        public event EventHandler<MarketDataUpdateTradingSessionDate> MarketDataUpdateTradingSessionDateEvent;
+        public event EventHandler<MarketDepthReject> MarketDepthRejectEvent;
+        public event EventHandler<MarketDepthSnapshotLevel> MarketDepthSnapshotLevelEvent;
+        public event EventHandler<MarketDepthSnapshotLevel_Int> MarketDepthSnapshotLevelIntEvent;
+        public event EventHandler<MarketDepthUpdateLevel> MarketDepthUpdateLevelEvent;
+        public event EventHandler<MarketDepthUpdateLevel_Int> MarketDepthUpdateLevelIntEvent;
+        public event EventHandler<MarketDataFeedStatus> MarketDataFeedStatusEvent;
+        public event EventHandler<MarketDataFeedSymbolStatus> MarketDataFeedSymbolStatusEvent;
+        public event EventHandler<OpenOrdersReject> OpenOrdersRejectEvent;
+        public event EventHandler<OrderUpdate> OrderUpdateEvent;
+        public event EventHandler<HistoricalOrderFillResponse> HistoricalOrderFillResponseEvent;
+        public event EventHandler<CurrentPositionsReject> CurrentPositionsRejectEvent;
+        public event EventHandler<PositionUpdate> PositionUpdateEvent;
+        public event EventHandler<TradeAccountResponse> TradeAccountResponseEvent;
+        public event EventHandler<ExchangeListResponse> ExchangeListResponseEvent;
+        public event EventHandler<SecurityDefinitionResponse> SecurityDefinitionResponseEvent;
+        public event EventHandler<SecurityDefinitionReject> SecurityDefinitionRejectEvent;
+        public event EventHandler<AccountBalanceReject> AccountBalanceRejectEvent;
+        public event EventHandler<AccountBalanceUpdate> AccountBalanceUpdateEvent;
+        public event EventHandler<UserMessage> UserMessageEvent;
+        public event EventHandler<GeneralLogMessage> GeneralLogMessageEvent;
+        public event EventHandler<HistoricalPriceDataResponseHeader> HistoricalPriceDataResponseHeaderEvent;
+        public event EventHandler<HistoricalPriceDataReject> HistoricalPriceDataRejectEvent;
+        public event EventHandler<HistoricalPriceDataRecordResponse> HistoricalPriceDataRecordResponseEvent;
+        public event EventHandler<HistoricalPriceDataTickRecordResponse> HistoricalPriceDataTickRecordResponseEvent;
+        public event EventHandler<HistoricalPriceDataRecordResponse_Int> HistoricalPriceDataRecordResponseIntEvent;
+        public event EventHandler<HistoricalPriceDataTickRecordResponse_Int> HistoricalPriceDataTickRecordResponseIntEvent;
 
         #endregion events
 
@@ -216,13 +215,14 @@ namespace DTCClient
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
-            EventHandler<EventArgs<EncodingResponse>> handler = null;
-            handler = (s, e) =>
+
+            void Handler(object s, EncodingResponse e)
             {
-                EncodingResponseEvent -= handler; // unregister to avoid a potential memory leak
-                result = e.Data;
-            };
-            EncodingResponseEvent += handler;
+                EncodingResponseEvent -= Handler; // unregister to avoid a potential memory leak
+                result = e;
+            }
+
+            EncodingResponseEvent += Handler;
 
             // Request protocol buffers encoding
             var encodingRequest = new EncodingRequest
@@ -286,13 +286,14 @@ namespace DTCClient
 
             // Set up the handler to capture the event
             LogonResponse result = null;
-            EventHandler<EventArgs<LogonResponse>> handler = null;
-            handler = (s, e) =>
+
+            void Handler(object s, LogonResponse e)
             {
-                LogonResponseEvent -= handler; // unregister to avoid a potential memory leak
-                result = e.Data;
-            };
-            LogonResponseEvent += handler;
+                LogonResponseEvent -= Handler; // unregister to avoid a potential memory leak
+                result = e;
+            }
+
+            LogonResponseEvent += Handler;
 
             // Send the request
             var logonRequest = new LogonRequest
@@ -348,40 +349,41 @@ namespace DTCClient
             HistoricalPriceDataReject historicalPriceDataReject = null;
 
             // Set up handler to capture the reject event
-            void HandlerReject(object s, EventArgs<HistoricalPriceDataReject> e)
+            void OnHistoricalPriceDataRejectEvent(object s, HistoricalPriceDataReject e)
             {
-                HistoricalPriceDataRejectEvent -= HandlerReject; // unregister to avoid a potential memory leak
-                historicalPriceDataReject = e.Data;
+                HistoricalPriceDataRejectEvent -= OnHistoricalPriceDataRejectEvent; // unregister to avoid a potential memory leak
+                historicalPriceDataReject = e;
                 timeout = 0; // force immediate return
             }
 
-            HistoricalPriceDataRejectEvent += HandlerReject;
+            HistoricalPriceDataRejectEvent += OnHistoricalPriceDataRejectEvent;
 
             // Set up handler to capture the header event
-            EventHandler<EventArgs<HistoricalPriceDataResponseHeader>> handlerHeader = null;
-            handlerHeader = (s, e) =>
+            void HandlerHeader(object s, HistoricalPriceDataResponseHeader e)
             {
-                HistoricalPriceDataResponseHeaderEvent -= handlerHeader; // unregister to avoid a potential memory leak
-                var header = e.Data;
+                HistoricalPriceDataResponseHeaderEvent -= HandlerHeader; // unregister to avoid a potential memory leak
+                var header = e;
                 headerCallback(header);
                 timeout = int.MaxValue; // wait for the last price data response to arrive
-            };
-            HistoricalPriceDataResponseHeaderEvent += handlerHeader;
+            }
+
+            HistoricalPriceDataResponseHeaderEvent += HandlerHeader;
 
             // Set up the handler to capture the HistoricalPriceDataRecordResponseEvent
             HistoricalPriceDataRecordResponse response;
-            EventHandler<EventArgs<HistoricalPriceDataRecordResponse>> handler = null;
-            handler = (s, e) =>
+
+            void Handler(object s, HistoricalPriceDataRecordResponse e)
             {
-                response = e.Data;
+                response = e;
                 dataCallback(response);
-                if (e.Data.IsFinalRecordBool)
+                if (e.IsFinalRecordBool)
                 {
-                    HistoricalPriceDataRecordResponseEvent -= handler; // unregister to avoid a potential memory leak
+                    HistoricalPriceDataRecordResponseEvent -= Handler; // unregister to avoid a potential memory leak
                     timeout = 0; // force immediate exit
                 }
-            };
-            HistoricalPriceDataRecordResponseEvent += handler;
+            }
+
+            HistoricalPriceDataRecordResponseEvent += Handler;
 
             // Send the request
             var request = new HistoricalPriceDataRequest
@@ -419,13 +421,14 @@ namespace DTCClient
             // Set up the handler to capture the event
             var startTime = DateTime.Now;
             SecurityDefinitionResponse result = null;
-            EventHandler<EventArgs<SecurityDefinitionResponse>> handler = null;
-            handler = (s, e) =>
+
+            void Handler(object s, SecurityDefinitionResponse e)
             {
-                SecurityDefinitionResponseEvent -= handler; // unregister to avoid a potential memory leak
-                result = e.Data;
-            };
-            SecurityDefinitionResponseEvent += handler;
+                SecurityDefinitionResponseEvent -= Handler; // unregister to avoid a potential memory leak
+                result = e;
+            }
+
+            SecurityDefinitionResponseEvent += Handler;
 
             // Send the request
             var securityDefinitionForSymbolRequest = new SecurityDefinitionForSymbolRequest
@@ -579,13 +582,14 @@ namespace DTCClient
             }
 
             // Set up handler to capture the reject event
-            EventHandler<EventArgs<MarketDataReject>> handlerReject = null;
-            handlerReject = (s, e) =>
+            void HandlerReject(object s, MarketDataReject e)
             {
-                MarketDataRejectEvent -= handlerReject; // unregister to avoid a potential memory leak
-                marketDataReject = e.Data;
+                MarketDataRejectEvent -= HandlerReject; // unregister to avoid a potential memory leak
+                marketDataReject = e;
                 timeout = 0; // force immediate return
-            };
+            }
+
+            MarketDataRejectEvent += HandlerReject;
 
             using (var handleSnapshot = new EventToCallbackForSymbol<MarketDataSnapshot>(symbolId, symbol, exchange,
                 handler => MarketDataSnapshotEvent += handler, handler => MarketDataSnapshotEvent -= handler, snapshotCallback))
@@ -667,29 +671,10 @@ namespace DTCClient
             }
         }
 
-        private void ThrowEventImpl<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
-        {
-            var temp = eventForMessage; // for thread safety
-            temp?.Invoke(this, new EventArgs<T>(message));
-        }
-
         private void ThrowEventImpl<T>(T message, EventHandler<T> eventForMessage)
         {
             var temp = eventForMessage;
             temp?.Invoke(this, message);
-        }
-
-        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T>> eventForMessage) where T : IMessage
-        {
-            //if (_stayOnCallingThread)
-            //{
-            //    var task = new Task(() => ThrowEventImpl(message, eventForMessage));
-            //    task.RunSynchronously(_taskSchedulerCurrContext);
-            //}
-            //else
-            //{
-            ThrowEventImpl(message, eventForMessage);
-            //}
         }
 
         private void ThrowEvent<T>(T message, EventHandler<T> eventForMessage) where T : IMessage
@@ -758,7 +743,8 @@ namespace DTCClient
         private void ProcessResponseBytes(DTCMessageType messageType, byte[] messageBytes)
         {
             if (messageType == DTCMessageType.MarketDataUpdateBidAsk)
-            { }
+            {
+            }
 
             //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
             switch (messageType)

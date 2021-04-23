@@ -5,13 +5,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using DTCCommon;
-using DTCCommon.EventArgsF;
 using DTCPB;
 using Google.Protobuf;
 using NLog;
-using Timer = System.Timers.Timer;
 
 namespace DTCServer
 {
@@ -77,16 +74,16 @@ namespace DTCServer
 
         #region events
 
-        public event EventHandler<EventArgs<ClientHandler>> ClientConnected;
+        public event EventHandler<ClientHandler> ClientConnected;
 
         private void OnClientConnected(ClientHandler clientHandler)
         {
             clientHandler.OnConnected("Connected");
             var temp = ClientConnected;
-            temp?.Invoke(this, new EventArgs<ClientHandler>(clientHandler));
+            temp?.Invoke(this, clientHandler);
         }
 
-        public event EventHandler<EventArgs<ClientHandler>> ClientDisconnected;
+        public event EventHandler<ClientHandler> ClientDisconnected;
 
         private void OnClientDisconnected(ClientHandler clientHandler)
         {
@@ -95,7 +92,7 @@ namespace DTCServer
                 _clientHandlers.Remove(clientHandler);
             }
             var temp = ClientDisconnected;
-            temp?.Invoke(this, new EventArgs<ClientHandler>(clientHandler));
+            temp?.Invoke(this, clientHandler);
         }
 
         #endregion events
@@ -170,7 +167,7 @@ namespace DTCServer
                 for (int i = 0; i < _clientHandlers.Count; i++)
                 {
                     var clientHandler = _clientHandlers[i];
-                    
+
                     // OnClientDisconnected removes the clientHandler from _clientHandlers
                     OnClientDisconnected(clientHandler);
                     clientHandler.Dispose();

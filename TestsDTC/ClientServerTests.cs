@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
-using DTCCommon.EventArgsF;
 using DTCPB;
 using DTCServer;
 using NLog;
@@ -98,9 +97,8 @@ namespace Tests
             using (var server = StartExampleServer(TimeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
-                void ClientHandlerConnected(object s, EventArgs<ClientHandler> e)
+                void ClientHandlerConnected(object s, ClientHandler clientHandler)
                 {
-                    var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
                     numConnects++;
                 }
@@ -108,9 +106,8 @@ namespace Tests
                 server.ClientConnected += ClientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
-                void ClientHandlerDisconnected(object s, EventArgs<ClientHandler> e)
+                void ClientHandlerDisconnected(object s, ClientHandler clientHandler)
                 {
-                    var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
                     numDisconnects++;
                 }
@@ -152,9 +149,8 @@ namespace Tests
             using (var server = StartExampleServer(TimeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientHandlerConnected event
-                void ClientHandlerConnected(object s, EventArgs<ClientHandler> e)
+                void ClientHandlerConnected(object s, ClientHandler clientHandler)
                 {
-                    var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
                     numConnects++;
                 }
@@ -162,9 +158,8 @@ namespace Tests
                 server.ClientConnected += ClientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
-                void ClientHandlerDisconnected(object s, EventArgs<ClientHandler> e)
+                void ClientHandlerDisconnected(object s, ClientHandler clientHandler)
                 {
-                    var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
                     numDisconnects++;
                 }
@@ -213,22 +208,22 @@ namespace Tests
             using (var server = StartExampleServer(timeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientConnected event
-                EventHandler<EventArgs<ClientHandler>> clientConnected = (s, e) =>
+                void ClientConnected(object s, ClientHandler clientHandler)
                 {
-                    var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} connected to {clientHandler}");
                     numConnects++;
-                };
-                server.ClientConnected += clientConnected;
+                }
+
+                server.ClientConnected += ClientConnected;
 
                 // Set up the handler to capture the ClientDisconnected event
-                EventHandler<EventArgs<ClientHandler>> clientDisconnected = (s, e) =>
+                void ClientDisconnected(object s, ClientHandler clientHandler)
                 {
-                    var clientHandler = e.Data;
                     _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} disconnected from {clientHandler}");
                     numDisconnects++;
-                };
-                server.ClientDisconnected += clientDisconnected;
+                }
+
+                server.ClientDisconnected += ClientDisconnected;
 
                 using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
                 {
@@ -293,9 +288,8 @@ namespace Tests
                 client1.Connected += Connected;
 
                 // Set up the handler to capture the Disconnected event
-                void Disconnected(object s, EventArgs<Error> e)
+                void Disconnected(object s, Error error)
                 {
-                    var error = e.Data;
                     _output.WriteLine($"Client is disconnected from {server.Address} due to {error}");
                     isConnected = false;
                 }
@@ -357,9 +351,8 @@ namespace Tests
                     var numTrades = 0;
 
                     // Set up the handler to capture the MarketDataSnapshot event
-                    void MarketDataSnapshotEvent(object s, EventArgs<MarketDataSnapshot> e)
+                    void MarketDataSnapshotEvent(object s, MarketDataSnapshot snapshot)
                     {
-                        var snapshot = e.Data;
                         _output.WriteLine($"Client1 received a MarketDataSnapshot after {sw.ElapsedMilliseconds} msecs");
                         numSnapshots++;
                     }
@@ -367,9 +360,8 @@ namespace Tests
                     client1.MarketDataSnapshotEvent += MarketDataSnapshotEvent;
 
                     // Set up the handler to capture the MarketDataUpdateTradeCompact events
-                    void MarketDataUpdateTradeCompactEvent(object s, EventArgs<MarketDataUpdateTradeCompact> e)
+                    void MarketDataUpdateTradeCompactEvent(object s, MarketDataUpdateTradeCompact trade)
                     {
-                        var trade = e.Data;
                         numTrades++;
                         //s_logger.Debug("numTrades={numTrades}", numTrades);
                     }
@@ -377,9 +369,8 @@ namespace Tests
                     client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
 
                     // Set up the handler to capture the MarketDataUpdateBidAskCompact events
-                    void MarketDataUpdateBidAskCompactEvent(object s, EventArgs<MarketDataUpdateBidAskCompact> e)
+                    void MarketDataUpdateBidAskCompactEvent(object s, MarketDataUpdateBidAskCompact bidAsk)
                     {
-                        var bidAsk = e.Data;
                         numBidAsks++;
                         //s_logger.Debug("numBidAsks={numBidAsks}", numBidAsks);
                     }

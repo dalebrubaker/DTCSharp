@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using DTCClient;
-using DTCCommon;
-using DTCCommon.EventArgsF;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
@@ -91,9 +89,8 @@ namespace Tests
                     var numTrades = 0;
 
                     // Set up the handler to capture the HistoricalPriceDataResponseHeader event
-                    void ResponseHeaderEvent(object s, EventArgs<HistoricalPriceDataResponseHeader> e)
+                    void ResponseHeaderEvent(object s, HistoricalPriceDataResponseHeader header)
                     {
-                        var header = e.Data;
                         _output.WriteLine($"Client1 received a HistoricalPriceDataResponseHeader after {sw.ElapsedMilliseconds} msecs");
                         numHistoricalPriceDataResponseHeader++;
                     }
@@ -101,9 +98,8 @@ namespace Tests
                     clientHistorical.HistoricalPriceDataResponseHeaderEvent += ResponseHeaderEvent;
 
                     // Set up the handler to capture the HistoricalPriceDataRecordResponse events
-                    void HistoricalPriceDataRecordResponseEvent(object s, EventArgs<HistoricalPriceDataRecordResponse> e)
+                    void HistoricalPriceDataRecordResponseEvent(object s, HistoricalPriceDataRecordResponse trade)
                     {
-                        var trade = e.Data;
                         numTrades++;
                         if (trade.IsFinalRecord != 0)
                         {
@@ -120,7 +116,7 @@ namespace Tests
                         Symbol = "ESZ6",
                         Exchange = "",
                         RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
-                        StartDateTime = DateTime.MinValue.UtcToDtcDateTime(), 
+                        StartDateTime = DateTime.MinValue.UtcToDtcDateTime(),
                         EndDateTime = DateTime.MaxValue.UtcToDtcDateTime(),
                         MaxDaysToReturn = 1, // ignored in this test
                         UseZLibCompression = UseZLibCompression ? 1 : 0,
@@ -137,7 +133,7 @@ namespace Tests
                     _output.WriteLine($"Client1 received all {numTrades} historical trades in {elapsed} msecs");
 
                     Assert.Equal(1, numHistoricalPriceDataResponseHeader);
-                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend + 1, numTrades ); // Plus 1 because of empty Final record
+                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend + 1, numTrades); // Plus 1 because of empty Final record
                 }
             }
         }

@@ -1,5 +1,4 @@
 ﻿using System;
-using DTCCommon.EventArgsF;
 using DTCPB;
 
 namespace DTCCommon
@@ -9,12 +8,12 @@ namespace DTCCommon
         private readonly uint _symbolId;
         private readonly string _symbol;
         private readonly string _exchange;
-        private readonly Action<EventHandler<EventArgs<T>>> _remove;
+        private readonly Action<EventHandler<T>> _remove;
         private readonly Action<T> _callback;
         private bool _isDisposed;
 
         /// <summary>
-        /// 
+        /// EventToCallbackForSymbol
         /// </summary>
         /// <param name="symbolId">the symbol Id for events to be sent to callback</param>
         /// <param name="symbol">for debugging</param>
@@ -22,8 +21,8 @@ namespace DTCCommon
         /// <param name="add"></param>
         /// <param name="remove"></param>
         /// <param name="callback">the callback for the event, or ignored if null</param>
-        public EventToCallbackForSymbol(uint symbolId, string symbol, string exchange, Action<EventHandler<EventArgs<T>>> add,
-            Action<EventHandler<EventArgs<T>>> remove, Action<T> callback)
+        public EventToCallbackForSymbol(uint symbolId, string symbol, string exchange, Action<EventHandler<T>> add, Action<EventHandler<T>> remove,
+            Action<T> callback)
         {
             _symbolId = symbolId;
             _symbol = symbol;
@@ -38,24 +37,18 @@ namespace DTCCommon
 
         public bool IsDataReceived { get; private set; }
 
-        private void Client_EventT(object sender, EventArgs<T> e)
+        private void Client_EventT(object sender, T e)
         {
-            if (e.Data.SymbolID == _symbolId)
+            if (e.SymbolID == _symbolId)
             {
-                _callback(e.Data);
+                _callback(e);
                 IsDataReceived = true;
             }
         }
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing && !_isDisposed)
+            if (!_isDisposed)
             {
                 if (_callback != null)
                 {
@@ -64,6 +57,7 @@ namespace DTCCommon
                 }
                 _isDisposed = true;
             }
+            GC.SuppressFinalize(this);
         }
 
         public override string ToString()
