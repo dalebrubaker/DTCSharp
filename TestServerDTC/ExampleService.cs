@@ -180,40 +180,23 @@ namespace TestServer
                     break;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = message as MarketDataRequest;
-
-                    // First we send a snapshot, then bids and asks
-                    var marketDataSnapshot = new MarketDataSnapshot
+                    switch (marketDataRequest.RequestAction)
                     {
-                        AskPrice = 1,
-                        AskQuantity = 1,
-                        BidAskDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
-                        BidPrice = 2,
-                        BidQuantity = 2,
-                        LastTradeDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
-                        LastTradePrice = 123,
-                        LastTradeVolume = 456,
-                        MarketDepthUpdateDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
-                        OpenInterest = 789
-                    };
-                    clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, marketDataSnapshot);
-                    var numSentMarketData = 0;
-                    var numSentBidAsks = 0;
-                    for (int i = 0; i < NumTradesAndBidAsksToSend; i++)
-                    {
-                        var marketDataUpdateTradeCompact = MarketDataUpdateTradeCompacts[i];
-                        if (marketDataRequest.SymbolID == marketDataUpdateTradeCompact.SymbolID)
-                        {
-                            numSentMarketData++;
-                            clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact, marketDataUpdateTradeCompact);
-                        }
-                        var marketDataUpdateBidAskCompact = MarketDataUpdateBidAskCompacts[i];
-                        if (marketDataRequest.SymbolID == marketDataUpdateBidAskCompact.SymbolID)
-                        {
-                            numSentBidAsks++;
-                            clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
-                        }
+                        case RequestActionEnum.RequestActionUnset:
+                            break;
+                        case RequestActionEnum.Subscribe:
+                            SendSnapshot<T>(clientHandler);
+                            SendMarketData<T>(clientHandler, marketDataRequest);
+                            break;
+                        case RequestActionEnum.Unsubscribe:
+                            // stop sending data
+                            break;
+                        case RequestActionEnum.Snapshot:
+                            SendSnapshot<T>(clientHandler);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
-                    s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
                     break;
                 case DTCMessageType.MarketDataReject:
                 case DTCMessageType.MarketDataSnapshot:
@@ -317,6 +300,47 @@ namespace TestServer
             }
             var msg = $"{messageType}:{message}";
             OnMessage(msg);
+        }
+
+        private void SendMarketData<T>(ClientHandler clientHandler, MarketDataRequest marketDataRequest) where T : IMessage
+        {
+            var numSentMarketData = 0;
+            var numSentBidAsks = 0;
+            for (int i = 0; i < NumTradesAndBidAsksToSend; i++)
+            {
+                var marketDataUpdateTradeCompact = MarketDataUpdateTradeCompacts[i];
+                if (marketDataRequest.SymbolID == marketDataUpdateTradeCompact.SymbolID)
+                {
+                    numSentMarketData++;
+                    clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact, marketDataUpdateTradeCompact);
+                }
+                var marketDataUpdateBidAskCompact = MarketDataUpdateBidAskCompacts[i];
+                if (marketDataRequest.SymbolID == marketDataUpdateBidAskCompact.SymbolID)
+                {
+                    numSentBidAsks++;
+                    clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
+                }
+            }
+            s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
+        }
+
+        private static void SendSnapshot<T>(ClientHandler clientHandler) where T : IMessage
+        {
+            // First we send a snapshot, then bids and asks
+            var marketDataSnapshot = new MarketDataSnapshot
+            {
+                AskPrice = 1,
+                AskQuantity = 1,
+                BidAskDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
+                BidPrice = 2,
+                BidQuantity = 2,
+                LastTradeDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
+                LastTradePrice = 123,
+                LastTradeVolume = 456,
+                MarketDepthUpdateDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
+                OpenInterest = 789
+            };
+            clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, marketDataSnapshot);
         }
 
         #endregion events
