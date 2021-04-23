@@ -719,7 +719,7 @@ namespace DTCClient
                     //     await Task.Delay(1).ConfigureAwait(false);
                     //     continue;
                     // }
-                    s_logger.Debug($"Waiting in {nameof(Client)}.{nameof(ResponseReader)} to read a message");
+                    //s_logger.Debug($"Waiting in {nameof(Client)}.{nameof(ResponseReader)} to read a message");
                     var (messageType, messageBytes) = _currentCodec.ReadMessage();
                     if (messageType == DTCMessageType.MessageTypeUnset)
                     {
@@ -760,7 +760,7 @@ namespace DTCClient
             if (messageType == DTCMessageType.MarketDataUpdateBidAsk)
             { }
 
-            s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
+            //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
             switch (messageType)
             {
                 case DTCMessageType.LogonResponse:

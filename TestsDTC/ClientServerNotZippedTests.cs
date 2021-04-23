@@ -8,6 +8,7 @@ using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
+using NLog;
 using TestServer;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,6 +17,8 @@ namespace Tests
 {
     public class ClientServerNotZippedTests : IDisposable
     {
+        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+
         private readonly ITestOutputHelper _output;
 
         public ClientServerNotZippedTests(ITestOutputHelper output)
@@ -25,7 +28,7 @@ namespace Tests
 
         public void Dispose()
         {
-            _output.WriteLine("Disposing");
+            //_output.WriteLine("Disposing");
         }
 
         private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null)
@@ -63,6 +66,7 @@ namespace Tests
             const int TimeoutForConnect = 10000;
             const bool UseZLibCompression = false;
             var isFinalRecordReceived = false;
+            var sw = Stopwatch.StartNew();
 
             // Set up the exampleService responses
             var exampleService = new ExampleService();
@@ -73,7 +77,6 @@ namespace Tests
                 using (var clientHistorical = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port, EncodingEnum.BinaryEncoding)
                     .ConfigureAwait(false))
                 {
-                    var sw = Stopwatch.StartNew();
                     while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
                     {
                         // Wait for the client to connect

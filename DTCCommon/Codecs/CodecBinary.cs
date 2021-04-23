@@ -39,7 +39,7 @@ namespace DTCCommon.Codecs
             {
                 return;
             }
-            Logger.Debug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
+            //Logger.Debug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
             int sizeExcludingHeader;
             switch (messageType)
             {
@@ -243,8 +243,7 @@ namespace DTCCommon.Codecs
                     _binaryWriter.Write((byte)historicalPriceDataRequest.Integer1);
                     return;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    Logger.Debug($"{nameof(CodecBinary)} is writing {messageType} {message}");
-
+                    // Logger.Debug($"{nameof(CodecBinary)} is writing {messageType} {message}");
                     var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
                     sizeExcludingHeader = 4 + 4 + 2 + 2 + 4;
                     Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
@@ -655,7 +654,7 @@ namespace DTCCommon.Codecs
                     index += 2; // align for packing
                     historicalPriceDataResponseHeader.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, index);
 
-                    Logger.Debug($"{nameof(CodecBinary)} loaded {messageType} {result}");
+                    //Logger.Debug($"{nameof(CodecBinary)} loaded {messageType} {result}");
                     return result;
                 case DTCMessageType.HistoricalPriceDataReject:
                     var historicalPriceDataReject = result as HistoricalPriceDataReject;

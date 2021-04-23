@@ -18,12 +18,12 @@ namespace TestServer
 
         public ExampleService()
         {
-            NumTradesAndBidAsksToSend = 20;
+            NumTradesAndBidAsksToSend = 20000;
             MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>(NumTradesAndBidAsksToSend);
             MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>(NumTradesAndBidAsksToSend);
             MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>(NumTradesAndBidAsksToSend);
 
-            NumHistoricalPriceDataRecordsToSend = 10;
+            NumHistoricalPriceDataRecordsToSend = 10000;
             HistoricalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>(NumHistoricalPriceDataRecordsToSend);
 
             // Define default test data
