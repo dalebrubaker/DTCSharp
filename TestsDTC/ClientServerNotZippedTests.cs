@@ -12,7 +12,7 @@ using TestServer;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Tests
+namespace TestsDTC
 {
     public class ClientServerNotZippedTests : IDisposable
     {

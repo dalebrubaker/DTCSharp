@@ -1,4 +1,4 @@
-﻿namespace TestClient
+﻿namespace TestClientDTC
 {
     partial class LogControl
     {

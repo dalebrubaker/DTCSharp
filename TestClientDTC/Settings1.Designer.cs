@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace TestClient {
+namespace TestClientDTC {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

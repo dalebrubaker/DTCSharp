@@ -13,13 +13,13 @@ namespace DTCCommon.Codecs
 {
     public abstract class Codec
     {
-        private readonly Stream _stream;
+        private readonly Stream _stream; // normally a NetworkStream can be a MemoryStream for a unit test
         private readonly ClientOrServer _clientOrServer;
         protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
         protected BinaryWriter _binaryWriter;
         protected bool _disabledHeartbeats;
-        protected bool _isZippedStream;
+        private bool _isZippedStream;
         private BinaryReader _binaryReader;
         private DeflateStream _deflateStream;
 

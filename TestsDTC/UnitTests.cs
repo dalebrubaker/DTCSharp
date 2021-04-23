@@ -2,7 +2,7 @@
 using DTCCommon.Extensions;
 using Xunit;
 
-namespace Tests
+namespace TestsDTC
 {
     public class UnitTests : IDisposable
     {

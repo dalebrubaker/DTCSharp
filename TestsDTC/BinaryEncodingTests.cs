@@ -8,7 +8,7 @@ using DTCPB;
 using Google.Protobuf;
 using Xunit;
 
-namespace Tests
+namespace TestsDTC
 {
     public class BinaryEncodingTests : IDisposable
     {

@@ -8,7 +8,7 @@ using TestServer;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Tests
+namespace TestsDTC
 {
     /// <summary>
     /// This tests needs to be in its own class or it causes others to fail

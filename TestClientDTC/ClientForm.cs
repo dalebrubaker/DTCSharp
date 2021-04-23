@@ -8,7 +8,7 @@ using DTCCommon;
 using DTCCommon.Extensions;
 using DTCPB;
 
-namespace TestClient
+namespace TestClientDTC
 {
     public partial class ClientForm : Form
     {
@@ -683,8 +683,8 @@ namespace TestClient
             try
             {
                 const int Timeout = 5000;
-                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_symbolId1, _ctsLevel1Symbol1.Token, Timeout, symbol, "", MarketDataSnapshotCallback,
-                    MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
+                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_symbolId1, _ctsLevel1Symbol1.Token, Timeout, symbol, "",
+                    MarketDataSnapshotCallback, MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
                 if (reject != null)
                 {
                     var message = $"Subscription to {symbol} rejected: {reject.RejectText}";
@@ -708,8 +708,8 @@ namespace TestClient
             logControlLevel1.LogMessage($"Getting market data for {symbol}");
             try
             {
-                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_symbolId2, _ctsLevel1Symbol2.Token, 5000, symbol, "", MarketDataSnapshotCallback,
-                    MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
+                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_symbolId2, _ctsLevel1Symbol2.Token, 5000, symbol, "",
+                    MarketDataSnapshotCallback, MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
                 if (reject != null)
                 {
                     var message = $"Subscription to {symbol} rejected: {reject.RejectText}";

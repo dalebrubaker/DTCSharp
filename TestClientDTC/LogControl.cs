@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace TestClient
+namespace TestClientDTC
 {
     public partial class LogControl : UserControl
     {

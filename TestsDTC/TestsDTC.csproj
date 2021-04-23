@@ -7,7 +7,7 @@
     <ProjectGuid>{36C6832D-45A4-45EC-AC29-78D3A0F29098}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Tests</RootNamespace>
+    <RootNamespace>TestsDTC</RootNamespace>
     <AssemblyName>TestsDTC</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
