@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using DTCCommon.EventArgsF;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
@@ -127,54 +126,12 @@ namespace TestServer
 
         #region events
 
-        public event EventHandler<EventArgs<Heartbeat, DTCMessageType, ClientHandler>> HeartbeatEvent;
-        public event EventHandler<EventArgs<Logoff, DTCMessageType, ClientHandler>> LogoffEvent;
-
-        /// <summary>
-        /// This event is only thrown for informational purposes.
-        /// HandleMessage() takes care of changing the current encoding and responding.
-        /// So do NOT respond to this event.
-        /// </summary>
-        public event EventHandler<EventArgs<EncodingRequest, DTCMessageType, ClientHandler>> EncodingRequestEvent;
-
-        public event EventHandler<EventArgs<LogonRequest, DTCMessageType, ClientHandler>> LogonRequestEvent;
-        public event EventHandler<EventArgs<MarketDataRequest, DTCMessageType, ClientHandler>> MarketDataRequestEvent;
-        public event EventHandler<EventArgs<MarketDepthRequest, DTCMessageType, ClientHandler>> MarketDepthRequestEvent;
-        public event EventHandler<EventArgs<SubmitNewSingleOrder, DTCMessageType, ClientHandler>> SubmitNewSingleOrderEvent;
-        public event EventHandler<EventArgs<SubmitNewSingleOrderInt, DTCMessageType, ClientHandler>> SubmitNewSingleOrderIntEvent;
-        public event EventHandler<EventArgs<SubmitNewOCOOrder, DTCMessageType, ClientHandler>> SubmitNewOcoOrderEvent;
-        public event EventHandler<EventArgs<SubmitNewOCOOrderInt, DTCMessageType, ClientHandler>> SubmitNewOcoOrderIntEvent;
-        public event EventHandler<EventArgs<CancelOrder, DTCMessageType, ClientHandler>> CancelOrderEvent;
-        public event EventHandler<EventArgs<CancelReplaceOrder, DTCMessageType, ClientHandler>> CancelReplaceOrderEvent;
-        public event EventHandler<EventArgs<CancelReplaceOrderInt, DTCMessageType, ClientHandler>> CancelReplaceOrderIntEvent;
-        public event EventHandler<EventArgs<OpenOrdersRequest, DTCMessageType, ClientHandler>> OpenOrdersRequestEvent;
-        public event EventHandler<EventArgs<HistoricalOrderFillsRequest, DTCMessageType, ClientHandler>> HistoricalOrderFillsRequestEvent;
-        public event EventHandler<EventArgs<CurrentPositionsRequest, DTCMessageType, ClientHandler>> CurrentPositionsRequestEvent;
-        public event EventHandler<EventArgs<TradeAccountsRequest, DTCMessageType, ClientHandler>> TradeAccountsRequestEvent;
-        public event EventHandler<EventArgs<ExchangeListRequest, DTCMessageType, ClientHandler>> ExchangeListRequestEvent;
-        public event EventHandler<EventArgs<SymbolsForExchangeRequest, DTCMessageType, ClientHandler>> SymbolsForExchangeRequestEvent;
-        public event EventHandler<EventArgs<UnderlyingSymbolsForExchangeRequest, DTCMessageType, ClientHandler>> UnderlyingSymbolsForExchangeRequestEvent;
-        public event EventHandler<EventArgs<SymbolsForUnderlyingRequest, DTCMessageType, ClientHandler>> SymbolsForUnderlyingRequestEvent;
-        public event EventHandler<EventArgs<SecurityDefinitionForSymbolRequest, DTCMessageType, ClientHandler>> SecurityDefinitionForSymbolRequestEvent;
-        public event EventHandler<EventArgs<SymbolSearchRequest, DTCMessageType, ClientHandler>> SymbolSearchRequestEvent;
-        public event EventHandler<EventArgs<AccountBalanceRequest, DTCMessageType, ClientHandler>> AccountBalanceRequestEvent;
-        public event EventHandler<EventArgs<HistoricalPriceDataRequest, DTCMessageType, ClientHandler>> HistoricalPriceDataRequestEvent;
-
         public event EventHandler<string> MessageEvent;
-
-        public bool SendSymbols { get; set; }
 
         private void OnMessage(string message)
         {
             var temp = MessageEvent;
             temp?.Invoke(this, message);
-        }
-
-        private void ThrowEvent<T>(T message, EventHandler<EventArgs<T, DTCMessageType, ClientHandler>> eventForMessage, DTCMessageType messageType,
-            ClientHandler clientHandler) where T : IMessage
-        {
-            var temp = eventForMessage; // for thread safety
-            temp?.Invoke(this, new EventArgs<T, DTCMessageType, ClientHandler>(message, messageType, clientHandler));
         }
 
         public void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage
@@ -239,7 +196,7 @@ namespace TestServer
                         OpenInterest = 789
                     };
                     clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, marketDataSnapshot);
-                   var numSentMarketData = 0;
+                    var numSentMarketData = 0;
                     var numSentBidAsks = 0;
                     for (int i = 0; i < NumTradesAndBidAsksToSend; i++)
                     {
@@ -255,7 +212,6 @@ namespace TestServer
                             numSentBidAsks++;
                             clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                         }
-                        
                     }
                     s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
                     break;
@@ -361,131 +317,6 @@ namespace TestServer
             }
             var msg = $"{messageType}:{message}";
             OnMessage(msg);
-        }
-
-        private void OnHeartbeatEvent(EventArgs<Heartbeat, DTCMessageType, ClientHandler> e)
-        {
-            HeartbeatEvent?.Invoke(this, e);
-        }
-
-        private void OnLogoffEvent(EventArgs<Logoff, DTCMessageType, ClientHandler> e)
-        {
-            LogoffEvent?.Invoke(this, e);
-        }
-
-        private void OnEncodingRequestEvent(EventArgs<EncodingRequest, DTCMessageType, ClientHandler> e)
-        {
-            EncodingRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnLogonRequestEvent(EventArgs<LogonRequest, DTCMessageType, ClientHandler> e)
-        {
-            LogonRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnMarketDataRequestEvent(EventArgs<MarketDataRequest, DTCMessageType, ClientHandler> e)
-        {
-            MarketDataRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnMarketDepthRequestEvent(EventArgs<MarketDepthRequest, DTCMessageType, ClientHandler> e)
-        {
-            MarketDepthRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnSubmitNewSingleOrderEvent(EventArgs<SubmitNewSingleOrder, DTCMessageType, ClientHandler> e)
-        {
-            SubmitNewSingleOrderEvent?.Invoke(this, e);
-        }
-
-        private void OnSubmitNewOcoOrderIntEvent(EventArgs<SubmitNewOCOOrderInt, DTCMessageType, ClientHandler> e)
-        {
-            SubmitNewOcoOrderIntEvent?.Invoke(this, e);
-        }
-
-        private void OnCancelOrderEvent(EventArgs<CancelOrder, DTCMessageType, ClientHandler> e)
-        {
-            CancelOrderEvent?.Invoke(this, e);
-        }
-
-        private void OnCancelReplaceOrderIntEvent(EventArgs<CancelReplaceOrderInt, DTCMessageType, ClientHandler> e)
-        {
-            CancelReplaceOrderIntEvent?.Invoke(this, e);
-        }
-
-        private void OnOpenOrdersRequestEvent(EventArgs<OpenOrdersRequest, DTCMessageType, ClientHandler> e)
-        {
-            OpenOrdersRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnHistoricalOrderFillsRequestEvent(EventArgs<HistoricalOrderFillsRequest, DTCMessageType, ClientHandler> e)
-        {
-            HistoricalOrderFillsRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnTradeAccountsRequestEvent(EventArgs<TradeAccountsRequest, DTCMessageType, ClientHandler> e)
-        {
-            TradeAccountsRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnCurrentPositionsRequestEvent(EventArgs<CurrentPositionsRequest, DTCMessageType, ClientHandler> e)
-        {
-            CurrentPositionsRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnSubmitNewSingleOrderIntEvent(EventArgs<SubmitNewSingleOrderInt, DTCMessageType, ClientHandler> e)
-        {
-            SubmitNewSingleOrderIntEvent?.Invoke(this, e);
-        }
-
-        private void OnSubmitNewOcoOrderEvent(EventArgs<SubmitNewOCOOrder, DTCMessageType, ClientHandler> e)
-        {
-            SubmitNewOcoOrderEvent?.Invoke(this, e);
-        }
-
-        private void OnCancelReplaceOrderEvent(EventArgs<CancelReplaceOrder, DTCMessageType, ClientHandler> e)
-        {
-            CancelReplaceOrderEvent?.Invoke(this, e);
-        }
-
-        private void OnExchangeListRequestEvent(EventArgs<ExchangeListRequest, DTCMessageType, ClientHandler> e)
-        {
-            ExchangeListRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnSymbolsForExchangeRequestEvent(EventArgs<SymbolsForExchangeRequest, DTCMessageType, ClientHandler> e)
-        {
-            SymbolsForExchangeRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnUnderlyingSymbolsForExchangeRequestEvent(EventArgs<UnderlyingSymbolsForExchangeRequest, DTCMessageType, ClientHandler> e)
-        {
-            UnderlyingSymbolsForExchangeRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnSymbolsForUnderlyingRequestEvent(EventArgs<SymbolsForUnderlyingRequest, DTCMessageType, ClientHandler> e)
-        {
-            SymbolsForUnderlyingRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnSymbolSearchRequestEvent(EventArgs<SymbolSearchRequest, DTCMessageType, ClientHandler> e)
-        {
-            SymbolSearchRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnHistoricalPriceDataRequestEvent(EventArgs<HistoricalPriceDataRequest, DTCMessageType, ClientHandler> e)
-        {
-            HistoricalPriceDataRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnAccountBalanceRequestEvent(EventArgs<AccountBalanceRequest, DTCMessageType, ClientHandler> e)
-        {
-            AccountBalanceRequestEvent?.Invoke(this, e);
-        }
-
-        private void OnSecurityDefinitionForSymbolRequestEvent(EventArgs<SecurityDefinitionForSymbolRequest, DTCMessageType, ClientHandler> e)
-        {
-            SecurityDefinitionForSymbolRequestEvent?.Invoke(this, e);
         }
 
         #endregion events
