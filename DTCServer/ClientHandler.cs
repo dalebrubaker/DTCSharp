@@ -439,9 +439,9 @@ namespace DTCServer
                 if (historicalPriceDataResponseHeader.UseZLibCompression != 0)
                 {
                     // Switch to writing zipped
+                    s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponse)} is switching server stream to write zipped.");
                     _currentCodec.WriteSwitchToZipped();
                     _useHeartbeat = false;
-                    s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponse)} switched server stream to zipped.");
                 }
             }
         }

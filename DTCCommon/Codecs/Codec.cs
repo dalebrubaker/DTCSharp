@@ -2,7 +2,6 @@
 using System;
 using System.IO;
 using System.IO.Compression;
-using System.Net.Sockets;
 using DTCCommon.Enums;
 using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
@@ -50,21 +49,29 @@ namespace DTCCommon.Codecs
 
         public (DTCMessageType messageType, byte[] bytes) ReadMessage()
         {
-            var size = _binaryReader.ReadUInt16();
-            var messageType = (DTCMessageType)_binaryReader.ReadUInt16();
-            //Logger.Debug($"{nameof(Client)}.{nameof(ResponseReaderAsync)} is about to process {messageType}");
-#if DEBUG
-            if (messageType == DTCMessageType.EncodingResponse)
+            try
             {
-            }
-            DebugHelpers.AddResponseReceived(messageType, this, size);
-            var requestsSent = DebugHelpers.RequestsSent;
-            var requestsReceived = DebugHelpers.RequestsReceived;
-            var responsesReceived = DebugHelpers.ResponsesReceived;
-            var responsesSent = DebugHelpers.ResponsesSent;
+                var size = _binaryReader.ReadUInt16();
+                var messageType = (DTCMessageType)_binaryReader.ReadUInt16();
+                //Logger.Debug($"{nameof(Client)}.{nameof(ResponseReaderAsync)} is about to process {messageType}");
+#if DEBUG
+                if (messageType == DTCMessageType.EncodingResponse)
+                {
+                }
+                DebugHelpers.AddResponseReceived(messageType, this, size);
+                var requestsSent = DebugHelpers.RequestsSent;
+                var requestsReceived = DebugHelpers.RequestsReceived;
+                var responsesReceived = DebugHelpers.ResponsesReceived;
+                var responsesSent = DebugHelpers.ResponsesSent;
 #endif
-            var messageBytes = _binaryReader.ReadBytes(size - 4); // size includes the header size+type
-            return (messageType, messageBytes);
+                var messageBytes = _binaryReader.ReadBytes(size - 4); // size includes the header size+type
+                return (messageType, messageBytes);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, ex.Message);
+                throw;
+            }
         }
 
         protected void WriteEncodingRequest<T>(DTCMessageType messageType, T message) where T : IMessage
@@ -109,6 +116,10 @@ namespace DTCCommon.Codecs
             _binaryWriter.Write(protocolType2); // 3 chars DTC plus null terminator 
         }
 
+        /// <summary>
+        /// Called by Client when the server tells it to read zipped
+        /// </summary>
+        /// <exception cref="DTCSharpException"></exception>
         public void ReadSwitchToZipped()
         {
             if (_isZippedStream)
@@ -126,22 +137,28 @@ namespace DTCCommon.Codecs
             {
                 throw new DTCSharpException($"Unexpected zlibFlg header byte {zlibFlg}, expected 156");
             }
-            SwitchToDeflatedStream();
-            Logger.Debug($"Changed to deflateStream.");
+            try
+            {
+                _isZippedStream = true;
+                _disabledHeartbeats = true;
+                var deflateStream = new DeflateStream(_stream, CompressionMode.Decompress);
+                _binaryReader = new BinaryReader(deflateStream); 
+                // Can't write this stream_binaryWriter = new BinaryWriter(deflateStream);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, ex.Message);
+                throw;
+            }
+            Logger.Debug("Switched to zipped in {nameof(ReadSwitchToZipped)} {this}", this, nameof(ReadSwitchToZipped));
         }
 
-        private void SwitchToDeflatedStream()
-        {
-            _isZippedStream = true;
-            _disabledHeartbeats = true;
-            var deflateStream = new DeflateStream(_stream, CompressionMode.Decompress);
-            //deflateStream.Flush();
-            _binaryReader = new BinaryReader(deflateStream);
-            _binaryWriter = new BinaryWriter(deflateStream);
-        }
-
+        /// <summary>
+        /// Called by ClientHandler when the server switches to write zipped
+        /// </summary>
+        /// <exception cref="DTCSharpException"></exception>
         public void WriteSwitchToZipped()
-        {            
+        {
             if (_isZippedStream)
             {
                 throw new DTCSharpException("Why?");
@@ -150,20 +167,33 @@ namespace DTCCommon.Codecs
             // Write the 2-byte header that Sierra Chart has coming from ZLib. See https://tools.ietf.org/html/rfc1950
             _binaryWriter.Write((byte)120); // zlibCmf 120 = 0111 1000 means Deflate 
             _binaryWriter.Write((byte)156); // zlibFlg 156 = 1001 1100
-            SwitchToDeflatedStream();
+            try
+            {
+                _isZippedStream = true;
+                _disabledHeartbeats = true;
+                var deflateStream = new DeflateStream(_stream, CompressionMode.Compress, true);
+                deflateStream.Flush();
+                // can't read this stream _binaryReader = new BinaryReader(deflateStream);
+                _binaryWriter = new BinaryWriter(deflateStream);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, ex.Message);
+                throw;
+            }
 
-            //Logger.Debug($"Switched to zipped _binaryWriter");
+            Logger.Debug("Switched to zipped in {nameof(WriteSwitchToZipped)} {this}", this, nameof(WriteSwitchToZipped));
+        }
+
+        public void Close()
+        {
+            _binaryReader.Close();
+            _binaryWriter.Close();
         }
 
         public override string ToString()
         {
             return $"{_clientOrServer} {GetType().Name}";
-        }
-
-        public void Close()
-        {
-           _binaryReader.Close();
-           _binaryWriter.Close();
         }
     }
 }

@@ -963,6 +963,8 @@ namespace DTCClient
                     if (historicalPriceDataResponseHeader.UseZLibCompression == 1)
                     {
                         // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
+                        s_logger.Debug($"{nameof(Client)}.{nameof(ProcessResponseBytes)} is switching client stream to read zipped.");
+
                         _currentCodec.ReadSwitchToZipped();
                         _useHeartbeat = false;
                     }

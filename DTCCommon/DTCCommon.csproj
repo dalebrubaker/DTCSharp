@@ -136,8 +136,8 @@
     </PackageReference>
     <PackageReference Include="Grpc.Tools">
       <Version>2.37.0</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="NLog">
       <Version>4.7.9</Version>

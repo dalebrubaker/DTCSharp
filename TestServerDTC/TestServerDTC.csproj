@@ -102,11 +102,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf">
-      <Version>3.15.8</Version>
-    </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\DTCClient\DTCClient.csproj">
       <Project>{5eac8139-46c7-4573-bf60-4010633d2628}</Project>
       <Name>DTCClient</Name>
@@ -119,6 +114,11 @@
       <Project>{ed55fc12-c152-4644-9427-7ef6cc11365e}</Project>
       <Name>DTCServer</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf">
+      <Version>3.15.8</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

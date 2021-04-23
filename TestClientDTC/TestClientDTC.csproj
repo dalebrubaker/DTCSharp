@@ -48,15 +48,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ClientForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="ClientForm.cs" />
     <Compile Include="ClientForm.Designer.cs">
       <DependentUpon>ClientForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="LogControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Include="LogControl.cs" />
     <Compile Include="LogControl.Designer.cs">
       <DependentUpon>LogControl.cs</DependentUpon>
     </Compile>
