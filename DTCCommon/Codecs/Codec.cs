@@ -148,7 +148,7 @@ namespace DTCCommon.Codecs
                 _isZippedStream = true;
                 _disabledHeartbeats = true;
                 var deflateStream = new DeflateStream(_stream, CompressionMode.Decompress);
-                _binaryReader = new BinaryReader(deflateStream);
+                _binaryReader = new BinaryReader(deflateStream); 
                 // Can't write this stream_binaryWriter = new BinaryWriter(deflateStream);
             }
             catch (Exception ex)

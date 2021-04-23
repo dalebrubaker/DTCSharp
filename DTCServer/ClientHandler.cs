@@ -162,15 +162,15 @@ namespace DTCServer
         /// <param name="binaryReader"></param>
         private void ProcessClientRequest(DTCMessageType messageType, byte[] messageBytes, ref BinaryReader binaryReader)
         {
-            //#if DEBUG
-            //            var port = ((IPEndPoint)_tcpClient.Client.LocalEndPoint).Port;
-            //            if (port == 49998)
-            //            {
-            //#pragma warning disable 219
-            //                var debug = 1;
-            //#pragma warning restore 219
-            //            }
-            //#endif
+//#if DEBUG
+//            var port = ((IPEndPoint)_tcpClient.Client.LocalEndPoint).Port;
+//            if (port == 49998)
+//            {
+//#pragma warning disable 219
+//                var debug = 1;
+//#pragma warning restore 219
+//            }
+//#endif
             switch (messageType)
             {
                 case DTCMessageType.LogonRequest:
@@ -428,18 +428,18 @@ namespace DTCServer
         public void SendResponse<T>(DTCMessageType messageType, T message) where T : IMessage
         {
 #if DEBUG
-            //            if (messageType != DTCMessageType.Heartbeat)
-            //            {
-            //#pragma warning disable 219
-            //                var debug = 1;
-            //#pragma warning restore 219
-            //            }
-            //            else
-            //            {
-            //#pragma warning disable 219
-            //                var debug3 = 1;
-            //#pragma warning restore 219
-            //            }
+//            if (messageType != DTCMessageType.Heartbeat)
+//            {
+//#pragma warning disable 219
+//                var debug = 1;
+//#pragma warning restore 219
+//            }
+//            else
+//            {
+//#pragma warning disable 219
+//                var debug3 = 1;
+//#pragma warning restore 219
+//            }
             if (_currentCodec == null)
             {
                 return;

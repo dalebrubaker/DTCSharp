@@ -194,7 +194,7 @@ namespace DTCClient
                 return null;
             }
             ClientName = clientName;
-            _tcpClient = new TcpClient { NoDelay = true, ReceiveBufferSize = int.MaxValue, LingerState = new LingerOption(true, 5) };
+            _tcpClient = new TcpClient {NoDelay = true, ReceiveBufferSize = int.MaxValue, LingerState = new LingerOption(true, 5)};
             if (_timeoutNoActivity != 0)
             {
                 _tcpClient.ReceiveTimeout = _timeoutNoActivity;
@@ -571,11 +571,11 @@ namespace DTCClient
             MarketDataReject marketDataReject = null;
             if (LogonResponse == null)
             {
-                return new MarketDataReject { RejectText = "Not logged on." };
+                return new MarketDataReject {RejectText = "Not logged on."};
             }
             if (LogonResponse.MarketDataSupported == 0)
             {
-                return new MarketDataReject { RejectText = "Market data is not supported." };
+                return new MarketDataReject {RejectText = "Market data is not supported."};
             }
 
             // Set up handler to capture the reject event
@@ -635,12 +635,12 @@ namespace DTCClient
         public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
 #if DEBUG
-            //            if (messageType != DTCMessageType.Heartbeat)
-            //            {
-            //#pragma warning disable 219
-            //                var debug = 1;
-            //#pragma warning restore 219
-            //            }
+//            if (messageType != DTCMessageType.Heartbeat)
+//            {
+//#pragma warning disable 219
+//                var debug = 1;
+//#pragma warning restore 219
+//            }
             DebugHelpers.AddRequestSent(messageType, _currentCodec);
             //var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
             //if (port == 49998 && messageType == DTCMessageType.LogonResponse)

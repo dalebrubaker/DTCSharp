@@ -1,6 +1,12 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using DTCPB;
+using uint8_t = System.Byte;
+using uint16_t = System.UInt16;
+using u_int16 = System.UInt16;
+using u_int32 = System.UInt32;
+using int32_t = System.Int32;
+using t_DateTime4Byte = System.Int32;
 
 // ReSharper disable InconsistentNaming
 

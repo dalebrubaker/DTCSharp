@@ -1,5 +1,8 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Net.Sockets;
 using DTCCommon.Enums;
+using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
 
@@ -9,9 +12,9 @@ namespace DTCCommon.Codecs
     {
         public CodecProtobuf(Stream stream, ClientOrServer clientOrServer) : base(stream, clientOrServer)
         {
-
+            
         }
-
+        
         public override void Write<T>(DTCMessageType messageType, T message)
         {
             if (_binaryWriter == null)

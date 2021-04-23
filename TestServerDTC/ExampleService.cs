@@ -239,7 +239,7 @@ namespace TestServer
                         OpenInterest = 789
                     };
                     clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, marketDataSnapshot);
-                    var numSentMarketData = 0;
+                   var numSentMarketData = 0;
                     var numSentBidAsks = 0;
                     for (int i = 0; i < NumTradesAndBidAsksToSend; i++)
                     {
@@ -255,7 +255,7 @@ namespace TestServer
                             numSentBidAsks++;
                             clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                         }
-
+                        
                     }
                     s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
                     break;

@@ -12,7 +12,7 @@ namespace DTCCommon.EventArgsF
         public T Data { get; }
     }
 
-
+    
 
     public class EventArgs<T1, T2, T3> : EventArgs
     {
@@ -28,8 +28,8 @@ namespace DTCCommon.EventArgsF
         public T3 Data3 { get; }
     }
 
+   
+   
 
-
-
-
+   
 }
