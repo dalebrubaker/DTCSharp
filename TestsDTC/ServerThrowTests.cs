@@ -36,7 +36,7 @@ namespace Tests
             {
                 try
                 {
-                    await Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
+                    var task = Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
                 }
                 catch (Exception exception)
                 {

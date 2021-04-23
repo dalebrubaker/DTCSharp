@@ -5,6 +5,7 @@ using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
 using Google.Protobuf;
+using NLog;
 
 namespace TestServer
 {
@@ -13,6 +14,8 @@ namespace TestServer
     /// </summary>
     public sealed class ExampleService : IServiceDTC
     {
+        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+
         public ExampleService()
         {
             NumTradesAndBidAsksToSend = 20;
@@ -220,7 +223,24 @@ namespace TestServer
                     break;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = message as MarketDataRequest;
-                    var numSentMarketData = 0;
+
+                    // First we send a snapshot, then bids and asks
+                    var marketDataSnapshot = new MarketDataSnapshot
+                    {
+                        AskPrice = 1,
+                        AskQuantity = 1,
+                        BidAskDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
+                        BidPrice = 2,
+                        BidQuantity = 2,
+                        LastTradeDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
+                        LastTradePrice = 123,
+                        LastTradeVolume = 456,
+                        MarketDepthUpdateDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
+                        OpenInterest = 789
+                    };
+                    clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, marketDataSnapshot);
+                   var numSentMarketData = 0;
+                    var numSentBidAsks = 0;
                     for (int i = 0; i < NumTradesAndBidAsksToSend; i++)
                     {
                         var marketDataUpdateTradeCompact = MarketDataUpdateTradeCompacts[i];
@@ -229,8 +249,15 @@ namespace TestServer
                             numSentMarketData++;
                             clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact, marketDataUpdateTradeCompact);
                         }
+                        var marketDataUpdateBidAskCompact = MarketDataUpdateBidAskCompacts[i];
+                        if (marketDataRequest.SymbolID == marketDataUpdateBidAskCompact.SymbolID)
+                        {
+                            numSentBidAsks++;
+                            clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
+                        }
+                        
                     }
-                    
+                    s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
                     break;
                 case DTCMessageType.MarketDataReject:
                 case DTCMessageType.MarketDataSnapshot:

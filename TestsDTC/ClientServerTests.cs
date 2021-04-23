@@ -8,6 +8,7 @@ using DTCCommon;
 using DTCCommon.EventArgsF;
 using DTCPB;
 using DTCServer;
+using NLog;
 using TestServer;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,6 +17,8 @@ namespace Tests
 {
     public class ClientServerTests : IDisposable
     {
+        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+
         // ReSharper disable once InconsistentNaming
         private static int _nextServerPort = 54321;
 
@@ -327,16 +330,16 @@ namespace Tests
         [Fact]
         public async Task MarketDataCompactTest()
         {
-            const int timeoutNoActivity = 10000;
-            const int timeoutForConnect = 10000;
+            const int TimeoutNoActivity = 10000;
+            const int TimeoutForConnect = 10000;
 
             // Set up the exampleService responses
             var exampleService = new ExampleService();
             var port = NextServerPort;
 
-            using (var server = StartExampleServer(timeoutNoActivity, port, exampleService))
+            using (var server = StartExampleServer(TimeoutNoActivity, port, exampleService))
             {
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
                     while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
@@ -346,7 +349,7 @@ namespace Tests
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
-                    var loginResponse = await client1.LogonAsync(1, true, 5000).ConfigureAwait(true);
+                    var loginResponse = await client1.LogonAsync(useHeartbeat: false, timeout: TimeoutNoActivity).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     var numSnapshots = 0;
@@ -368,6 +371,7 @@ namespace Tests
                     {
                         var trade = e.Data;
                         numTrades++;
+                        //s_logger.Debug("numTrades={numTrades}", numTrades);
                     }
 
                     client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
@@ -377,6 +381,7 @@ namespace Tests
                     {
                         var bidAsk = e.Data;
                         numBidAsks++;
+                        //s_logger.Debug("numBidAsks={numBidAsks}", numBidAsks);
                     }
 
                     client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;

@@ -266,7 +266,7 @@ namespace DTCClient
         /// <param name="tradeAccount">optional identifier if that is required to login</param>
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
         /// <returns>The LogonResponse, or null if not received before timeout</returns>
-        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds, bool useHeartbeat = true, int timeout = 1000, string userName = "",
+        public async Task<LogonResponse> LogonAsync(int heartbeatIntervalInSeconds = 1, bool useHeartbeat = true, int timeout = 1000, string userName = "",
             string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0, TradeModeEnum tradeMode = TradeModeEnum.TradeModeUnset,
             string tradeAccount = "", string hardwareIdentifier = "")
         {
@@ -300,7 +300,7 @@ namespace DTCClient
                 ClientName = ClientName,
                 GeneralTextData = generalTextData,
                 HardwareIdentifier = hardwareIdentifier,
-                HeartbeatIntervalInSeconds = heartbeatIntervalInSeconds,
+                HeartbeatIntervalInSeconds = _useHeartbeat ? heartbeatIntervalInSeconds : 0,
                 Integer1 = integer1,
                 Integer2 = integer2,
                 Username = userName,
@@ -757,6 +757,9 @@ namespace DTCClient
         /// <param name="messageBytes"></param>
         private void ProcessResponseBytes(DTCMessageType messageType, byte[] messageBytes)
         {
+            if (messageType == DTCMessageType.MarketDataUpdateBidAsk)
+            { }
+
             s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
             switch (messageType)
             {
@@ -829,6 +832,7 @@ namespace DTCClient
                     break;
                 case DTCMessageType.MarketDataUpdateBidAskCompact:
                     var marketDataUpdateBidAskCompact = _currentCodec.Load<MarketDataUpdateBidAskCompact>(messageType, messageBytes);
+                    //s_logger.Debug("Throwing a MarketDataUpdateBidAskCompactEvent");
                     ThrowEvent(marketDataUpdateBidAskCompact, MarketDataUpdateBidAskCompactEvent);
                     break;
                 case DTCMessageType.MarketDataUpdateBidAskInt:
@@ -1067,6 +1071,7 @@ namespace DTCClient
         {
             if (!_isDisposed)
             {
+                //s_logger.Debug("Disposing Client");
                 _currentCodec.Write(DTCMessageType.Logoff, new Logoff
                 {
                     DoNotReconnect = 1u,

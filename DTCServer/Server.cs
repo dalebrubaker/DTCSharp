@@ -10,12 +10,15 @@ using DTCCommon;
 using DTCCommon.EventArgsF;
 using DTCPB;
 using Google.Protobuf;
+using NLog;
 using Timer = System.Timers.Timer;
 
 namespace DTCServer
 {
     public class Server : IDisposable
     {
+        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+
         private readonly int _port;
         private readonly int _timeoutNoActivity;
         private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
@@ -184,6 +187,7 @@ namespace DTCServer
         {
             if (!_isDisposed)
             {
+                //s_logger.Debug("Disposing Server");
                 _cts.Cancel();
                 IsConnected = false;
                 _isDisposed = true;

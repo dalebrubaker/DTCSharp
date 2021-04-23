@@ -75,7 +75,7 @@ namespace DTCServer
 
         private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
-            if (!_useHeartbeat)
+            if (!_useHeartbeat || _currentCodec == null)
             {
                 // Don't send a heartbeat if output is zipped
                 return;
@@ -120,6 +120,12 @@ namespace DTCServer
                     //}
                     s_logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(RequestReaderLoop)} to read a message");
                     var (messageType, messageBytes) = _currentCodec.ReadMessage();
+                    if (messageType == DTCMessageType.MessageTypeUnset)
+                    {
+                        // The service has ended
+                        Dispose();
+                        break;
+                    }
                     ProcessClientRequest(messageType, messageBytes, ref binaryReader);
                     if (_currentCodec == null)
                     {
@@ -434,6 +440,10 @@ namespace DTCServer
 //                var debug3 = 1;
 //#pragma warning restore 219
 //            }
+            if (_currentCodec == null)
+            {
+                return;
+            }
 
             DebugHelpers.AddResponseSent(messageType, _currentCodec);
 #endif
@@ -458,21 +468,22 @@ namespace DTCServer
         public void EndZippedWriting()
         {
             _currentCodec.EndZippedWriting();
-            _currentCodec = null;
+            Dispose();
         }
 
         public void Dispose()
         {
             if (!_isDisposed)
             {
+                s_logger.Debug("Disposing ClientHandler");
+                _isDisposed = true;
+                DisposeTimerHeartbeat();
                 OnDisconnected(new Error("Disposed"));
                 _ctsRequestReader.Cancel();
                 _currentCodec?.Close();
                 _currentCodec = null;
-                DisposeTimerHeartbeat();
                 _tcpClient?.Close();
                 _tcpClient = null;
-                _isDisposed = true;
             }
             GC.SuppressFinalize(this);
         }
