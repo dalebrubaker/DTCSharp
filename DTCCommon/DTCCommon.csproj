@@ -74,7 +74,6 @@
     <Compile Include="Debugging\DebugMessageRow.cs" />
     <Compile Include="Enums\ClientOrServer.cs" />
     <Compile Include="Error.cs" />
-    <Compile Include="EventToCallbackForSymbol.cs" />
     <Compile Include="Exceptions\DTCSharpException.cs" />
     <Compile Include="Extensions\DateTimeExtensions.cs" />
     <Compile Include="Extensions\IntExtensions.cs" />

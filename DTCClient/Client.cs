@@ -591,49 +591,112 @@ namespace DTCClient
 
             MarketDataRejectEvent += HandlerReject;
 
-            using (var handleSnapshot = new EventToCallbackForSymbol<MarketDataSnapshot>(symbolId, symbol, exchange,
-                handler => MarketDataSnapshotEvent += handler, handler => MarketDataSnapshotEvent -= handler, snapshotCallback))
-            using (var handleTrade = new EventToCallbackForSymbol<MarketDataUpdateTradeCompact>(symbolId, symbol, exchange,
-                handler => MarketDataUpdateTradeCompactEvent += handler, handler => MarketDataUpdateTradeCompactEvent -= handler, tradeCallback))
-            using (var handleBidAsk = new EventToCallbackForSymbol<MarketDataUpdateBidAskCompact>(symbolId, symbol, exchange,
-                handler => MarketDataUpdateBidAskCompactEvent += handler, handler => MarketDataUpdateBidAskCompactEvent -= handler, bidAskCallback))
-            using (var handleSessionOpen = new EventToCallbackForSymbol<MarketDataUpdateSessionOpen>(symbolId, symbol, exchange,
-                handler => MarketDataUpdateSessionOpenEvent += handler, handler => MarketDataUpdateSessionOpenEvent -= handler, sessionOpenCallback))
-            using (var handleSessionHigh = new EventToCallbackForSymbol<MarketDataUpdateSessionHigh>(symbolId, symbol, exchange,
-                handler => MarketDataUpdateSessionHighEvent += handler, handler => MarketDataUpdateSessionHighEvent -= handler, sessionHighCallback))
-            using (var handleSessionLow = new EventToCallbackForSymbol<MarketDataUpdateSessionLow>(symbolId, symbol, exchange,
-                handler => MarketDataUpdateSessionLowEvent += handler, handler => MarketDataUpdateSessionLowEvent -= handler, sessionLowCallback))
-            using (var handleSessionSettlement = new EventToCallbackForSymbol<MarketDataUpdateSessionSettlement>(symbolId, symbol, exchange,
-                handler => MarketDataUpdateSessionSettlementEvent += handler, handler => MarketDataUpdateSessionSettlementEvent -= handler,
-                sessionSettlementCallback))
-            using (var handleSessionVolume = new EventToCallbackForSymbol<MarketDataUpdateSessionVolume>(symbolId, symbol, exchange,
-                handler => MarketDataUpdateSessionVolumeEvent += handler, handler => MarketDataUpdateSessionVolumeEvent -= handler, sessionVolumeCallback))
-            using (var handleOpenInterest = new EventToCallbackForSymbol<MarketDataUpdateOpenInterest>(symbolId, symbol, exchange,
-                handler => MarketDataUpdateOpenInterestEvent += handler, handler => MarketDataUpdateOpenInterestEvent -= handler, openInterestCallback))
-            {
-                // Send the request
-                var request = new MarketDataRequest
-                {
-                    RequestAction = RequestActionEnum.Subscribe,
-                    SymbolID = symbolId,
-                    Symbol = symbol,
-                    Exchange = exchange
-                };
-                SendRequest(DTCMessageType.MarketDataRequest, request);
+            var isDataReceived = false;
 
-                // Wait until timeout or cancellation
-                var startTime = DateTime.Now; // for checking timeout
-                while ((DateTime.Now - startTime).TotalMilliseconds < timeout && !cancellationToken.IsCancellationRequested)
-                {
-                    if (handleSnapshot.IsDataReceived || handleTrade.IsDataReceived)
-                    {
-                        // We're receiving data, so never timeout
-                        timeout = int.MaxValue;
-                    }
-                    await Task.Delay(1, cancellationToken).ConfigureAwait(false);
-                }
-                return marketDataReject;
+            void MarketDataSnapshotEvent(object sender, MarketDataSnapshot e)
+            {
+                isDataReceived = true;
+                snapshotCallback(e);
             }
+
+            this.MarketDataSnapshotEvent += MarketDataSnapshotEvent;
+
+            void MarketDataUpdateTradeCompactEvent(object sender, MarketDataUpdateTradeCompact e)
+            {
+                isDataReceived = true;
+                tradeCallback(e);
+            }
+
+            this.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
+
+            void MarketDataUpdateBidAskCompactEvent(object sender, MarketDataUpdateBidAskCompact e)
+            {
+                isDataReceived = true;
+                bidAskCallback(e);
+            }
+
+            this.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;
+
+            void MarketDataUpdateSessionOpenEvent(object sender, MarketDataUpdateSessionOpen e)
+            {
+                isDataReceived = true;
+                sessionOpenCallback(e);
+            }
+
+            this.MarketDataUpdateSessionOpenEvent += MarketDataUpdateSessionOpenEvent;
+
+            void MarketDataUpdateSessionHighEvent(object sender, MarketDataUpdateSessionHigh e)
+            {
+                isDataReceived = true;
+                sessionHighCallback(e);
+            }
+
+            this.MarketDataUpdateSessionHighEvent += MarketDataUpdateSessionHighEvent;
+
+            void MarketDataUpdateSessionLowEvent(object sender, MarketDataUpdateSessionLow e)
+            {
+                isDataReceived = true;
+                sessionLowCallback(e);
+            }
+
+            this.MarketDataUpdateSessionLowEvent += MarketDataUpdateSessionLowEvent;
+
+            void MarketDataUpdateSessionSettlementEvent(object sender, MarketDataUpdateSessionSettlement e)
+            {
+                isDataReceived = true;
+                sessionSettlementCallback(e);
+            }
+
+            this.MarketDataUpdateSessionSettlementEvent += MarketDataUpdateSessionSettlementEvent;
+
+            void MarketDataUpdateSessionVolumeEvent(object sender, MarketDataUpdateSessionVolume e)
+            {
+                isDataReceived = true;
+                sessionVolumeCallback(e);
+            }
+
+            this.MarketDataUpdateSessionVolumeEvent += MarketDataUpdateSessionVolumeEvent;
+
+            void MarketDataUpdateOpenInterestEvent(object sender, MarketDataUpdateOpenInterest e)
+            {
+                isDataReceived = true;
+                openInterestCallback(e);
+            }
+
+            this.MarketDataUpdateOpenInterestEvent += MarketDataUpdateOpenInterestEvent;
+
+            // Send the request
+            var request = new MarketDataRequest
+            {
+                RequestAction = RequestActionEnum.Subscribe,
+                SymbolID = symbolId,
+                Symbol = symbol,
+                Exchange = exchange
+            };
+            SendRequest(DTCMessageType.MarketDataRequest, request);
+
+            // Wait until timeout or cancellation
+            var startTime = DateTime.Now; // for checking timeout
+            while ((DateTime.Now - startTime).TotalMilliseconds < timeout && !cancellationToken.IsCancellationRequested)
+            {
+                if (isDataReceived)
+                {
+                    // We're receiving data, so never timeout
+                    timeout = int.MaxValue;
+                }
+                await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            }
+            this.MarketDataSnapshotEvent -= MarketDataSnapshotEvent;
+            this.MarketDataUpdateTradeCompactEvent -= MarketDataUpdateTradeCompactEvent;
+            this.MarketDataUpdateBidAskCompactEvent -= MarketDataUpdateBidAskCompactEvent;
+            this.MarketDataUpdateSessionOpenEvent -= MarketDataUpdateSessionOpenEvent;
+            this.MarketDataUpdateSessionHighEvent -= MarketDataUpdateSessionHighEvent;
+            this.MarketDataUpdateSessionLowEvent -= MarketDataUpdateSessionLowEvent;
+            this.MarketDataUpdateSessionSettlementEvent -= MarketDataUpdateSessionSettlementEvent;
+            this.MarketDataUpdateSessionVolumeEvent -= MarketDataUpdateSessionVolumeEvent;
+            this.MarketDataUpdateOpenInterestEvent -= MarketDataUpdateOpenInterestEvent;
+
+            return marketDataReject;
         }
 
         public void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage

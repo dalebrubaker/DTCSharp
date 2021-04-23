@@ -656,8 +656,8 @@ namespace TestClient
             logControlLevel1.LogMessage($"Getting market data for {symbol}");
             try
             {
-                const int timeout = 5000;
-                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol1.Token, timeout, symbol, "", MarketDataSnapshotCallback,
+                const int Timeout = 5000;
+                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol1.Token, Timeout, symbol, "", MarketDataSnapshotCallback,
                     MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
                 if (reject != null)
                 {
