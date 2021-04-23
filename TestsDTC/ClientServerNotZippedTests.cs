@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using DTCClient;
-using DTCCommon;
 using DTCCommon.EventArgsF;
 using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
@@ -124,7 +123,7 @@ namespace Tests
                         Symbol = "ESZ6",
                         Exchange = "",
                         RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
-                        StartDateTime = DateTime.MinValue.UtcToDtcDateTime(), 
+                        StartDateTime = DateTime.MinValue.UtcToDtcDateTime(),
                         EndDateTime = DateTime.MaxValue.UtcToDtcDateTime(),
                         MaxDaysToReturn = 1, // ignored in this test
                         UseZLibCompression = UseZLibCompression ? 1 : 0,
@@ -142,7 +141,7 @@ namespace Tests
                     _output.WriteLine($"Client1 received all {numTrades} historical trades in {elapsed} msecs");
 
                     Assert.Equal(1, numHistoricalPriceDataResponseHeader);
-                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend +1, numTrades); // Add 1 for the 0's FinalRecord
+                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend + 1, numTrades); // Add 1 for the 0's FinalRecord
                 }
             }
         }

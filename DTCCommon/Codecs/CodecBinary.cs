@@ -3,8 +3,6 @@ using System.IO;
 using DTCCommon.Enums;
 using DTCCommon.Extensions;
 using DTCPB;
-using uint8_t = System.Byte;
-using int32_t = System.Int32;
 
 // ReSharper disable InconsistentNaming
 
@@ -14,7 +12,7 @@ namespace DTCCommon.Codecs
     {
         public CodecBinary(Stream stream, ClientOrServer clientOrServer) : base(stream, clientOrServer)
         {
-            
+
         }
 
         // Text string lengths. Copied from DTCProtocol.h

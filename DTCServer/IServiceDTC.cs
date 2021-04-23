@@ -8,7 +8,7 @@ namespace DTCServer
     public interface IServiceDTC
     {
         bool SendSymbols { get; set; }
-        
+
         /// <summary>
         /// This method is called for every request received by a client connected to this server.
         /// WARNING! You must not block this thread for long, as further requests can't be received until you return from this method.

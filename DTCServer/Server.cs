@@ -5,13 +5,11 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using DTCCommon;
 using DTCCommon.EventArgsF;
 using DTCPB;
 using Google.Protobuf;
 using NLog;
-using Timer = System.Timers.Timer;
 
 namespace DTCServer
 {
@@ -170,7 +168,7 @@ namespace DTCServer
                 for (int i = 0; i < _clientHandlers.Count; i++)
                 {
                     var clientHandler = _clientHandlers[i];
-                    
+
                     // OnClientDisconnected removes the clientHandler from _clientHandlers
                     OnClientDisconnected(clientHandler);
                     clientHandler.Dispose();

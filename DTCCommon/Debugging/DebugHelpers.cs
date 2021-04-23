@@ -16,7 +16,7 @@ namespace DTCCommon
         public static readonly List<DebugMessageRow> ResponsesReceived = new List<DebugMessageRow>();
         public static readonly List<DebugMessageRow> RequestsSent = new List<DebugMessageRow>();
 
-        public static void AddRequestReceived(DTCMessageType messageType, Codec currentCodec,int size)
+        public static void AddRequestReceived(DTCMessageType messageType, Codec currentCodec, int size)
         {
             var lastRow = RequestsReceived.LastOrDefault();
             if (lastRow == null || lastRow.MessageType != messageType)
