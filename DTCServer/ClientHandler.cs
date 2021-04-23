@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
@@ -36,7 +37,6 @@ namespace DTCServer
         /// </summary>
         /// <param name="callback">The callback to the DTC service implementation. Every request will be sent to the callback</param>
         /// <param name="tcpClient"></param>
-        /// <param name="server">back-pointer for the server owning this ClientHandler</param>
         public ClientHandler(Action<ClientHandler, DTCMessageType, IMessage> callback, TcpClient tcpClient)
         {
             _callback = callback;
@@ -45,6 +45,7 @@ namespace DTCServer
             _ctsRequestReader = new CancellationTokenSource();
             _networkStreamServer = _tcpClient.GetStream();
             _currentCodec = new CodecBinary(_networkStreamServer, ClientOrServer.Server);
+            //_receiverQueue = new BlockingCollection<>()
         }
 
         public string RemoteEndPoint { get; }

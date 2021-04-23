@@ -3,15 +3,20 @@ using Google.Protobuf;
 
 namespace DTCCommon
 {
-    public class MessageWithType<T> where T : IMessage
+    public class MessageWithType
     {
-        public MessageWithType(DTCMessageType messageType, T message)
+        public DTCMessageType MessageType { get; }
+        public IMessage Message { get; }
+
+        public MessageWithType(DTCMessageType messageType, IMessage message)
         {
             MessageType = messageType;
             Message = message;
         }
 
-        public DTCMessageType MessageType { get; }
-        public T Message { get; }
+        public override string ToString()
+        {
+            return $"{MessageType}: {GetType().Name}";
+        }
     }
 }
