@@ -612,7 +612,10 @@ namespace DTCClient
             void MarketDataUpdateBidAskCompactEvent(object sender, MarketDataUpdateBidAskCompact e)
             {
                 isDataReceived = true;
-                bidAskCallback(e);
+                if (bidAskCallback != null)
+                {
+                    bidAskCallback(e);
+                }
             }
 
             this.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;
@@ -620,7 +623,10 @@ namespace DTCClient
             void MarketDataUpdateSessionOpenEvent(object sender, MarketDataUpdateSessionOpen e)
             {
                 isDataReceived = true;
-                sessionOpenCallback(e);
+                if (sessionOpenCallback != null)
+                {
+                    sessionOpenCallback(e);
+                }
             }
 
             this.MarketDataUpdateSessionOpenEvent += MarketDataUpdateSessionOpenEvent;
@@ -628,7 +634,10 @@ namespace DTCClient
             void MarketDataUpdateSessionHighEvent(object sender, MarketDataUpdateSessionHigh e)
             {
                 isDataReceived = true;
-                sessionHighCallback(e);
+                if (sessionHighCallback != null)
+                {
+                    sessionHighCallback(e);
+                }
             }
 
             this.MarketDataUpdateSessionHighEvent += MarketDataUpdateSessionHighEvent;
@@ -636,7 +645,10 @@ namespace DTCClient
             void MarketDataUpdateSessionLowEvent(object sender, MarketDataUpdateSessionLow e)
             {
                 isDataReceived = true;
-                sessionLowCallback(e);
+                if (sessionLowCallback != null)
+                {
+                    sessionLowCallback(e);
+                }
             }
 
             this.MarketDataUpdateSessionLowEvent += MarketDataUpdateSessionLowEvent;
@@ -644,7 +656,10 @@ namespace DTCClient
             void MarketDataUpdateSessionSettlementEvent(object sender, MarketDataUpdateSessionSettlement e)
             {
                 isDataReceived = true;
-                sessionSettlementCallback(e);
+                if (sessionSettlementCallback != null)
+                {
+                    sessionSettlementCallback(e);
+                }
             }
 
             this.MarketDataUpdateSessionSettlementEvent += MarketDataUpdateSessionSettlementEvent;
@@ -652,7 +667,10 @@ namespace DTCClient
             void MarketDataUpdateSessionVolumeEvent(object sender, MarketDataUpdateSessionVolume e)
             {
                 isDataReceived = true;
-                sessionVolumeCallback(e);
+                if (sessionVolumeCallback != null)
+                {
+                    sessionVolumeCallback(e);
+                }
             }
 
             this.MarketDataUpdateSessionVolumeEvent += MarketDataUpdateSessionVolumeEvent;
@@ -660,7 +678,10 @@ namespace DTCClient
             void MarketDataUpdateOpenInterestEvent(object sender, MarketDataUpdateOpenInterest e)
             {
                 isDataReceived = true;
-                openInterestCallback(e);
+                if (openInterestCallback != null)
+                {
+                    openInterestCallback(e);
+                }
             }
 
             this.MarketDataUpdateOpenInterestEvent += MarketDataUpdateOpenInterestEvent;
