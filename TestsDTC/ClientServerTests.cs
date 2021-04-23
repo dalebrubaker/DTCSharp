@@ -379,7 +379,7 @@ namespace Tests
 
                     // Now subscribe to the data
                     sw.Restart();
-                    var symbolId = client1.SubscribeMarketData("ESZ6", "");
+                    var symbolId = client1.SubscribeMarketData(1, "ESZ6", "");
                     Assert.Equal(1u, symbolId);
                     while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
                     {

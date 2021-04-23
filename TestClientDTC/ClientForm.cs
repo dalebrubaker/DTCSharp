@@ -22,6 +22,16 @@ namespace TestClient
         private uint _symbolId2;
         private List<MarketDataUpdateTradeCompact> _ticks;
 
+        /// <summary>
+        /// This is the list of Symbol.Exchange by symbolId, which is 1-based
+        /// </summary>
+        private readonly Dictionary<string, uint> _symbolIdBySymbolDotExchange = new Dictionary<string, uint>();
+
+        /// <summary>
+        /// This is the inverse of _symbolIdBySymbolDotExchange
+        /// </summary>
+        private readonly Dictionary<uint, string> _symbolDotExchangeBySymbolId = new Dictionary<uint, string>();
+
         public ClientForm()
         {
             InitializeComponent();
@@ -241,19 +251,19 @@ namespace TestClient
 
         private void Client_MarketDataUpdateSessionLowEvent(object sender, MarketDataUpdateSessionLow response)
         {
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data new session low for {combo}: {response.Price}");
         }
 
         private void Client_MarketDataUpdateSessionHighEvent(object sender, MarketDataUpdateSessionHigh response)
         {
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data new session high for {combo}: {response.Price}");
         }
 
         private void Client_MarketDataUpdateSessionVolumeEvent(object sender, MarketDataUpdateSessionVolume response)
         {
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data session volume correction for {combo}: {response.Volume}");
         }
 
@@ -263,7 +273,7 @@ namespace TestClient
             {
                 return;
             }
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
             logControlLevel1.LogMessage(
                 $"Market Data Update Bid/Ask Int for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime:yyyyMMdd.HHmmss.fff}");
@@ -275,7 +285,7 @@ namespace TestClient
             {
                 return;
             }
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
             logControlLevel1.LogMessage(
                 $"Market Data Update Bid/Ask for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime:yyyyMMdd.HHmmss.fff}");
@@ -288,7 +298,7 @@ namespace TestClient
 
         private void Client_MarketDataUpdateTradeIntEvent(object sender, MarketDataUpdateTrade_Int response)
         {
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
             logControlLevel1.LogMessage(
                 $"Market Data Update Trade Int for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}");
@@ -296,7 +306,7 @@ namespace TestClient
 
         private void Client_MarketDataUpdateTradeEvent(object sender, MarketDataUpdateTrade response)
         {
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
             logControlLevel1.LogMessage(
                 $"Market Data Update Trade for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}");
@@ -309,7 +319,7 @@ namespace TestClient
 
         private void Client_MarketDataFeedSymbolStatusEvent(object sender, MarketDataFeedSymbolStatus response)
         {
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             logControlLevel1.LogMessage($"Market Data Feed status for {combo}: {response.Status}");
         }
 
@@ -325,7 +335,7 @@ namespace TestClient
 
         private void Client_MarketDataSnapshotIntEvent(object sender, MarketDataSnapshot_Int response)
         {
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             var lines = new List<string>
             {
                 $"Market Data Snapshot for {combo}:",
@@ -352,7 +362,7 @@ namespace TestClient
 
         private void Client_MarketDataRejectEvent(object sender, MarketDataReject marketDataReject)
         {
-            var combo = _client.SymbolExchangeComboBySymbolId[marketDataReject.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[marketDataReject.SymbolID];
             logControlLevel1.LogMessage($"Market data request rejected for {combo} because {marketDataReject.RejectText}");
         }
 
@@ -604,7 +614,21 @@ namespace TestClient
                 RegisterClientEventsMarketData(_client);
             }
             logControlLevel1.LogMessage($"Subscribing to market data for {txtSymbolLevel1_1.Text}");
-            _symbolId1 = _client.SubscribeMarketData(txtSymbolLevel1_1.Text, "");
+            _symbolId1 = RequireSymbolId(txtSymbolLevel1_1.Text, "");
+            _client.SubscribeMarketData(_symbolId1, txtSymbolLevel1_1.Text, "");
+        }
+
+        private uint RequireSymbolId(string symbol, string exchange)
+        {
+            var key = $"{symbol}.{exchange}";
+            if (_symbolIdBySymbolDotExchange.TryGetValue(key, out var symbolId))
+            {
+                return symbolId;
+            }
+            symbolId = (uint)_symbolIdBySymbolDotExchange.Count + 1; // must be 1-based. 0 means Error
+            _symbolIdBySymbolDotExchange.Add(key, symbolId);
+            _symbolDotExchangeBySymbolId.Add(symbolId, key);
+            return symbolId;
         }
 
         private void btnUnsubscribe1_Click(object sender, EventArgs e)
@@ -630,7 +654,8 @@ namespace TestClient
                 RegisterClientEventsMarketData(_client);
             }
             logControlLevel1.LogMessage($"Subscribing to market data for {txtSymbolLevel1_2.Text}");
-            _symbolId2 = _client.SubscribeMarketData(txtSymbolLevel1_2.Text, "");
+            _symbolId2 = RequireSymbolId(txtSymbolLevel1_2.Text, "");
+            _client.SubscribeMarketData(_symbolId2, txtSymbolLevel1_2.Text, "");
         }
 
         private void btnUnsubscribe2_Click(object sender, EventArgs e)
@@ -653,11 +678,12 @@ namespace TestClient
             btnSubscribeCallbacks1.Enabled = false;
             _ctsLevel1Symbol1 = new CancellationTokenSource();
             var symbol = txtSymbolLevel1_1.Text;
+            _symbolId1 = RequireSymbolId(symbol, "");
             logControlLevel1.LogMessage($"Getting market data for {symbol}");
             try
             {
                 const int Timeout = 5000;
-                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol1.Token, Timeout, symbol, "", MarketDataSnapshotCallback,
+                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_symbolId1, _ctsLevel1Symbol1.Token, Timeout, symbol, "", MarketDataSnapshotCallback,
                     MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
                 if (reject != null)
                 {
@@ -678,10 +704,11 @@ namespace TestClient
             btnSubscribeCallbacks2.Enabled = false;
             _ctsLevel1Symbol2 = new CancellationTokenSource();
             var symbol = txtSymbolLevel1_2.Text;
+            _symbolId2 = RequireSymbolId(symbol, "");
             logControlLevel1.LogMessage($"Getting market data for {symbol}");
             try
             {
-                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_ctsLevel1Symbol2.Token, 5000, symbol, "", MarketDataSnapshotCallback,
+                var reject = await _client.GetMarketDataUpdateTradeCompactAsync(_symbolId2, _ctsLevel1Symbol2.Token, 5000, symbol, "", MarketDataSnapshotCallback,
                     MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback).ConfigureAwait(false);
                 if (reject != null)
                 {
@@ -698,7 +725,7 @@ namespace TestClient
 
         private void MarketDataSnapshotCallback(MarketDataSnapshot response)
         {
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             var lines = new List<string>
             {
                 $"Market Data Snapshot for {combo}:",
@@ -729,7 +756,7 @@ namespace TestClient
             {
                 return;
             }
-            var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+            var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
             var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
             logControlLevel1.LogMessage(
                 $"Market Data Update Bid/Ask Compact for {combo}: BP:{response.BidPrice} BQ:{response.BidQuantity} AP:{response.AskPrice} AQ:{response.AskQuantity} D:{dateTime:yyyyMMdd.HHmmss.fff}");
@@ -765,7 +792,7 @@ namespace TestClient
             var lines = new List<string>(newTicks.Count);
             foreach (var response in newTicks)
             {
-                var combo = _client.SymbolExchangeComboBySymbolId[response.SymbolID];
+                var combo = _symbolDotExchangeBySymbolId[response.SymbolID];
                 var dateTime = response.DateTime.DtcDateTime4ByteToUtc().ToLocalTime();
                 var line =
                     $"Market Data Update Trade Compact for {combo}: P:{response.Price} V:{response.Volume} D:{dateTime:yyyyMMdd.HHmmss.fff} B/A:{response.AtBidOrAsk}";

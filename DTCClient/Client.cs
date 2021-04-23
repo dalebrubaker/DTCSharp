@@ -30,7 +30,6 @@ namespace DTCClient
         private Codec _currentCodec;
         private CancellationTokenSource _ctsResponseReader;
         private int _nextRequestId;
-        private uint _nextSymbolId;
         private bool _useHeartbeat;
         private bool _isConnected;
         private ConfiguredTaskAwaitable _tasKReceiveLoop;
@@ -46,8 +45,6 @@ namespace DTCClient
             ServerAddress = serverAddress;
             _timeoutNoActivity = timeoutNoActivity;
             ServerPort = serverPort;
-            SymbolIdBySymbolExchangeCombo = new ConcurrentDictionary<string, uint>();
-            SymbolExchangeComboBySymbolId = new ConcurrentDictionary<uint, string>();
         }
 
         public bool IsConnected => _isConnected;
@@ -63,19 +60,6 @@ namespace DTCClient
         /// This is auto-incrementing
         /// </summary>
         public int NextRequestId => ++_nextRequestId;
-
-        /// <summary>
-        /// See http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#SymbolIDRequestIDRules
-        /// This is auto-incrementing
-        /// </summary>
-        public uint NextSymbolId => ++_nextSymbolId;
-
-        /// <summary>
-        /// Key is "Symbol|Exchange built by Get
-        /// </summary>
-        public ConcurrentDictionary<string, uint> SymbolIdBySymbolExchangeCombo { get; set; }
-
-        public ConcurrentDictionary<uint, string> SymbolExchangeComboBySymbolId { get; set; }
 
         public string ServerAddress { get; }
 
@@ -477,50 +461,19 @@ namespace DTCClient
         }
 
         /// <summary>
-        /// Get the symbol and exchange for symbolId, or null if not found
-        /// </summary>
-        /// <param name="symbolId"></param>
-        /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        public void GetSymbolExchangeForSymbolId(uint symbolId, out string symbol, out string exchange)
-        {
-            SymbolExchangeComboBySymbolId.TryGetValue(symbolId, out var combo);
-            SplitSymbolExchange(combo, out symbol, out exchange);
-        }
-
-        /// <summary>
-        /// Get the SymbolId for symbol and exchange, adding it if it doesn't already exist
-        /// </summary>
-        /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        /// <returns></returns>
-        private uint RequireSymbolId(string symbol, string exchange)
-        {
-            var combo = CombineSymbolExchange(symbol, exchange);
-            if (!SymbolIdBySymbolExchangeCombo.TryGetValue(combo, out var symbolId))
-            {
-                symbolId = NextSymbolId;
-                SymbolIdBySymbolExchangeCombo[combo] = symbolId;
-                SymbolExchangeComboBySymbolId[symbolId] = combo;
-            }
-            return symbolId;
-        }
-
-        /// <summary>
         /// Request market data for symbol|exchange
         /// Add a symbolId if not already assigned 
         /// This is done for you within GetMarketDataUpdateTradeCompact()
         /// </summary>
+        /// <param name="symbolId">The 1-based unique SymbolId that you have assigned symbol.exchange</param>
         /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        /// <returns>the symbol ID for symbol|exchange, or 0 if not logged on or market data is not supported</returns>
-        public uint SubscribeMarketData(string symbol, string exchange)
+        /// <param name="exchange">optional</param>
+        public uint SubscribeMarketData(uint symbolId, string symbol, string exchange)
         {
             if (LogonResponse == null || LogonResponse.MarketDataSupported == 0)
             {
                 return 0;
             }
-            uint symbolId = RequireSymbolId(symbol, exchange);
             var request = new MarketDataRequest
             {
                 RequestAction = RequestActionEnum.Subscribe,
@@ -532,6 +485,10 @@ namespace DTCClient
             return symbolId;
         }
 
+        /// <summary>
+        /// Unsubscribe from market data  symbolId 
+        /// </summary>
+        /// <param name="symbolId">The 1-based unique SymbolId that you have assigned symbol.exchange</param>
         public void UnsubscribeMarketData(uint symbolId)
         {
             var request = new MarketDataRequest
@@ -550,6 +507,7 @@ namespace DTCClient
         /// To stop the callbacks, use MarketDataUnsubscribe() and cancel this method using cancellationToken (CancellationTokenSource.Cancel())
         /// </summary>
         /// <param name="timeout">The time (in milliseconds) to wait for a response before giving up</param>
+        /// <param name="symbolId">The 1-based unique SymbolId that you have assigned symbol.exchange</param>
         /// <param name="cancellationToken">To stop the callbacks, use MarketDataUnsubscribe() and cancel this method using cancellationToken (CancellationTokenSource.Cancel())</param>
         /// <param name="symbol"></param>
         /// <param name="exchange"></param>
@@ -562,15 +520,13 @@ namespace DTCClient
         /// <param name="sessionSettlementCallback">Won't be used if null</param>
         /// <param name="sessionVolumeCallback">Won't be used if null</param>
         /// <param name="openInterestCallback">Won't be used if null</param>
-        /// <returns>rejection, or null if not rejected</returns>
-        public async Task<MarketDataReject> GetMarketDataUpdateTradeCompactAsync(CancellationToken cancellationToken, int timeout, string symbol,
+        public async Task<MarketDataReject> GetMarketDataUpdateTradeCompactAsync(uint symbolId, CancellationToken cancellationToken, int timeout, string symbol,
             string exchange, Action<MarketDataSnapshot> snapshotCallback, Action<MarketDataUpdateTradeCompact> tradeCallback,
             Action<MarketDataUpdateBidAskCompact> bidAskCallback = null, Action<MarketDataUpdateSessionOpen> sessionOpenCallback = null,
             Action<MarketDataUpdateSessionHigh> sessionHighCallback = null, Action<MarketDataUpdateSessionLow> sessionLowCallback = null,
             Action<MarketDataUpdateSessionSettlement> sessionSettlementCallback = null, Action<MarketDataUpdateSessionVolume> sessionVolumeCallback = null,
             Action<MarketDataUpdateOpenInterest> openInterestCallback = null)
         {
-            var symbolId = RequireSymbolId(symbol, exchange);
             MarketDataReject marketDataReject = null;
             if (LogonResponse == null)
             {
@@ -612,10 +568,7 @@ namespace DTCClient
             void MarketDataUpdateBidAskCompactEvent(object sender, MarketDataUpdateBidAskCompact e)
             {
                 isDataReceived = true;
-                if (bidAskCallback != null)
-                {
-                    bidAskCallback(e);
-                }
+                bidAskCallback?.Invoke(e);
             }
 
             this.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;
@@ -623,10 +576,7 @@ namespace DTCClient
             void MarketDataUpdateSessionOpenEvent(object sender, MarketDataUpdateSessionOpen e)
             {
                 isDataReceived = true;
-                if (sessionOpenCallback != null)
-                {
-                    sessionOpenCallback(e);
-                }
+                sessionOpenCallback?.Invoke(e);
             }
 
             this.MarketDataUpdateSessionOpenEvent += MarketDataUpdateSessionOpenEvent;
@@ -634,10 +584,7 @@ namespace DTCClient
             void MarketDataUpdateSessionHighEvent(object sender, MarketDataUpdateSessionHigh e)
             {
                 isDataReceived = true;
-                if (sessionHighCallback != null)
-                {
-                    sessionHighCallback(e);
-                }
+                sessionHighCallback?.Invoke(e);
             }
 
             this.MarketDataUpdateSessionHighEvent += MarketDataUpdateSessionHighEvent;
@@ -645,10 +592,7 @@ namespace DTCClient
             void MarketDataUpdateSessionLowEvent(object sender, MarketDataUpdateSessionLow e)
             {
                 isDataReceived = true;
-                if (sessionLowCallback != null)
-                {
-                    sessionLowCallback(e);
-                }
+                sessionLowCallback?.Invoke(e);
             }
 
             this.MarketDataUpdateSessionLowEvent += MarketDataUpdateSessionLowEvent;
@@ -656,10 +600,7 @@ namespace DTCClient
             void MarketDataUpdateSessionSettlementEvent(object sender, MarketDataUpdateSessionSettlement e)
             {
                 isDataReceived = true;
-                if (sessionSettlementCallback != null)
-                {
-                    sessionSettlementCallback(e);
-                }
+                sessionSettlementCallback?.Invoke(e);
             }
 
             this.MarketDataUpdateSessionSettlementEvent += MarketDataUpdateSessionSettlementEvent;
@@ -667,10 +608,7 @@ namespace DTCClient
             void MarketDataUpdateSessionVolumeEvent(object sender, MarketDataUpdateSessionVolume e)
             {
                 isDataReceived = true;
-                if (sessionVolumeCallback != null)
-                {
-                    sessionVolumeCallback(e);
-                }
+                sessionVolumeCallback?.Invoke(e);
             }
 
             this.MarketDataUpdateSessionVolumeEvent += MarketDataUpdateSessionVolumeEvent;
