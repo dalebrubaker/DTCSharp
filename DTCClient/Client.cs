@@ -721,6 +721,11 @@ namespace DTCClient
                     // }
                     s_logger.Debug($"Waiting in {nameof(Client)}.{nameof(ResponseReader)} to read a message");
                     var (messageType, messageBytes) = _currentCodec.ReadMessage();
+                    if (messageType == DTCMessageType.MessageTypeUnset)
+                    {
+                        // End of zipped historical data. We can't proceed
+                        return;
+                    }
                     ProcessResponseBytes(messageType, messageBytes);
                     //await Task.Delay(1).ConfigureAwait(false);
                 }

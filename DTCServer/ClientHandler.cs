@@ -121,7 +121,12 @@ namespace DTCServer
                     s_logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(RequestReaderLoop)} to read a message");
                     var (messageType, messageBytes) = _currentCodec.ReadMessage();
                     ProcessClientRequest(messageType, messageBytes, ref binaryReader);
-                    //await Task.Delay(1).ConfigureAwait(false);
+                    if (_currentCodec == null)
+                    {
+                        // The service ended a zipped historical data transmission. We can't continue
+                        Dispose();
+                        break;
+                    }
                 }
 #pragma warning disable 168
                 catch (IOException ex)
@@ -446,13 +451,24 @@ namespace DTCServer
             }
         }
 
+        /// <summary>
+        /// Do this when you are done writing compressed data.
+        /// And you can't write any future info to this ClientHandler
+        /// </summary>
+        public void EndZippedWriting()
+        {
+            _currentCodec.EndZippedWriting();
+            _currentCodec = null;
+        }
+
         public void Dispose()
         {
             if (!_isDisposed)
             {
                 OnDisconnected(new Error("Disposed"));
                 _ctsRequestReader.Cancel();
-                _currentCodec.Close();
+                _currentCodec?.Close();
+                _currentCodec = null;
                 DisposeTimerHeartbeat();
                 _tcpClient?.Close();
                 _tcpClient = null;

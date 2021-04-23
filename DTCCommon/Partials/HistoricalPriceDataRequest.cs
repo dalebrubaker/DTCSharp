@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using DTCCommon.Extensions;
+using Google.Protobuf;
 
 namespace DTCPB
 {
-    [DebuggerDisplay("{" + nameof(MyToString) + "}")]
-    public partial class HistoricalPriceDataRequest
+    public partial class HistoricalPriceDataRequest : ICustomDiagnosticMessage
     {
         public DateTime StartDateTimeUtc
         {
@@ -25,6 +24,9 @@ namespace DTCPB
             set => useZLibCompression_ = value ? 1u : 0u;
         }
 
-        public string MyToString => $"{symbol_} {StartDateTimeUtc} - {EndDateTimeUtc} MaxDaysToReturn:{MaxDaysToReturn} (UTC) Zip:{IsZipped} {RecordInterval}";
+        public string ToDiagnosticString()
+        {
+            return $"{symbol_} {StartDateTimeUtc} - {EndDateTimeUtc} MaxDaysToReturn:{MaxDaysToReturn} (UTC) Zip:{IsZipped} {RecordInterval}";
+        }
     }
 }

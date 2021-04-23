@@ -90,6 +90,7 @@
     <Compile Include="MessageWithType.cs" />
     <Compile Include="Partials\EncodingResponse.cs" />
     <Compile Include="Partials\EncodingRequest.cs" />
+    <Compile Include="Partials\HistoricalPriceDataRecordResponse Header.cs" />
     <Compile Include="Partials\HistoricalPriceDataRequest.cs" />
     <Compile Include="Partials\HistoricalPriceDataRecordResponse.cs" />
     <Compile Include="Partials\IMessageSymbolId.cs" />

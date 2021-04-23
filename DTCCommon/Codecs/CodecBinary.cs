@@ -108,11 +108,19 @@ namespace DTCCommon.Codecs
                     _binaryWriter.Write(heartbeat.CurrentDateTime);
                     return;
                 case DTCMessageType.Logoff:
-                    var logoff = message as Logoff;
-                    sizeExcludingHeader = TEXT_DESCRIPTION_LENGTH + 1;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(logoff.Reason.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
-                    _binaryWriter.Write((byte)logoff.DoNotReconnect);
+                    try
+                    {
+                        var logoff = message as Logoff;
+                        sizeExcludingHeader = TEXT_DESCRIPTION_LENGTH + 1;
+                        Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
+                        _binaryWriter.Write(logoff.Reason.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+                        _binaryWriter.Write((byte)logoff.DoNotReconnect);
+                    }
+                    catch (IOException ex)
+                    {
+                        // Ignore this exception, which happens on Dispose() if the stream has already gone away, as when the ClientHandler finishes sending zipped historical records 
+                        var tmp = ex;
+                    }
                     return;
                 case DTCMessageType.EncodingRequest:
                     WriteEncodingRequest(messageType, message);

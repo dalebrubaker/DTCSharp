@@ -21,6 +21,7 @@ namespace DTCCommon.Codecs
         protected bool _disabledHeartbeats;
         protected bool _isZippedStream;
         private BinaryReader _binaryReader;
+        private DeflateStream _deflateStream;
 
         protected Codec(Stream stream, ClientOrServer clientOrServer)
         {
@@ -66,6 +67,11 @@ namespace DTCCommon.Codecs
 #endif
                 var messageBytes = _binaryReader.ReadBytes(size - 4); // size includes the header size+type
                 return (messageType, messageBytes);
+            }
+            catch (EndOfStreamException)
+            {
+                // This happens when zipped historical records are done. We can no longer read from this stream, which was closed by ClientHandler
+                return (DTCMessageType.MessageTypeUnset, new byte[0]);
             }
             catch (Exception ex)
             {
@@ -171,10 +177,10 @@ namespace DTCCommon.Codecs
             {
                 _isZippedStream = true;
                 _disabledHeartbeats = true;
-                var deflateStream = new DeflateStream(_stream, CompressionMode.Compress, true);
-                deflateStream.Flush();
+                _deflateStream = new DeflateStream(_stream, CompressionMode.Compress, true);
+                _deflateStream.Flush();
                 // can't read this stream _binaryReader = new BinaryReader(deflateStream);
-                _binaryWriter = new BinaryWriter(deflateStream);
+                _binaryWriter = new BinaryWriter(_deflateStream);
             }
             catch (Exception ex)
             {
@@ -187,8 +193,18 @@ namespace DTCCommon.Codecs
 
         public void Close()
         {
-            _binaryReader.Close();
-            _binaryWriter.Close();
+            _binaryReader?.Close();
+            _binaryWriter?.Close();
+        }
+
+        public void EndZippedWriting()
+        {
+            _deflateStream.Close();
+            _deflateStream?.Dispose();
+            _deflateStream = null;
+            Close();
+            _binaryWriter = null;
+            _binaryReader = null;
         }
 
         public override string ToString()

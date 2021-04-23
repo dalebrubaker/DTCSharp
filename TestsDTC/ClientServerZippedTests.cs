@@ -91,16 +91,17 @@ namespace Tests
                     var numTrades = 0;
 
                     // Set up the handler to capture the HistoricalPriceDataResponseHeader event
-                    EventHandler<EventArgs<HistoricalPriceDataResponseHeader>> responseHeaderEvent = (s, e) =>
+                    void ResponseHeaderEvent(object s, EventArgs<HistoricalPriceDataResponseHeader> e)
                     {
                         var header = e.Data;
                         _output.WriteLine($"Client1 received a HistoricalPriceDataResponseHeader after {sw.ElapsedMilliseconds} msecs");
                         numHistoricalPriceDataResponseHeader++;
-                    };
-                    clientHistorical.HistoricalPriceDataResponseHeaderEvent += responseHeaderEvent;
+                    }
+
+                    clientHistorical.HistoricalPriceDataResponseHeaderEvent += ResponseHeaderEvent;
 
                     // Set up the handler to capture the HistoricalPriceDataRecordResponse events
-                    EventHandler<EventArgs<HistoricalPriceDataRecordResponse>> historicalPriceDataRecordResponseEvent = (s, e) =>
+                    void HistoricalPriceDataRecordResponseEvent(object s, EventArgs<HistoricalPriceDataRecordResponse> e)
                     {
                         var trade = e.Data;
                         numTrades++;
@@ -108,8 +109,9 @@ namespace Tests
                         {
                             isFinalRecordReceived = true;
                         }
-                    };
-                    clientHistorical.HistoricalPriceDataRecordResponseEvent += historicalPriceDataRecordResponseEvent;
+                    }
+
+                    clientHistorical.HistoricalPriceDataRecordResponseEvent += HistoricalPriceDataRecordResponseEvent;
 
                     // Now request the data
                     var request = new HistoricalPriceDataRequest
@@ -135,7 +137,7 @@ namespace Tests
                     _output.WriteLine($"Client1 received all {numTrades} historical trades in {elapsed} msecs");
 
                     Assert.Equal(1, numHistoricalPriceDataResponseHeader);
-                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend, numTrades);
+                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend + 1, numTrades ); // Plus 1 because of empty Final record
                 }
             }
         }
