@@ -36,8 +36,10 @@ namespace DTCCommon.Codecs
                 await WriteEncodingResponseAsync(messageType, encodingResponse, cancellationToken).ConfigureAwait(false);
                 return;
             }
+            if (message is LogonResponse)
+            {}
             var bytes = message.ToByteArray();
-            using var bufferBuilder = new BufferBuilder(4 + bytes.Length);
+            using var bufferBuilder = new BufferBuilder(4 + bytes.Length, this);
             bufferBuilder.AddHeader(messageType);
             bufferBuilder.Add(bytes);
             await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);

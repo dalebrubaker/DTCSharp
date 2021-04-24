@@ -3,13 +3,18 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using DTCCommon.Codecs;
 using DTCPB;
+using NLog;
 
 namespace DTCCommon
 {
     public class BufferBuilder : IDisposable
     {
+        protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
+
         private readonly int _size;
+        private readonly Codec _codec;
         private readonly MemoryStream _memoryStream;
         private readonly BinaryWriter _binaryWriter;
 
@@ -17,9 +22,11 @@ namespace DTCCommon
         /// Start building a buffer
         /// </summary>
         /// <param name="size"></param>
-        public BufferBuilder(int size)
+        /// <param name="codec">For debugging</param>
+        public BufferBuilder(int size, Codec codec)
         {
             _size = size;
+            _codec = codec;
             _memoryStream = new MemoryStream(size);
             _binaryWriter = new BinaryWriter(_memoryStream);
         }
@@ -102,15 +109,33 @@ namespace DTCCommon
             _binaryWriter.Write(value);
         }
 
-        public Task WriteAsync(Stream stream, CancellationToken cancellationToken)
+        public async Task WriteAsync(Stream stream, CancellationToken cancellationToken)
         {
-            return stream.WriteAsync(Buffer, 0, Buffer.Length, cancellationToken);
+            try
+            {
+                Logger.Debug($"{this} writing {Buffer.Length:N0} bytes to stream");
+                if (Buffer.Length == 11)
+                {
+                }
+                await stream.WriteAsync(Buffer, 0, Buffer.Length, cancellationToken).ConfigureAwait(false);
+                Logger.Debug($"{this} wrote {Buffer.Length:N0} bytes to stream");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
         public void Dispose()
         {
             _memoryStream?.Dispose();
             _binaryWriter?.Dispose();
+        }
+
+        public override string ToString()
+        {
+            return $"BufferBuilder on {_codec}";
         }
     }
 }

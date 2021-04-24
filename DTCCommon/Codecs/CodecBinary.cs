@@ -217,7 +217,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4 + 9 * 8 + 1;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(historicalPriceDataRecordResponse.RequestID);
@@ -239,7 +239,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH + 2 + 2;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(historicalPriceDataReject.RequestID);
@@ -253,7 +253,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4 + 4 + 2 + 2 + 4;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(historicalPriceDataResponseHeader.RequestID);
@@ -269,7 +269,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 4 + 8 + 8 + 4 + 3 * 1;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(historicalPriceDataRequest.RequestID);
@@ -291,7 +291,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(securityDefinitionReject.RequestID);
@@ -320,7 +320,7 @@ namespace DTCCommon.Codecs
                 + 4
                 + SYMBOL_LENGTH;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(securityDefinitionResponse.RequestID);
@@ -356,7 +356,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(securityDefinitionForSymbolRequest.RequestID);
@@ -370,7 +370,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4 + EXCHANGE_LENGTH + 1 + EXCHANGE_DESCRIPTION_LENGTH;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(exchangeListResponse.RequestID);
@@ -385,7 +385,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(exchangeListRequest.RequestID);
@@ -397,7 +397,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add((int)marketDataFeedStatus.Status);
@@ -408,7 +408,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 2 + TEXT_DESCRIPTION_LENGTH;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add((ushort)marketDataReject.SymbolID);
@@ -420,7 +420,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4 + 2 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add((int)marketDataRequest.RequestAction);
@@ -436,7 +436,7 @@ namespace DTCCommon.Codecs
             {
                 const int sizeExcludingHeader = TEXT_DESCRIPTION_LENGTH + 1;
                 const int size = sizeExcludingHeader + 4;
-                using var bufferBuilder = new BufferBuilder(size);
+                using var bufferBuilder = new BufferBuilder(size, this);
                 bufferBuilder.AddHeader(messageType);
 
                 bufferBuilder.Add(logoff.Reason.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
@@ -453,7 +453,7 @@ namespace DTCCommon.Codecs
         private async Task WriteHeartbeatAsync<T>(DTCMessageType messageType, Heartbeat heartbeat, CancellationToken cancellationToken)
         {
             const int size = 16;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(heartbeat.NumDroppedMessages);
@@ -465,7 +465,7 @@ namespace DTCCommon.Codecs
         {
             const int sizeExcludingHeader = 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + 4 * 1 + SYMBOL_EXCHANGE_DELIMITER_LENGTH + 8 * 1 + 4;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(logonResponse.ProtocolVersion);
@@ -505,7 +505,7 @@ namespace DTCCommon.Codecs
                                             + GENERAL_IDENTIFIER_LENGTH
                                             + 32;
             const int size = sizeExcludingHeader + 4;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(logonRequest.ProtocolVersion);

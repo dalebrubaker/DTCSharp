@@ -199,13 +199,12 @@ namespace TestsDTC
         [Fact]
         public async Task ClientLogonAndHeartbeatTest()
         {
-            await Task.Delay(1000).ConfigureAwait(false);
             var numConnects = 0;
             var numDisconnects = 0;
-            const int timeoutNoActivity = 30000;
-            const int timeoutForConnect = 5000;
+            const int TimeoutNoActivity = int.MaxValue; // 30000;
+            const int TimeoutForConnect = int.MaxValue; // 5000;
             var port = NextServerPort;
-            using (var server = StartExampleServer(timeoutNoActivity, port))
+            using (var server = StartExampleServer(TimeoutNoActivity, port))
             {
                 // Set up the handler to capture the ClientConnected event
                 void ClientConnected(object s, ClientHandler clientHandler)
@@ -225,7 +224,7 @@ namespace TestsDTC
 
                 server.ClientDisconnected += ClientDisconnected;
 
-                using (var client1 = await ConnectClientAsync(timeoutNoActivity, timeoutForConnect, port).ConfigureAwait(false))
+                using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
                 {
                     var sw = Stopwatch.StartNew();
                     while (numConnects != 1 && sw.ElapsedMilliseconds < 1000)
@@ -235,18 +234,19 @@ namespace TestsDTC
                     }
                     Assert.Equal(1, server.NumberOfClientHandlers);
 
-                    var loginResponse = await client1.LogonAsync(1, true, 5000).ConfigureAwait(true);
+                    var loginResponse = await client1.LogonAsync(1, false, TimeoutForConnect).ConfigureAwait(true);
                     Assert.NotNull(loginResponse);
 
                     // Set up the handler to capture the HeartBeat event
                     var numHeartbeats = 0;
-                    EventHandler<Heartbeat> heartbeatEvent = null;
-                    heartbeatEvent = (s, e) =>
+
+                    void HeartbeatEvent(object s, Heartbeat e)
                     {
                         _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
                         numHeartbeats++;
-                    };
-                    client1.HeartbeatEvent += heartbeatEvent;
+                    }
+
+                    client1.HeartbeatEvent += HeartbeatEvent;
                     sw.Restart();
                     while (numHeartbeats < 2)
                     {

@@ -187,7 +187,7 @@ namespace DTCClient
                 RequestID = NextRequestId,
                 Symbol = symbol
             };
-            await SendRequestAsync(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest, _cts.Token).ConfigureAwait(false);
+            await SendRequestAsync(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest, _ctsProducer.Token).ConfigureAwait(false);
 
             // Wait until the response is received or until timeout
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
@@ -218,7 +218,7 @@ namespace DTCClient
                 Symbol = symbol,
                 Exchange = exchange
             };
-            await SendRequestAsync(DTCMessageType.MarketDataRequest, request, _cts.Token).ConfigureAwait(false);
+            await SendRequestAsync(DTCMessageType.MarketDataRequest, request, _ctsProducer.Token).ConfigureAwait(false);
             return symbolId;
         }
 
@@ -233,7 +233,7 @@ namespace DTCClient
                 RequestAction = RequestActionEnum.Unsubscribe,
                 SymbolID = symbolId,
             };
-            await SendRequestAsync(DTCMessageType.MarketDataRequest, request, _cts.Token).ConfigureAwait(false);
+            await SendRequestAsync(DTCMessageType.MarketDataRequest, request, _ctsProducer.Token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -369,7 +369,7 @@ namespace DTCClient
                 Symbol = symbol,
                 Exchange = exchange
             };
-            await SendRequestAsync(DTCMessageType.MarketDataRequest, request, _cts.Token).ConfigureAwait(false);
+            await SendRequestAsync(DTCMessageType.MarketDataRequest, request, _ctsProducer.Token).ConfigureAwait(false);
 
             // Wait until timeout or cancellation
             var startTime = DateTime.Now; // for checking timeout
@@ -400,7 +400,7 @@ namespace DTCClient
         /// binaryReader may be changed to use a new DeflateStream if we change to zipped
         /// </summary>
         /// <param name="messageDTC"></param>
-        protected override void ProcessMessage(MessageDTC messageDTC)
+        protected override async Task ProcessMessageAsync(MessageDTC messageDTC)
         {
             //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");\
             switch (messageDTC.MessageType)
@@ -409,7 +409,7 @@ namespace DTCClient
                 case DTCMessageType.Heartbeat:
                 case DTCMessageType.Logoff:
                 case DTCMessageType.EncodingResponse:
-                    base.ProcessMessage(messageDTC);
+                    await base.ProcessMessageAsync(messageDTC).ConfigureAwait(false);
                     break;
                 case DTCMessageType.MarketDataReject:
                     ThrowEvent(messageDTC.Message as MarketDataReject, MarketDataRejectEvent);
@@ -542,7 +542,7 @@ namespace DTCClient
                     if (historicalPriceDataResponseHeader.UseZLibCompression == 1)
                     {
                         // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
-                        Logger.Debug($"{nameof(Client)}.{nameof(ProcessMessage)} is switching client stream to read zipped.");
+                        Logger.Debug($"{nameof(Client)}.{nameof(ProcessMessageAsync)} is switching client stream to read zipped.");
 
                         _currentCodec.ReadSwitchToZipped();
                         _useHeartbeat = false;
@@ -629,7 +629,7 @@ namespace DTCClient
                     var responsesReceived = DebugHelpers.ResponsesReceived;
                     var responsesSent = DebugHelpers.ResponsesSent;
 #endif
-                    throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessage)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessageAsync)}.");
             }
         }
     }

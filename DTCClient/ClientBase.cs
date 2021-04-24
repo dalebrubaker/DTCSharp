@@ -28,13 +28,15 @@ namespace DTCClient
         private DateTime _lastHeartbeatReceivedTime;
         private NetworkStream _networkStream;
         protected Codec _currentCodec;
-        protected CancellationTokenSource _cts;
-        private CancellationTokenSource _ctsReader;
+        protected CancellationTokenSource _ctsProducer; // cancellation for the blocking collections
+        protected CancellationTokenSource _ctsConsumer; // cancellation for the blocking collections
+        private CancellationTokenSource _ctsTasks; // cancellation for the tasks
         private int _nextRequestId;
         protected bool _useHeartbeat;
         private bool _isConnected;
-        private BlockingCollection<MessageDTC> _messageQueue;
-        private ConfiguredTaskAwaitable _taskConsumer;
+        private readonly BlockingCollection<MessageDTC> _messageQueue;
+        private ConfiguredTaskAwaitable<Task> _taskConsumer;
+
         private ConfiguredTaskAwaitable<Task> _taskProducer;
         //private bool _isProducerRunning;
 
@@ -87,7 +89,7 @@ namespace DTCClient
 
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat();
-            await SendRequestAsync(DTCMessageType.Heartbeat, heartbeat, _cts.Token).ConfigureAwait(false);
+            await SendRequestAsync(DTCMessageType.Heartbeat, heartbeat, _ctsProducer.Token).ConfigureAwait(false);
         }
 
         #region events
@@ -134,7 +136,13 @@ namespace DTCClient
                 return null;
             }
             ClientName = clientName;
-            _tcpClient = new TcpClient {NoDelay = true, ReceiveBufferSize = int.MaxValue, LingerState = new LingerOption(true, 5)};
+            _tcpClient = new TcpClient
+            {
+                NoDelay = true,
+                ReceiveBufferSize = int.MaxValue, 
+                LingerState = new LingerOption(true, 5)
+            };
+            var tmp = _tcpClient.SendBufferSize;
             if (TimeoutNoActivity != 0)
             {
                 _tcpClient.ReceiveTimeout = TimeoutNoActivity;
@@ -151,10 +159,11 @@ namespace DTCClient
             _networkStream = _tcpClient.GetStream();
             _currentCodec = new CodecBinary(_networkStream, ClientOrServer.Client);
             Logger.Debug("Initial setting of _currentCodec is Binary");
-            _cts = new CancellationTokenSource();
-            _ctsReader = new CancellationTokenSource();
-            _taskConsumer = Task.Factory.StartNew(ConsumerLoop, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
-            _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
+            _ctsProducer = new CancellationTokenSource();
+            _ctsConsumer = new CancellationTokenSource();
+            _ctsTasks = new CancellationTokenSource();
+            _taskConsumer = Task.Factory.StartNew(ConsumerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
+            _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
@@ -177,7 +186,7 @@ namespace DTCClient
 
             // Give the server a bit to be able to respond
             //await Task.Delay(100).ConfigureAwait(true);
-            await SendRequestAsync(DTCMessageType.EncodingRequest, encodingRequest, _cts.Token).ConfigureAwait(false);
+            await SendRequestAsync(DTCMessageType.EncodingRequest, encodingRequest, _ctsProducer.Token).ConfigureAwait(false);
 
             // Wait until the response is received or until timeout
             var startTime = DateTime.Now;
@@ -253,7 +262,7 @@ namespace DTCClient
                 TradeAccount = tradeAccount,
                 TradeMode = tradeMode
             };
-            await SendRequestAsync(DTCMessageType.LogonRequest, logonRequest, _cts.Token).ConfigureAwait(false);
+            await SendRequestAsync(DTCMessageType.LogonRequest, logonRequest, _ctsProducer.Token).ConfigureAwait(false);
 
             // Wait until the response is received or until timeout
             var startTime = DateTime.Now;
@@ -308,14 +317,15 @@ namespace DTCClient
             //_isProducerRunning = true;
             try
             {
-                while (!_cts.IsCancellationRequested)
+                while (!_ctsProducer.IsCancellationRequested)
                 {
-                    //Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ProducerLoopAsync)} to read a message with {_currentCodec.Encoding}");
-                    var message = await ReadMessageDTCAsync(_ctsReader.Token);
-                    if (_ctsReader.IsCancellationRequested)
+                    Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ProducerLoopAsync)} to read a message with {_currentCodec.Encoding}");
+                    var message = await ReadMessageDTCAsync(_ctsProducer.Token);
+                    Logger.Debug($"Did in {nameof(Client)}.{nameof(ProducerLoopAsync)} read a message with {_currentCodec.Encoding}");
+                    if (_ctsProducer.IsCancellationRequested)
                     {
                         // Changed _currentCodec, so unblocked this way
-                        _ctsReader = new CancellationTokenSource();
+                        _ctsProducer = new CancellationTokenSource();
                         continue;
                     }
                     if (message == null)
@@ -323,8 +333,9 @@ namespace DTCClient
                         // Probably an exception
                         throw new DTCSharpException("Why?");
                     }
-                    _messageQueue.Add(message, _cts.Token);
-                    //Logger.Debug($"{nameof(Client)}.{nameof(ProducerLoopAsync)} added to messageQueue: {message}");
+                    Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ProducerLoopAsync)} to add to messageQueue: {message}");
+                    _messageQueue.Add(message, _ctsProducer.Token);
+                    Logger.Debug($"{nameof(Client)}.{nameof(ProducerLoopAsync)} added to messageQueue: {message}");
                 }
                 _messageQueue.CompleteAdding();
             }
@@ -336,20 +347,20 @@ namespace DTCClient
             //_isProducerRunning = false;
         }
 
-        private async Task<MessageDTC> ReadMessageDTCAsync(CancellationToken ctsReadsToken)
+        private async Task<MessageDTC> ReadMessageDTCAsync(CancellationToken cancellationToken)
         {
-            while (!_cts.Token.IsCancellationRequested)
+            while (!_ctsProducer.Token.IsCancellationRequested)
             {
                 try
                 {
                     //s_logger.Debug($"Waiting in {nameof(Client)}.{nameof(ResponseReader)} to read a message");
-                    var message = await _currentCodec.GetMessageDTCAsync(ctsReadsToken);
+                    var message = await _currentCodec.GetMessageDTCAsync(cancellationToken);
                     return message;
                 }
                 catch (IOException ex)
                 {
                     // Ignore this if it results from disconnect (cancellation)
-                    if (_cts.Token.IsCancellationRequested)
+                    if (_ctsProducer.Token.IsCancellationRequested)
                     {
                         Disconnect(new Error("Read error.", ex));
                         return null;
@@ -371,15 +382,15 @@ namespace DTCClient
         /// <summary>
         /// Consumer, processes the messages from the _messageQueue
         /// </summary>
-        private void ConsumerLoop()
+        private async Task ConsumerLoopAsync()
         {
             while (!_messageQueue.IsCompleted)
             {
                 MessageDTC message = null;
                 try
                 {
-                    message = _messageQueue.Take(_cts.Token);
-                    //Logger.Debug($"{nameof(Client)}.{nameof(ConsumerLoop)} took from messageQueue: {message}");
+                    message = _messageQueue.Take(_ctsConsumer.Token);
+                    //Logger.Debug($"{nameof(Client)}.{nameof(ConsumerLoopAsync)} took from messageQueue: {message}");
                 }
                 catch (InvalidOperationException)
                 {
@@ -389,9 +400,14 @@ namespace DTCClient
                 {
                     break;
                 }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, ex.Message);
+                    throw;
+                }
                 if (message != null)
                 {
-                    ProcessMessage(message);
+                    await ProcessMessageAsync(message).ConfigureAwait(false);
                 }
             }
         }
@@ -400,9 +416,10 @@ namespace DTCClient
         /// Process the message represented by bytes.
         /// </summary>
         /// <param name="messageDTC"></param>
-        protected virtual void ProcessMessage(MessageDTC messageDTC)
+        protected virtual async Task ProcessMessageAsync(MessageDTC messageDTC)
         {
             //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
+            // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
             switch (messageDTC.MessageType)
             {
                 case DTCMessageType.LogonResponse:
@@ -420,11 +437,11 @@ namespace DTCClient
                     // Note that we must use binary encoding here on the first usage after connect, 
                     //    per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
                     var encodingResponse = messageDTC.Message as EncodingResponse;
-                    SetCurrentCodec(encodingResponse.Encoding);
+                    await SetCurrentCodecAsync(encodingResponse.Encoding).ConfigureAwait(false);
                     ThrowEvent(encodingResponse, EncodingResponseEvent);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessage)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessageAsync)}.");
             }
         }
 
@@ -432,14 +449,14 @@ namespace DTCClient
         /// This must be called whenever the encoding changes, immediately AFTER the EncodingResponse is sent to the client
         /// </summary>
         /// <param name="encoding"></param>
-        private void SetCurrentCodec(EncodingEnum encoding)
+        private async Task SetCurrentCodecAsync(EncodingEnum encoding)
         {
             switch (encoding)
             {
                 case EncodingEnum.BinaryEncoding:
                     if (!(_currentCodec is CodecBinary))
                     {
-                        ChangeToNewCodec(new CodecBinary(_networkStream, ClientOrServer.Server));
+                        await ChangeToNewCodecAsync(new CodecBinary(_networkStream, ClientOrServer.Server)).ConfigureAwait(false);
                         Logger.Debug($"_currCodec changed to Binary in {nameof(Client)}");
                     }
                     break;
@@ -450,7 +467,7 @@ namespace DTCClient
                 case EncodingEnum.ProtocolBuffers:
                     if (!(_currentCodec is CodecProtobuf))
                     {
-                        ChangeToNewCodec(new CodecProtobuf(_networkStream, ClientOrServer.Server));
+                        await ChangeToNewCodecAsync(new CodecProtobuf(_networkStream, ClientOrServer.Server)).ConfigureAwait(false);
                     }
                     break;
                 default:
@@ -458,20 +475,23 @@ namespace DTCClient
             }
         }
 
-        private void ChangeToNewCodec(Codec codec)
+        private async Task ChangeToNewCodecAsync(Codec codec)
         {
             // Stop the ProducerLoop while we change to a new codec
             //_cts.Cancel();
-            _ctsReader.Cancel();
+            _ctsProducer.Cancel(false);
             _currentCodec = codec;
-            // while (!_messageQueue.IsCompleted || _messageQueue.Count > 0 || _isProducerRunning)
-            // {
-            //     Thread.Sleep(1);
-            // }
+            while (!_messageQueue.IsCompleted || _messageQueue.Count > 0) // || _isProducerRunning)
+            {
+                await Task.Delay(1).ConfigureAwait(false);
+            }
+            var taskProducer = _taskProducer;
+            var taskConsumer = _taskConsumer;
+
             // _messageQueue = new BlockingCollection<MessageDTC>();
             //_cts = new CancellationTokenSource();
             // _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
-            // _taskConsumer = Task.Factory.StartNew(ConsumerLoop, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
+            // _taskConsumer = Task.Factory.StartNew(ConsumerLoopAsync, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
             Logger.Debug($"_currCodec changed to Protobuf in {nameof(Client)}");
         }
 
@@ -486,8 +506,9 @@ namespace DTCClient
                     DoNotReconnect = 1u,
                     Reason = "Client Disposed"
                 }, default(CancellationToken));
-                _ctsReader.Cancel(true);
-                _cts.Cancel(true);
+                _ctsProducer.Cancel(true);
+                _ctsConsumer.Cancel(true);
+                _ctsTasks.Cancel(true);
                 _currentCodec.Close();
                 Disconnect(new Error("Disposing"));
             }

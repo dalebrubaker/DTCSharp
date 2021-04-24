@@ -17,10 +17,9 @@ namespace DTCCommon.Codecs
     {
         protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
-        protected readonly Stream _stream; // normally a NetworkStream but can be a MemoryStream for a unit test
+        protected Stream _stream; // normally a NetworkStream but can be a MemoryStream for a unit test
         private readonly ClientOrServer _clientOrServer;
         private bool _isZippedStream;
-        private BinaryReader _binaryReader;
         private DeflateStream _deflateStream;
         private readonly byte[] _bufferHeader;
 
@@ -30,7 +29,6 @@ namespace DTCCommon.Codecs
         {
             _stream = stream;
             _clientOrServer = clientOrServer;
-            _binaryReader = new BinaryReader(stream);
             _bufferHeader = new byte[4];
         }
 
@@ -292,8 +290,12 @@ namespace DTCCommon.Codecs
                 }
                 Debug.Assert(numBytes == 2);
                 var size = BitConverter.ToInt16(_bufferHeader, 0);
+                Logger.Debug($"{this}.{nameof(ReadMessageAsync)} read size={size} from _stream");
                 if (size < 4)
                 {
+                    await Task.Delay(100);
+                    var buffer = new byte[10000];
+                    var moreBytes = await _stream.ReadAsync(buffer, 0, 10000, cancellationToken).ConfigureAwait(false);
                     // There is not a complete record available yet
                     return (DTCMessageType.MessageTypeUnset, new byte[0]);
                     // Debug.Assert(size > 4, "If only 4, then message length is 0 bytes");
@@ -307,6 +309,7 @@ namespace DTCCommon.Codecs
                 }
                 Debug.Assert(numBytes == 2);
                 var messageType = (DTCMessageType)BitConverter.ToInt16(_bufferHeader, 2);
+                //Logger.Debug($"{this}.{nameof(ReadMessageAsync)} read messageType={messageType} from _stream");
                 var messageSize = size - 4; // size includes the header
                 var messageBytes = new byte[messageSize];
                 numBytes = await _stream.ReadAsync(messageBytes, 0, messageSize, cancellationToken).ConfigureAwait(false);
@@ -315,6 +318,7 @@ namespace DTCCommon.Codecs
                     // There is not a complete record available yet
                     return (DTCMessageType.MessageTypeUnset, new byte[0]);
                 }
+                //Logger.Debug($"{this}.{nameof(ReadMessageAsync)} read {numBytes} messageSize from _stream");
                 Debug.Assert(numBytes == messageSize);
                 return (messageType, messageBytes);
             }
@@ -340,7 +344,7 @@ namespace DTCCommon.Codecs
         {
             // EncodingRequest goes as binary for all protocol versions
             var size = 16;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.AddHeader(messageType);
             bufferBuilder.Add(encodingRequest.ProtocolVersion);
             bufferBuilder.Add((int)encodingRequest.Encoding); // enum size is 4
@@ -373,7 +377,7 @@ namespace DTCCommon.Codecs
         protected async Task WriteEncodingResponseAsync(DTCMessageType messageType, EncodingResponse encodingResponse, CancellationToken cancellationToken)
         {
             var size = (short)16;
-            using var bufferBuilder = new BufferBuilder(size);
+            using var bufferBuilder = new BufferBuilder(size, this);
             bufferBuilder.Add(size);
             bufferBuilder.Add((short)messageType);
             bufferBuilder.Add(encodingResponse.ProtocolVersion);
@@ -394,12 +398,13 @@ namespace DTCCommon.Codecs
                 throw new DTCSharpException("Why?");
             }
             // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
-            var zlibCmf = _binaryReader.ReadByte(); // 120 = 0111 1000 means Deflate 
+            var binaryReader = new BinaryReader(_stream);
+            var zlibCmf = binaryReader.ReadByte(); // 120 = 0111 1000 means Deflate 
             if (zlibCmf != 120)
             {
                 throw new DTCSharpException($"Unexpected zlibCmf header byte {zlibCmf}, expected 120");
             }
-            var zlibFlg = _binaryReader.ReadByte(); // 156 = 1001 1100
+            var zlibFlg = binaryReader.ReadByte(); // 156 = 1001 1100
             if (zlibFlg != 156)
             {
                 throw new DTCSharpException($"Unexpected zlibFlg header byte {zlibFlg}, expected 156");
@@ -409,7 +414,12 @@ namespace DTCCommon.Codecs
                 _isZippedStream = true;
                 _disabledHeartbeats = true;
                 var deflateStream = new DeflateStream(_stream, CompressionMode.Decompress);
-                _binaryReader = new BinaryReader(deflateStream);
+                
+                // Does redefining _stream also corrupt deflateStream?  We want to read deflateStream but write _stream
+                _stream = deflateStream;
+                
+                
+                //_binaryReader = new BinaryReader(deflateStream);
                 // Can't write this stream_binaryWriter = new BinaryWriter(deflateStream);
             }
             catch (Exception ex)

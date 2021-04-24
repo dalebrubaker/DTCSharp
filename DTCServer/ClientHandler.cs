@@ -456,7 +456,7 @@ namespace DTCServer
             if (messageType == DTCMessageType.LogonResponse)
             {}
             await _currentCodec.WriteAsync(messageType, message, cancellationToken).ConfigureAwait(false);
-            s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponseAsync)} wrote with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");
+            //s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponseAsync)} wrote with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");
             if (messageType == DTCMessageType.HistoricalPriceDataResponseHeader)
             {
                 var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
