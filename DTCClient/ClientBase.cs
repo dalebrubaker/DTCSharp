@@ -9,6 +9,7 @@ using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
 using DTCCommon.Enums;
+using DTCCommon.Exceptions;
 using DTCPB;
 using Google.Protobuf;
 using NLog;
@@ -27,13 +28,15 @@ namespace DTCClient
         private DateTime _lastHeartbeatReceivedTime;
         private NetworkStream _networkStream;
         protected Codec _currentCodec;
-        private CancellationTokenSource _cts;
+        protected CancellationTokenSource _cts;
+        private CancellationTokenSource _ctsReader;
         private int _nextRequestId;
         protected bool _useHeartbeat;
         private bool _isConnected;
-        private readonly BlockingCollection<MessageWithType> _blockingCollection;
+        private BlockingCollection<MessageDTC> _messageQueue;
         private ConfiguredTaskAwaitable _taskConsumer;
-        private ConfiguredTaskAwaitable _taskProducer;
+        private ConfiguredTaskAwaitable<Task> _taskProducer;
+        //private bool _isProducerRunning;
 
         /// <summary>
         /// Constructor for a client
@@ -46,7 +49,7 @@ namespace DTCClient
             ServerAddress = serverAddress;
             TimeoutNoActivity = timeoutNoActivity;
             ServerPort = serverPort;
-            _blockingCollection = new BlockingCollection<MessageWithType>();
+            _messageQueue = new BlockingCollection<MessageDTC>();
         }
 
         public bool IsConnected => _isConnected;
@@ -69,7 +72,7 @@ namespace DTCClient
 
         public string ClientName { get; protected set; }
 
-        private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
+        private async void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
             if (!_useHeartbeat)
             {
@@ -84,7 +87,7 @@ namespace DTCClient
 
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat();
-            SendRequest(DTCMessageType.Heartbeat, heartbeat);
+            await SendRequestAsync(DTCMessageType.Heartbeat, heartbeat, _cts.Token).ConfigureAwait(false);
         }
 
         #region events
@@ -146,12 +149,12 @@ namespace DTCClient
             }
             // Every Codec must write the encoding request as binary
             _networkStream = _tcpClient.GetStream();
-            _currentCodec = new CodecProtobuf(_networkStream, ClientOrServer.Client);
+            _currentCodec = new CodecBinary(_networkStream, ClientOrServer.Client);
+            Logger.Debug("Initial setting of _currentCodec is Binary");
             _cts = new CancellationTokenSource();
-            _taskConsumer = Task.Factory.StartNew(ConsumerLoop, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current)
-                .ConfigureAwait(false);
-            _taskProducer = Task.Factory.StartNew(ProducerLoop, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current)
-                .ConfigureAwait(false);
+            _ctsReader = new CancellationTokenSource();
+            _taskConsumer = Task.Factory.StartNew(ConsumerLoop, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
+            _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
@@ -174,7 +177,7 @@ namespace DTCClient
 
             // Give the server a bit to be able to respond
             //await Task.Delay(100).ConfigureAwait(true);
-            SendRequest(DTCMessageType.EncodingRequest, encodingRequest);
+            await SendRequestAsync(DTCMessageType.EncodingRequest, encodingRequest, _cts.Token).ConfigureAwait(false);
 
             // Wait until the response is received or until timeout
             var startTime = DateTime.Now;
@@ -189,7 +192,6 @@ namespace DTCClient
             return result;
         }
 
-    
         /// <summary>
         /// Call this method AFTER calling ConnectAsync() to make the connection
         /// Send a Logon request to the server. 
@@ -251,7 +253,7 @@ namespace DTCClient
                 TradeAccount = tradeAccount,
                 TradeMode = tradeMode
             };
-            SendRequest(DTCMessageType.LogonRequest, logonRequest);
+            await SendRequestAsync(DTCMessageType.LogonRequest, logonRequest, _cts.Token).ConfigureAwait(false);
 
             // Wait until the response is received or until timeout
             var startTime = DateTime.Now;
@@ -262,103 +264,87 @@ namespace DTCClient
             return result;
         }
 
-        /// <summary>
-        /// Return symbol|exchange
-        /// </summary>
-        /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        /// <returns></returns>
-        public string CombineSymbolExchange(string symbol, string exchange)
-        {
-            return $"{symbol}|{exchange}";
-        }
-
-        /// <summary>
-        /// Split symbol|exchange.
-        /// </summary>
-        /// <param name="combo"></param>
-        /// <param name="symbol"></param>
-        /// <param name="exchange"></param>
-        public void SplitSymbolExchange(string combo, out string symbol, out string exchange)
-        {
-            if (string.IsNullOrEmpty(combo))
-            {
-                symbol = null;
-                exchange = null;
-                return;
-            }
-            var splits = combo.Split('|');
-            symbol = splits[0];
-            exchange = splits[1];
-        }
-
-        protected void ThrowEventImpl<T>(T message, EventHandler<T> eventForMessage)
+        protected void ThrowEvent<T>(T message, EventHandler<T> eventForMessage) where T : IMessage
         {
             var temp = eventForMessage;
             temp?.Invoke(this, message);
         }
 
-        protected void ThrowEvent<T>(T message, EventHandler<T> eventForMessage) where T : IMessage
+        /// <summary>
+        /// internal for unit tests
+        /// </summary>
+        /// <param name="messageType"></param>
+        /// <param name="message"></param>
+        /// <param name="cancellationToken"></param>
+        /// <typeparam name="T"></typeparam>
+        protected internal async Task SendRequestAsync<T>(DTCMessageType messageType, T message, CancellationToken cancellationToken) where T : IMessage
         {
-            ThrowEventImpl(message, eventForMessage);
+#if DEBUG
+            //DebugHelpers.AddRequestSent(messageType, _currentCodec);
+            // if (messageType == DTCMessageType.LogonRequest)
+            // {
+            //     var requestsSent = DebugHelpers.RequestsSent;
+            //     var requestsReceived = DebugHelpers.RequestsReceived;
+            //     var responsesReceived = DebugHelpers.ResponsesReceived;
+            //     var responsesSent = DebugHelpers.ResponsesSent;
+            // }
+#endif
+            try
+            {
+                await _currentCodec.WriteAsync(messageType, message, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                var error = new Error("Unable to send request", ex);
+                Disconnect(error);
+            }
         }
 
         /// <summary>
-        /// This message runs in a continuous loop on its own thread, throwing events as messages are received.
+        /// Producer, loads messages from the server into the _messageQueue
         /// </summary>
-        private void ResponseReader()
+        private async Task ProducerLoopAsync()
         {
-            while (!_cts.Token.IsCancellationRequested)
+            //_isProducerRunning = true;
+            try
             {
-                try
+                while (!_cts.IsCancellationRequested)
                 {
-                    // if (!_networkStream.DataAvailable)
-                    // {
-                    //     await Task.Delay(1).ConfigureAwait(false);
-                    //     continue;
-                    // }
-                    //s_logger.Debug($"Waiting in {nameof(Client)}.{nameof(ResponseReader)} to read a message");
-                    var (messageType, messageBytes) = _currentCodec.ReadMessage();
-                    if (messageType == DTCMessageType.MessageTypeUnset)
+                    //Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ProducerLoopAsync)} to read a message with {_currentCodec.Encoding}");
+                    var message = await ReadMessageDTCAsync(_ctsReader.Token);
+                    if (_ctsReader.IsCancellationRequested)
                     {
-                        // End of zipped historical data. We can't proceed
-                        return;
+                        // Changed _currentCodec, so unblocked this way
+                        _ctsReader = new CancellationTokenSource();
+                        continue;
                     }
-                    ProcessResponseBytes(messageType, messageBytes);
-                    //await Task.Delay(1).ConfigureAwait(false);
-                }
-                catch (IOException ex)
-                {
-                    // Ignore this if it results from disconnect (cancellation)
-                    if (_cts.Token.IsCancellationRequested)
+                    if (message == null)
                     {
-                        Disconnect(new Error("Read error.", ex));
-                        return;
+                        // Probably an exception
+                        throw new DTCSharpException("Why?");
                     }
-                    Logger.Error(ex, ex.Message);
-                    throw;
+                    _messageQueue.Add(message, _cts.Token);
+                    //Logger.Debug($"{nameof(Client)}.{nameof(ProducerLoopAsync)} added to messageQueue: {message}");
                 }
-                catch (Exception ex)
-                {
-                    var typeName = ex.GetType().Name;
-                    Disconnect(new Error($"Read error {typeName}.", ex));
-                    Logger.Error(ex, ex.Message);
-                }
+                _messageQueue.CompleteAdding();
             }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, ex.Message);
+                throw;
+            }
+            //_isProducerRunning = false;
         }
-        
-        /// <summary>
-        /// Block until a message is available
-        /// </summary>
-        private MessageWithType ReadMessageWithType()
+
+        private async Task<MessageDTC> ReadMessageDTCAsync(CancellationToken ctsReadsToken)
         {
             while (!_cts.Token.IsCancellationRequested)
             {
                 try
                 {
                     //s_logger.Debug($"Waiting in {nameof(Client)}.{nameof(ResponseReader)} to read a message");
-                    var messageWithType = _currentCodec.ReadIMessage();
-                    return messageWithType;
+                    var message = await _currentCodec.GetMessageDTCAsync(ctsReadsToken);
+                    return message;
                 }
                 catch (IOException ex)
                 {
@@ -376,80 +362,24 @@ namespace DTCClient
                     var typeName = ex.GetType().Name;
                     Disconnect(new Error($"Read error {typeName}.", ex));
                     Logger.Error(ex, ex.Message);
+                    throw;
                 }
             }
+            return null;
         }
 
         /// <summary>
-        /// internal for unit tests
-        /// </summary>
-        /// <param name="messageType"></param>
-        /// <param name="message"></param>
-        /// <typeparam name="T"></typeparam>
-        protected internal void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
-        {
-#if DEBUG
-//            if (messageType != DTCMessageType.Heartbeat)
-//            {
-//#pragma warning disable 219
-//                var debug = 1;
-//#pragma warning restore 219
-//            }
-            DebugHelpers.AddRequestSent(messageType, _currentCodec);
-            //var port = ((IPEndPoint)_tcpClient?.Client.LocalEndPoint)?.Port;
-            //if (port == 49998 && messageType == DTCMessageType.LogonResponse)
-            if (messageType == DTCMessageType.LogonRequest)
-            {
-#pragma warning disable 219
-                var debug2 = 1;
-#pragma warning restore 219
-                var requestsSent = DebugHelpers.RequestsSent;
-                var requestsReceived = DebugHelpers.RequestsReceived;
-                var responsesReceived = DebugHelpers.ResponsesReceived;
-                var responsesSent = DebugHelpers.ResponsesSent;
-            }
-
-#endif
-            try
-            {
-                _currentCodec.Write(messageType, message);
-            }
-            catch (Exception ex)
-            {
-                var error = new Error("Unable to send request", ex);
-                Disconnect(error);
-            }
-        }
-
-        /// <summary>
-        /// Producer 
-        /// </summary>
-        private void ProducerLoop()
-        {
-            while (!_cts.IsCancellationRequested)
-            {
-                var messageWithType = ReadMessageWithType();
-                if (messageWithType == null)
-                {
-                    // Probably an exception
-                    break;
-                }
-                _blockingCollection.Add(messageWithType, _cts.Token);
-            }
-            _blockingCollection.CompleteAdding();
-        }
-
-        /// <summary>
-        /// Consumer
+        /// Consumer, processes the messages from the _messageQueue
         /// </summary>
         private void ConsumerLoop()
         {
-            while (!_blockingCollection.IsCompleted)
+            while (!_messageQueue.IsCompleted)
             {
-                MessageWithType data = null;
+                MessageDTC message = null;
                 try
                 {
-                    data = _blockingCollection.Take(_cts.Token);
+                    message = _messageQueue.Take(_cts.Token);
+                    //Logger.Debug($"{nameof(Client)}.{nameof(ConsumerLoop)} took from messageQueue: {message}");
                 }
                 catch (InvalidOperationException)
                 {
@@ -459,385 +389,90 @@ namespace DTCClient
                 {
                     break;
                 }
-                if (data != null)
+                if (message != null)
                 {
-                    SendMessage(data);
+                    ProcessMessage(message);
                 }
-            }
-        }
-
-        protected virtual void SendMessage(MessageWithType messageWithType)
-        {
-            //s_logger.Debug($"{nameof(ProcessMessage)} is processing {messageWithType}");
-            switch (messageWithType.MessageType)
-            {
-                case DTCMessageType.MessageTypeUnset:
-                    throw new InvalidDataException("Unset should never happen");
-                case DTCMessageType.LogonRequest:
-                    throw new InvalidDataException($"{messageWithType} should never be sent.");
-                case DTCMessageType.LogonResponse:
-                    ThrowEvent(LogonResponse, LogonResponseEvent);
-                    break;
-                case DTCMessageType.Heartbeat:
-                    _lastHeartbeatReceivedTime = DateTime.Now;
-                    ThrowEvent(messageWithType.Message, HeartbeatEvent);
-                    break;
-                case DTCMessageType.Logoff:
-                    break;
-                case DTCMessageType.EncodingRequest:
-                    break;
-                case DTCMessageType.EncodingResponse:
-                    break;
-                case DTCMessageType.MarketDataRequest:
-                    break;
-                case DTCMessageType.MarketDataReject:
-                    break;
-                case DTCMessageType.MarketDataSnapshot:
-                    break;
-                case DTCMessageType.MarketDataSnapshotInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateTrade:
-                    break;
-                case DTCMessageType.MarketDataUpdateTradeCompact:
-                    break;
-                case DTCMessageType.MarketDataUpdateTradeInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
-                    break;
-                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator:
-                    break;
-                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator2:
-                    break;
-                case DTCMessageType.MarketDataUpdateTradeNoTimestamp:
-                    break;
-                case DTCMessageType.MarketDataUpdateBidAsk:
-                    break;
-                case DTCMessageType.MarketDataUpdateBidAskCompact:
-                    break;
-                case DTCMessageType.MarketDataUpdateBidAskNoTimestamp:
-                    break;
-                case DTCMessageType.MarketDataUpdateBidAskInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionOpen:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionOpenInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionHigh:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionHighInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionLow:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionLowInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionVolume:
-                    break;
-                case DTCMessageType.MarketDataUpdateOpenInterest:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionSettlement:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionSettlementInt:
-                    break;
-                case DTCMessageType.MarketDataUpdateSessionNumTrades:
-                    break;
-                case DTCMessageType.MarketDataUpdateTradingSessionDate:
-                    break;
-                case DTCMessageType.MarketDepthRequest:
-                    break;
-                case DTCMessageType.MarketDepthReject:
-                    break;
-                case DTCMessageType.MarketDepthSnapshotLevel:
-                    break;
-                case DTCMessageType.MarketDepthSnapshotLevelInt:
-                    break;
-                case DTCMessageType.MarketDepthSnapshotLevelFloat:
-                    break;
-                case DTCMessageType.MarketDepthUpdateLevel:
-                    break;
-                case DTCMessageType.MarketDepthUpdateLevelFloatWithMilliseconds:
-                    break;
-                case DTCMessageType.MarketDepthUpdateLevelNoTimestamp:
-                    break;
-                case DTCMessageType.MarketDepthUpdateLevelInt:
-                    break;
-                case DTCMessageType.MarketDataFeedStatus:
-                    break;
-                case DTCMessageType.MarketDataFeedSymbolStatus:
-                    break;
-                case DTCMessageType.TradingSymbolStatus:
-                    break;
-                case DTCMessageType.SubmitNewSingleOrder:
-                    break;
-                case DTCMessageType.SubmitNewSingleOrderInt:
-                    break;
-                case DTCMessageType.SubmitNewOcoOrder:
-                    break;
-                case DTCMessageType.SubmitNewOcoOrderInt:
-                    break;
-                case DTCMessageType.SubmitFlattenPositionOrder:
-                    break;
-                case DTCMessageType.CancelOrder:
-                    break;
-                case DTCMessageType.CancelReplaceOrder:
-                    break;
-                case DTCMessageType.CancelReplaceOrderInt:
-                    break;
-                case DTCMessageType.OpenOrdersRequest:
-                    break;
-                case DTCMessageType.OpenOrdersReject:
-                    break;
-                case DTCMessageType.OrderUpdate:
-                    break;
-                case DTCMessageType.HistoricalOrderFillsRequest:
-                    break;
-                case DTCMessageType.HistoricalOrderFillResponse:
-                    break;
-                case DTCMessageType.HistoricalOrderFillsReject:
-                    break;
-                case DTCMessageType.CurrentPositionsRequest:
-                    break;
-                case DTCMessageType.CurrentPositionsReject:
-                    break;
-                case DTCMessageType.PositionUpdate:
-                    break;
-                case DTCMessageType.TradeAccountsRequest:
-                    break;
-                case DTCMessageType.TradeAccountResponse:
-                    break;
-                case DTCMessageType.ExchangeListRequest:
-                    break;
-                case DTCMessageType.ExchangeListResponse:
-                    break;
-                case DTCMessageType.SymbolsForExchangeRequest:
-                    break;
-                case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
-                    break;
-                case DTCMessageType.SymbolsForUnderlyingRequest:
-                    break;
-                case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    break;
-                case DTCMessageType.SecurityDefinitionResponse:
-                    break;
-                case DTCMessageType.SymbolSearchRequest:
-                    break;
-                case DTCMessageType.SecurityDefinitionReject:
-                    break;
-                case DTCMessageType.AccountBalanceRequest:
-                    break;
-                case DTCMessageType.AccountBalanceReject:
-                    break;
-                case DTCMessageType.AccountBalanceUpdate:
-                    break;
-                case DTCMessageType.AccountBalanceAdjustment:
-                    break;
-                case DTCMessageType.AccountBalanceAdjustmentReject:
-                    break;
-                case DTCMessageType.AccountBalanceAdjustmentComplete:
-                    break;
-                case DTCMessageType.HistoricalAccountBalancesRequest:
-                    break;
-                case DTCMessageType.HistoricalAccountBalancesReject:
-                    break;
-                case DTCMessageType.HistoricalAccountBalanceResponse:
-                    break;
-                case DTCMessageType.UserMessage:
-                    break;
-                case DTCMessageType.GeneralLogMessage:
-                    break;
-                case DTCMessageType.AlertMessage:
-                    break;
-                case DTCMessageType.JournalEntryAdd:
-                    break;
-                case DTCMessageType.JournalEntriesRequest:
-                    break;
-                case DTCMessageType.JournalEntriesReject:
-                    break;
-                case DTCMessageType.JournalEntryResponse:
-                    break;
-                case DTCMessageType.HistoricalPriceDataRequest:
-                    break;
-                case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    break;
-                case DTCMessageType.HistoricalPriceDataReject:
-                    break;
-                case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    break;
-                case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                    break;
-                case DTCMessageType.HistoricalPriceDataRecordResponseInt:
-                    break;
-                case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
-                    break;
-                case DTCMessageType.HistoricalPriceDataResponseTrailer:
-                    break;
-                case DTCMessageType.HistoricalMarketDepthDataRequest:
-                    break;
-                case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
-                    break;
-                case DTCMessageType.HistoricalMarketDepthDataReject:
-                    break;
-                case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
             }
         }
 
         /// <summary>
         /// Process the message represented by bytes.
-        /// binaryReader may be changed to use a new DeflateStream if we change to zipped
         /// </summary>
-        /// <param name="messageType"></param>
-        /// <param name="messageBytes"></param>
-        protected virtual void ProcessResponseBytes(DTCMessageType messageType, byte[] messageBytes)
+        /// <param name="messageDTC"></param>
+        protected virtual void ProcessMessage(MessageDTC messageDTC)
         {
             //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
-            switch (messageType)
+            switch (messageDTC.MessageType)
             {
                 case DTCMessageType.LogonResponse:
-                    LogonResponse = _currentCodec.Load<LogonResponse>(messageType, messageBytes);
-                    ThrowEvent(LogonResponse, LogonResponseEvent);
+                    ThrowEvent(messageDTC.Message as LogonResponse, LogonResponseEvent);
                     break;
                 case DTCMessageType.Heartbeat:
                     _lastHeartbeatReceivedTime = DateTime.Now;
-                    var heartbeat = _currentCodec.Load<Heartbeat>(messageType, messageBytes);
-                    ThrowEvent(heartbeat, HeartbeatEvent);
+                    ThrowEvent(messageDTC.Message as Heartbeat, HeartbeatEvent);
                     break;
                 case DTCMessageType.Logoff:
-                    var logoff = _currentCodec.Load<Logoff>(messageType, messageBytes);
                     OnDisconnected(new Error("User logoff"));
-                    ThrowEvent(logoff, LogoffEvent);
+                    ThrowEvent(messageDTC.Message as Logoff, LogoffEvent);
                     break;
                 case DTCMessageType.EncodingResponse:
                     // Note that we must use binary encoding here on the first usage after connect, 
                     //    per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
-                    var encodingResponse = _currentCodec.Load<EncodingResponse>(messageType, messageBytes);
-                    switch (encodingResponse.Encoding)
-                    {
-                        case EncodingEnum.BinaryEncoding:
-                            _currentCodec = new CodecBinary(_networkStream, ClientOrServer.Client);
-                            break;
-                        case EncodingEnum.BinaryWithVariableLengthStrings:
-                        case EncodingEnum.JsonEncoding:
-                        case EncodingEnum.JsonCompactEncoding:
-                            throw new NotImplementedException($"Not implemented in {nameof(ProcessResponseBytes)}: {nameof(encodingResponse.Encoding)}");
-                        case EncodingEnum.ProtocolBuffers:
-                            _currentCodec = new CodecProtobuf(_networkStream, ClientOrServer.Client);
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                    var encodingResponse = messageDTC.Message as EncodingResponse;
+                    SetCurrentCodec(encodingResponse.Encoding);
                     ThrowEvent(encodingResponse, EncodingResponseEvent);
                     break;
-                case DTCMessageType.MarketDataReject:
-                case DTCMessageType.MarketDataSnapshot:
-                case DTCMessageType.MarketDataSnapshotInt:
-                case DTCMessageType.MarketDataUpdateTrade:
-                case DTCMessageType.MarketDataUpdateTradeCompact:
-                case DTCMessageType.MarketDataUpdateTradeInt:
-                case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
-                case DTCMessageType.MarketDataUpdateBidAsk:
-                case DTCMessageType.MarketDataUpdateBidAskCompact:
-                case DTCMessageType.MarketDataUpdateBidAskInt:
-                case DTCMessageType.MarketDataUpdateSessionOpen:
-                case DTCMessageType.MarketDataUpdateSessionOpenInt:
-                case DTCMessageType.MarketDataUpdateSessionHigh:
-                case DTCMessageType.MarketDataUpdateSessionHighInt:
-                case DTCMessageType.MarketDataUpdateSessionLow:
-                case DTCMessageType.MarketDataUpdateSessionLowInt:
-                case DTCMessageType.MarketDataUpdateSessionVolume:
-                case DTCMessageType.MarketDataUpdateOpenInterest:
-                case DTCMessageType.MarketDataUpdateSessionSettlement:
-                case DTCMessageType.MarketDataUpdateSessionSettlementInt:
-                case DTCMessageType.MarketDataUpdateSessionNumTrades:
-                case DTCMessageType.MarketDataUpdateTradingSessionDate:
-                case DTCMessageType.MarketDepthReject:
-                case DTCMessageType.MarketDepthSnapshotLevel:
-                case DTCMessageType.MarketDepthSnapshotLevelInt:
-                case DTCMessageType.MarketDepthUpdateLevel:
-                case DTCMessageType.MarketDepthUpdateLevelInt:
-                case DTCMessageType.MarketDataFeedStatus:
-                case DTCMessageType.MarketDataFeedSymbolStatus:
-                case DTCMessageType.OpenOrdersReject:
-                case DTCMessageType.OrderUpdate:
-                case DTCMessageType.HistoricalOrderFillResponse:
-                case DTCMessageType.CurrentPositionsReject:
-                case DTCMessageType.PositionUpdate:
-                case DTCMessageType.TradeAccountResponse:
-                case DTCMessageType.ExchangeListResponse:
-                case DTCMessageType.SecurityDefinitionResponse:
-                case DTCMessageType.SecurityDefinitionReject:
-                case DTCMessageType.AccountBalanceReject:
-                case DTCMessageType.AccountBalanceUpdate:
-                case DTCMessageType.UserMessage:
-                case DTCMessageType.GeneralLogMessage:
-                case DTCMessageType.HistoricalPriceDataResponseHeader:
-                case DTCMessageType.HistoricalPriceDataReject:
-                case DTCMessageType.HistoricalPriceDataRecordResponse:
-                case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                case DTCMessageType.HistoricalPriceDataRecordResponseInt:
-                case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
-                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator:
-                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator2:
-                case DTCMessageType.MarketDataUpdateTradeNoTimestamp:
-                case DTCMessageType.MarketDataUpdateBidAskNoTimestamp:
-                case DTCMessageType.MarketDepthSnapshotLevelFloat:
-                case DTCMessageType.MarketDepthUpdateLevelFloatWithMilliseconds:
-                case DTCMessageType.MarketDepthUpdateLevelNoTimestamp:
-                case DTCMessageType.TradingSymbolStatus:
-                case DTCMessageType.SubmitFlattenPositionOrder:
-                case DTCMessageType.HistoricalOrderFillsReject:
-                case DTCMessageType.AccountBalanceAdjustment:
-                case DTCMessageType.AccountBalanceAdjustmentReject:
-                case DTCMessageType.AccountBalanceAdjustmentComplete:
-                case DTCMessageType.HistoricalAccountBalancesRequest:
-                case DTCMessageType.HistoricalAccountBalancesReject:
-                case DTCMessageType.HistoricalAccountBalanceResponse:
-                case DTCMessageType.AlertMessage:
-                case DTCMessageType.JournalEntryAdd:
-                case DTCMessageType.JournalEntriesRequest:
-                case DTCMessageType.JournalEntriesReject:
-                case DTCMessageType.JournalEntryResponse:
-                case DTCMessageType.HistoricalPriceDataResponseTrailer:
-                case DTCMessageType.HistoricalMarketDepthDataRequest:
-                case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
-                case DTCMessageType.HistoricalMarketDepthDataReject:
-                case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                    throw new NotSupportedException("These records should be handled in a derived Client");
-                case DTCMessageType.MessageTypeUnset:
-                case DTCMessageType.LogonRequest:
-                case DTCMessageType.EncodingRequest:
-                case DTCMessageType.MarketDataRequest:
-                case DTCMessageType.MarketDepthRequest:
-                case DTCMessageType.SubmitNewSingleOrder:
-                case DTCMessageType.SubmitNewSingleOrderInt:
-                case DTCMessageType.SubmitNewOcoOrder:
-                case DTCMessageType.SubmitNewOcoOrderInt:
-                case DTCMessageType.CancelOrder:
-                case DTCMessageType.CancelReplaceOrder:
-                case DTCMessageType.CancelReplaceOrderInt:
-                case DTCMessageType.OpenOrdersRequest:
-                case DTCMessageType.HistoricalOrderFillsRequest:
-                case DTCMessageType.CurrentPositionsRequest:
-                case DTCMessageType.TradeAccountsRequest:
-                case DTCMessageType.ExchangeListRequest:
-                case DTCMessageType.SymbolsForExchangeRequest:
-                case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
-                case DTCMessageType.SymbolsForUnderlyingRequest:
-                case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                case DTCMessageType.SymbolSearchRequest:
-                case DTCMessageType.AccountBalanceRequest:
-                case DTCMessageType.HistoricalPriceDataRequest:
-                    throw new NotImplementedException($"{messageType}");
                 default:
-#if DEBUG
-                    var requestsSent = DebugHelpers.RequestsSent;
-                    var requestsReceived = DebugHelpers.RequestsReceived;
-                    var responsesReceived = DebugHelpers.ResponsesReceived;
-                    var responsesSent = DebugHelpers.ResponsesSent;
-#endif
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {ClientName} {nameof(ProcessResponseBytes)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessage)}.");
             }
+        }
+
+        /// <summary>
+        /// This must be called whenever the encoding changes, immediately AFTER the EncodingResponse is sent to the client
+        /// </summary>
+        /// <param name="encoding"></param>
+        private void SetCurrentCodec(EncodingEnum encoding)
+        {
+            switch (encoding)
+            {
+                case EncodingEnum.BinaryEncoding:
+                    if (!(_currentCodec is CodecBinary))
+                    {
+                        ChangeToNewCodec(new CodecBinary(_networkStream, ClientOrServer.Server));
+                        Logger.Debug($"_currCodec changed to Binary in {nameof(Client)}");
+                    }
+                    break;
+                case EncodingEnum.BinaryWithVariableLengthStrings:
+                case EncodingEnum.JsonEncoding:
+                case EncodingEnum.JsonCompactEncoding:
+                    throw new NotImplementedException($"Not implemented in {nameof(Client)}: {nameof(encoding)}");
+                case EncodingEnum.ProtocolBuffers:
+                    if (!(_currentCodec is CodecProtobuf))
+                    {
+                        ChangeToNewCodec(new CodecProtobuf(_networkStream, ClientOrServer.Server));
+                    }
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(encoding), encoding, null);
+            }
+        }
+
+        private void ChangeToNewCodec(Codec codec)
+        {
+            // Stop the ProducerLoop while we change to a new codec
+            //_cts.Cancel();
+            _ctsReader.Cancel();
+            _currentCodec = codec;
+            // while (!_messageQueue.IsCompleted || _messageQueue.Count > 0 || _isProducerRunning)
+            // {
+            //     Thread.Sleep(1);
+            // }
+            // _messageQueue = new BlockingCollection<MessageDTC>();
+            //_cts = new CancellationTokenSource();
+            // _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
+            // _taskConsumer = Task.Factory.StartNew(ConsumerLoop, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
+            Logger.Debug($"_currCodec changed to Protobuf in {nameof(Client)}");
         }
 
         public void Dispose()
@@ -845,15 +480,16 @@ namespace DTCClient
             if (!_isDisposed)
             {
                 //s_logger.Debug("Disposing Client");
-                _currentCodec.Write(DTCMessageType.Logoff, new Logoff
+                _isDisposed = true;
+                _currentCodec.WriteAsync(DTCMessageType.Logoff, new Logoff
                 {
                     DoNotReconnect = 1u,
                     Reason = "Client Disposed"
-                });
-                _cts.Cancel();
+                }, default(CancellationToken));
+                _ctsReader.Cancel(true);
+                _cts.Cancel(true);
                 _currentCodec.Close();
                 Disconnect(new Error("Disposing"));
-                _isDisposed = true;
             }
             GC.SuppressFinalize(this);
         }
@@ -865,11 +501,7 @@ namespace DTCClient
         protected void Disconnect(Error error)
         {
             OnDisconnected(error);
-
-            _timerHeartbeat?.Dispose();
-            _cts?.Cancel();
-            _tcpClient?.Close();
-            _tcpClient = null;
+            Dispose();
         }
 
         public override string ToString()

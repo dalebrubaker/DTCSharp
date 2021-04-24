@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
@@ -134,7 +136,7 @@ namespace TestServer
             temp?.Invoke(this, message);
         }
 
-        public void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage
+        public async Task HandleRequestAsync<T>(ClientHandler clientHandler, DTCMessageType messageType, T message, CancellationToken cancellationToken) where T : IMessage
         {
             switch (messageType)
             {
@@ -152,13 +154,13 @@ namespace TestServer
                         ProtocolVersion = logonRequest.ProtocolVersion,
                         MarketDataSupported = 1u
                     };
-                    clientHandler.SendResponse(DTCMessageType.LogonResponse, logonResponse);
+                    await clientHandler.SendResponseAsync(DTCMessageType.LogonResponse, logonResponse, cancellationToken).ConfigureAwait(false);
                     break;
 
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
                     HistoricalPriceDataResponseHeader.IsZipped = historicalPriceDataRequest.IsZipped;
-                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader);
+                    await clientHandler.SendResponseAsync(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader, cancellationToken).ConfigureAwait(false);
                     var numSent = 0;
                     for (int i = 0; i < HistoricalPriceDataRecordResponses.Count; i++)
                     {
@@ -166,12 +168,12 @@ namespace TestServer
                         if (historicalPriceDataRecordResponse.StartDateTime >= historicalPriceDataRequest.StartDateTime)
                         {
                             numSent++;
-                            clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponse);
+                            await clientHandler.SendResponseAsync(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponse, cancellationToken).ConfigureAwait(false);
                         }
                     }
                     var historicalPriceDataRecordResponseFinal = new HistoricalPriceDataRecordResponse();
                     historicalPriceDataRecordResponseFinal.IsFinalRecordBool = true;
-                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponseFinal);
+                    await clientHandler.SendResponseAsync(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponseFinal, cancellationToken).ConfigureAwait(false);
                     numSent++;
                     if (historicalPriceDataRequest.IsZipped)
                     {
@@ -185,14 +187,14 @@ namespace TestServer
                         case RequestActionEnum.RequestActionUnset:
                             break;
                         case RequestActionEnum.Subscribe:
-                            SendSnapshot<T>(clientHandler);
-                            SendMarketData<T>(clientHandler, marketDataRequest);
+                            await SendSnapshotAsync<T>(clientHandler, cancellationToken).ConfigureAwait(false);
+                            await SendMarketDataAsync<T>(clientHandler, marketDataRequest, cancellationToken).ConfigureAwait(false);
                             break;
                         case RequestActionEnum.Unsubscribe:
                             // stop sending data
                             break;
                         case RequestActionEnum.Snapshot:
-                            SendSnapshot<T>(clientHandler);
+                            await SendSnapshotAsync<T>(clientHandler, cancellationToken).ConfigureAwait(false);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -294,7 +296,7 @@ namespace TestServer
                 case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
                 case DTCMessageType.HistoricalMarketDepthDataReject:
                 case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                    throw new NotSupportedException($"Unexpected request {messageType} in {GetType().Name}.{nameof(HandleRequest)}");
+                    throw new NotSupportedException($"Unexpected request {messageType} in {GetType().Name}.{nameof(HandleRequestAsync)}");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(messageType), messageType, null);
             }
@@ -302,7 +304,7 @@ namespace TestServer
             OnMessage(msg);
         }
 
-        private void SendMarketData<T>(ClientHandler clientHandler, MarketDataRequest marketDataRequest) where T : IMessage
+        private async Task SendMarketDataAsync<T>(ClientHandler clientHandler, MarketDataRequest marketDataRequest, CancellationToken cancellationToken) where T : IMessage
         {
             var numSentMarketData = 0;
             var numSentBidAsks = 0;
@@ -312,19 +314,19 @@ namespace TestServer
                 if (marketDataRequest.SymbolID == marketDataUpdateTradeCompact.SymbolID)
                 {
                     numSentMarketData++;
-                    clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact, marketDataUpdateTradeCompact);
+                    await clientHandler.SendResponseAsync(DTCMessageType.MarketDataUpdateTradeCompact, marketDataUpdateTradeCompact, cancellationToken).ConfigureAwait(false);
                 }
                 var marketDataUpdateBidAskCompact = MarketDataUpdateBidAskCompacts[i];
                 if (marketDataRequest.SymbolID == marketDataUpdateBidAskCompact.SymbolID)
                 {
                     numSentBidAsks++;
-                    clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
+                    await clientHandler.SendResponseAsync(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact, cancellationToken).ConfigureAwait(false);
                 }
             }
             s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
         }
 
-        private static void SendSnapshot<T>(ClientHandler clientHandler) where T : IMessage
+        private static async Task SendSnapshotAsync<T>(ClientHandler clientHandler, CancellationToken cancellationToken) where T : IMessage
         {
             // First we send a snapshot, then bids and asks
             var marketDataSnapshot = new MarketDataSnapshot
@@ -340,7 +342,7 @@ namespace TestServer
                 MarketDepthUpdateDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
                 OpenInterest = 789
             };
-            clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, marketDataSnapshot);
+            await clientHandler.SendResponseAsync(DTCMessageType.MarketDataSnapshot, marketDataSnapshot, cancellationToken).ConfigureAwait(false);
         }
 
         #endregion events

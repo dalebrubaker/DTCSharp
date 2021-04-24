@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using DTCCommon;
 using DTCCommon.Codecs;
 using DTCCommon.Enums;
@@ -22,13 +23,13 @@ namespace TestsDTC
             var ms = new MemoryStream();
             var bw = new BinaryWriter(ms);
             var codec = new CodecBinary(ms, ClientOrServer.Client);
-            codec.Write(messageType, message);
+            codec.WriteAsync(messageType, message, CancellationToken.None);
             var bytes = ms.ToArray();
-            int sizeExcludingHeader;
-            DTCMessageType messageTypeHeader;
-            Utility.ReadHeader(bytes, out sizeExcludingHeader, out messageTypeHeader);
+            Utility.ReadHeader(bytes, out var sizeExcludingHeader, out var messageTypeHeader);
             Assert.Equal(messageType, messageTypeHeader);
-            var loadedMessage = codec.Load<T>(messageType, bytes, 4);
+            var messageBytes = new byte[sizeExcludingHeader];
+            Array.Copy(bytes, 4, messageBytes, 0, sizeExcludingHeader);
+            var loadedMessage = codec.Load<T>(messageType, messageBytes);
             if (!loadedMessage.Equals(message))
             {
                 //var debug = 1;

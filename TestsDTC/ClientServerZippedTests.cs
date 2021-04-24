@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon.Extensions;
@@ -32,7 +33,7 @@ namespace TestsDTC
             {
                 exampleService = new ExampleService();
             }
-            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, timeoutNoActivity);
+            var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None), IPAddress.Loopback, port, timeoutNoActivity);
             Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
@@ -124,7 +125,7 @@ namespace TestsDTC
                         Integer1 = 0,
                     };
                     sw.Restart();
-                    clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
+                    await clientHistorical.SendRequestAsync(DTCMessageType.HistoricalPriceDataRequest, request, CancellationToken.None).ConfigureAwait(false);
                     while (!isFinalRecordReceived)
                     {
                         await Task.Delay(100).ConfigureAwait(false);

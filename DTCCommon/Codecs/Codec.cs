@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
+using System.Threading.Tasks;
 using DTCCommon.Enums;
 using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
@@ -14,11 +17,12 @@ namespace DTCCommon.Codecs
     {
         protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
-        private readonly Stream _stream; // normally a NetworkStream can be a MemoryStream for a unit test
+        protected Stream _stream; // normally a NetworkStream can be a MemoryStream for a unit test
         private readonly ClientOrServer _clientOrServer;
         private bool _isZippedStream;
         private BinaryReader _binaryReader;
         private DeflateStream _deflateStream;
+        private readonly byte[] _bufferHeader;
 
         protected BinaryWriter _binaryWriter;
         protected bool _disabledHeartbeats;
@@ -29,14 +33,18 @@ namespace DTCCommon.Codecs
             _clientOrServer = clientOrServer;
             _binaryWriter = new BinaryWriter(stream);
             _binaryReader = new BinaryReader(stream);
+            _bufferHeader = new byte[4];
         }
+
+        public abstract EncodingEnum Encoding { get; }
 
         /// <summary>
         /// Write the ProtocolBuffer IMessage as bytes to the network stream.
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        public abstract void Write<T>(DTCMessageType messageType, T message) where T : IMessage;
+        /// <param name="cancellationToken"></param>
+        public abstract Task WriteAsync<T>(DTCMessageType messageType, T message, CancellationToken cancellationToken) where T : IMessage;
 
         /// <summary>
         /// Load the message represented by bytes into a new IMessage. Each codec translates the byte stream to a protobuf message.
@@ -44,24 +52,29 @@ namespace DTCCommon.Codecs
         /// <typeparam name="T"></typeparam>
         /// <param name="messageType"></param>
         /// <param name="bytes"></param>
-        /// <param name="index">the starting index in bytes</param>
         /// <returns></returns>
-        public abstract T Load<T>(DTCMessageType messageType, byte[] bytes, int index = 0) where T : IMessage<T>, new();
+        public abstract T Load<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new();
 
-        private MessageWithType GetMessageWithType<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new()
+        private MessageDTC GetMessageWithType<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new()
         {
             var iMessage = Load<T>(messageType, bytes);
-            var result = new MessageWithType(messageType, iMessage);
+            var result = new MessageDTC(messageType, iMessage);
             return result;
         }
-            
-        public MessageWithType ReadIMessage()
+
+        public async Task<MessageDTC> GetMessageDTCAsync(CancellationToken cancellationToken)
         {
-            var (messageType, bytes) = ReadMessage();
+            var (messageType, bytes) = await ReadMessageAsync(cancellationToken);
+            return ReadMessageDTC(messageType, bytes);
+        }
+
+        private MessageDTC ReadMessageDTC(DTCMessageType messageType, byte[] bytes)
+        {
             switch (messageType)
             {
                 case DTCMessageType.MessageTypeUnset:
-                    throw new NotSupportedException("Not valid");
+                    // Perhaps an exception in ReadMessage()
+                    return null;
                 case DTCMessageType.LogonRequest:
                     return GetMessageWithType<LogonRequest>(messageType, bytes);
                 case DTCMessageType.LogonResponse:
@@ -269,28 +282,51 @@ namespace DTCCommon.Codecs
             }
         }
 
-        public (DTCMessageType messageType, byte[] bytes) ReadMessage()
+        public async Task<(DTCMessageType messageType, byte[] bytes)> ReadMessageAsync(CancellationToken cancellationToken)
         {
             try
             {
-                var size = _binaryReader.ReadUInt16();
-                var messageType = (DTCMessageType)_binaryReader.ReadUInt16();
-                //Logger.Debug($"{nameof(Client)}.{nameof(ResponseReaderAsync)} is about to process {messageType}");
-#if DEBUG
-                if (messageType == DTCMessageType.EncodingResponse)
+                var numBytes = await _stream.ReadAsync(_bufferHeader, 0, 2, cancellationToken).ConfigureAwait(false);
+                if (numBytes < 2)
                 {
+                    // There is not a complete record available yet
+                    return (DTCMessageType.MessageTypeUnset, new byte[0]);
                 }
-                DebugHelpers.AddResponseReceived(messageType, this, size);
-                var requestsSent = DebugHelpers.RequestsSent;
-                var requestsReceived = DebugHelpers.RequestsReceived;
-                var responsesReceived = DebugHelpers.ResponsesReceived;
-                var responsesSent = DebugHelpers.ResponsesSent;
-#endif
-                var messageBytes = _binaryReader.ReadBytes(size - 4); // size includes the header size+type
+                Debug.Assert(numBytes == 2);
+                var size = BitConverter.ToInt16(_bufferHeader, 0);
+                if (size < 4)
+                {
+                    // There is not a complete record available yet
+                    return (DTCMessageType.MessageTypeUnset, new byte[0]);
+                    // Debug.Assert(size > 4, "If only 4, then message length is 0 bytes");
+                }
+                //Debug.Assert(size > 4, "If only 4, then message length is 0 bytes");
+                numBytes = await _stream.ReadAsync(_bufferHeader, 2, 2, cancellationToken).ConfigureAwait(false);
+                if (numBytes < 2)
+                {
+                    // There is not a complete record available yet
+                    return (DTCMessageType.MessageTypeUnset, new byte[0]);
+                }
+                Debug.Assert(numBytes == 2);
+                var messageType = (DTCMessageType)BitConverter.ToInt16(_bufferHeader, 2);
+                var messageSize = size - 4; // size includes the header
+                var messageBytes = new byte[messageSize];
+                numBytes = await _stream.ReadAsync(messageBytes, 0, messageSize, cancellationToken).ConfigureAwait(false);
+                if (numBytes < messageSize)
+                {
+                    // There is not a complete record available yet
+                    return (DTCMessageType.MessageTypeUnset, new byte[0]);
+                }
+                Debug.Assert(numBytes == messageSize);
                 return (messageType, messageBytes);
+            }
+            catch (TaskCanceledException)
+            {
+                return (DTCMessageType.MessageTypeUnset, new byte[0]);
             }
             catch (EndOfStreamException)
             {
+                // STILL HAPPENS?
                 // This happens when zipped historical records are done. We can no longer read from this stream, which was closed by ClientHandler
                 return (DTCMessageType.MessageTypeUnset, new byte[0]);
             }
@@ -301,18 +337,21 @@ namespace DTCCommon.Codecs
             }
         }
 
-        protected void WriteEncodingRequest<T>(DTCMessageType messageType, T message) where T : IMessage
+
+        protected async Task WriteEncodingRequestAsync(DTCMessageType messageType, EncodingRequest encodingRequest, CancellationToken cancellationToken)
         {
             // EncodingRequest goes as binary for all protocol versions
-            var encodingRequest = message as EncodingRequest;
-            Utility.WriteHeader(_binaryWriter, 12, messageType);
-            _binaryWriter.Write(encodingRequest.ProtocolVersion);
-            _binaryWriter.Write((int)encodingRequest.Encoding); // enum size is 4
+            var size = 16;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+            bufferBuilder.Add(encodingRequest.ProtocolVersion);
+            bufferBuilder.Add((int)encodingRequest.Encoding); // enum size is 4
             var protocolType = encodingRequest.ProtocolType.ToFixedBytes(4);
-            _binaryWriter.Write(protocolType); // 3 chars DTC plus null terminator 
+            bufferBuilder.Add(protocolType); // 3 chars DTC plus null terminator 
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
         }
 
-        protected static void LoadEncodingResponse<T>(byte[] bytes, int index, ref T result) where T : IMessage, new()
+            protected static void LoadEncodingResponse<T>(byte[] bytes, int index, ref T result) where T : IMessage, new()
         {
             // EncodingResponse comes back as binary for all protocol versions
             var encodingResponse = result as EncodingResponse;
@@ -333,14 +372,17 @@ namespace DTCCommon.Codecs
             encodingRequest.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
         }
 
-        protected void WriteEncodingResponse<T>(DTCMessageType messageType, T message)
+        protected async Task WriteEncodingResponseAsync(DTCMessageType messageType, EncodingResponse encodingResponse, CancellationToken cancellationToken)
         {
-            var encodingResponse = message as EncodingResponse;
-            Utility.WriteHeader(_binaryWriter, 12, messageType);
-            _binaryWriter.Write(encodingResponse.ProtocolVersion);
-            _binaryWriter.Write((int)encodingResponse.Encoding); // enum size is 4
-            var protocolType2 = encodingResponse.ProtocolType.ToFixedBytes(4);
-            _binaryWriter.Write(protocolType2); // 3 chars DTC plus null terminator 
+            var size = (short)16;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.Add(size);
+            bufferBuilder.Add((short)messageType);
+            bufferBuilder.Add(encodingResponse.ProtocolVersion);
+            bufferBuilder.Add((int)encodingResponse.Encoding); // enum size is 4
+            var protocolType = encodingResponse.ProtocolType.ToFixedBytes(4);
+            bufferBuilder.Add(protocolType); // 3 chars DTC plus null terminator 
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -392,8 +434,9 @@ namespace DTCCommon.Codecs
             }
 
             // Write the 2-byte header that Sierra Chart has coming from ZLib. See https://tools.ietf.org/html/rfc1950
-            _binaryWriter.Write((byte)120); // zlibCmf 120 = 0111 1000 means Deflate 
-            _binaryWriter.Write((byte)156); // zlibFlg 156 = 1001 1100
+            using var binaryWriter = new BinaryWriter(_stream);
+            binaryWriter.Write((byte)120); // zlibCmf 120 = 0111 1000 means Deflate 
+            binaryWriter.Write((byte)156); // zlibFlg 156 = 1001 1100
             try
             {
                 _isZippedStream = true;
@@ -401,7 +444,7 @@ namespace DTCCommon.Codecs
                 _deflateStream = new DeflateStream(_stream, CompressionMode.Compress, true);
                 _deflateStream.Flush();
                 // can't read this stream _binaryReader = new BinaryReader(deflateStream);
-                _binaryWriter = new BinaryWriter(_deflateStream);
+                //_binaryWriter = new BinaryWriter(_deflateStream);
             }
             catch (Exception ex)
             {
@@ -414,8 +457,8 @@ namespace DTCCommon.Codecs
 
         public void Close()
         {
-            _binaryReader?.Close();
-            _binaryWriter?.Close();
+            // _binaryReader?.Close();
+            // _binaryWriter?.Close();
         }
 
         public void EndZippedWriting()
@@ -424,13 +467,13 @@ namespace DTCCommon.Codecs
             _deflateStream?.Dispose();
             _deflateStream = null;
             Close();
-            _binaryWriter = null;
-            _binaryReader = null;
+            // _binaryWriter = null;
+            // _binaryReader = null;
         }
 
         public override string ToString()
         {
-            return $"{_clientOrServer} {GetType().Name}";
+            return $"{_clientOrServer} {GetType().Name} {Encoding}";
         }
     }
 }

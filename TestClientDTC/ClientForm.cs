@@ -442,12 +442,12 @@ namespace TestClientDTC
             };
             if (_client != null)
             {
-                _client.SendRequest(DTCMessageType.Logoff, logoffRequest);
+                await _client.SendRequestAsync(DTCMessageType.Logoff, logoffRequest, CancellationToken.None);
                 await DisposeClientAsync().ConfigureAwait(false);
             }
         }
 
-        private void btnExchanges_Click(object sender, EventArgs e)
+        private async void btnExchanges_Click(object sender, EventArgs e)
         {
             // TODO: Change this later to a Client async method that returns the list of ExchangeListResponse objects
             var exchangeListRequest = new ExchangeListRequest
@@ -455,7 +455,7 @@ namespace TestClientDTC
                 RequestID = _client.NextRequestId
             };
             logControlSymbols.LogMessage($"Sent exchangeListRequest, RequestID={exchangeListRequest.RequestID}");
-            _client.SendRequest(DTCMessageType.ExchangeListRequest, exchangeListRequest);
+            await _client.SendRequestAsync(DTCMessageType.ExchangeListRequest, exchangeListRequest, CancellationToken.None);
             if (string.IsNullOrEmpty(_client.LogonResponse.SymbolExchangeDelimiter))
             {
                 logControlSymbols.LogMessage("The LogonResponse.SymbolExchangeDelimiter is empty, so Exchanges probably aren't supported.");
@@ -615,7 +615,7 @@ namespace TestClientDTC
             }
             logControlLevel1.LogMessage($"Subscribing to market data for {txtSymbolLevel1_1.Text}");
             _symbolId1 = RequireSymbolId(txtSymbolLevel1_1.Text, "");
-            _client.SubscribeMarketData(_symbolId1, txtSymbolLevel1_1.Text, "");
+            _client.SubscribeMarketDataAsync(_symbolId1, txtSymbolLevel1_1.Text, "");
         }
 
         private uint RequireSymbolId(string symbol, string exchange)
@@ -642,7 +642,7 @@ namespace TestClientDTC
             }
             _ctsLevel1Symbol1?.Cancel();
             _ctsLevel1Symbol1 = null;
-            _client.UnsubscribeMarketData(_symbolId1);
+            _client.UnsubscribeMarketDataAsync(_symbolId1);
         }
 
         private void btnSubscribeEvents2_Click(object sender, EventArgs e)
@@ -655,7 +655,7 @@ namespace TestClientDTC
             }
             logControlLevel1.LogMessage($"Subscribing to market data for {txtSymbolLevel1_2.Text}");
             _symbolId2 = RequireSymbolId(txtSymbolLevel1_2.Text, "");
-            _client.SubscribeMarketData(_symbolId2, txtSymbolLevel1_2.Text, "");
+            _client.SubscribeMarketDataAsync(_symbolId2, txtSymbolLevel1_2.Text, "");
         }
 
         private void btnUnsubscribe2_Click(object sender, EventArgs e)
@@ -669,7 +669,7 @@ namespace TestClientDTC
             }
             _ctsLevel1Symbol2?.Cancel();
             _ctsLevel1Symbol2 = null;
-            _client.UnsubscribeMarketData(_symbolId2);
+            _client.UnsubscribeMarketDataAsync(_symbolId2);
         }
 
         private async void btnSubscribeCallbacks1_Click(object sender, EventArgs e)

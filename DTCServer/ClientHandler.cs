@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
@@ -74,7 +75,7 @@ namespace DTCServer
             temp?.Invoke(this, error);
         }
 
-        private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
+        private async void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
             if (!_useHeartbeat || _currentCodec == null)
             {
@@ -93,7 +94,7 @@ namespace DTCServer
             var heartbeat = new Heartbeat();
             try
             {
-                SendResponse(DTCMessageType.Heartbeat, heartbeat);
+                await SendResponseAsync(DTCMessageType.Heartbeat, heartbeat, _ctsRequestReader.Token);
             }
             catch (IOException ex)
             {
@@ -107,7 +108,7 @@ namespace DTCServer
         /// This method runs "forever", reading requests and throwing them as events until the network stream is closed.
         /// All reads are done async on this thread.
         /// </summary>
-        internal void RequestReaderLoop()
+        internal async Task RequestReaderLoopAsync()
         {
             var binaryReader = new BinaryReader(_networkStreamServer); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!_ctsRequestReader.Token.IsCancellationRequested)
@@ -119,15 +120,17 @@ namespace DTCServer
                     //    await Task.Delay(1).ConfigureAwait(false);
                     //    continue;
                     //}
-                    s_logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(RequestReaderLoop)} to read a message");
-                    var (messageType, messageBytes) = _currentCodec.ReadMessage();
+                    s_logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(RequestReaderLoopAsync)} to read a message with {_currentCodec.Encoding}");
+                    var (messageType, messageBytes) = await _currentCodec.ReadMessageAsync(_ctsRequestReader.Token);
+                    if (messageType == DTCMessageType.LogonRequest)
+                    { }
                     if (messageType == DTCMessageType.MessageTypeUnset)
                     {
                         // The service has ended
                         Dispose();
                         break;
                     }
-                    ProcessClientRequest(messageType, messageBytes, ref binaryReader);
+                    await ProcessClientRequestAsync(messageType, messageBytes, _ctsRequestReader.Token).ConfigureAwait(false);
                     if (_currentCodec == null)
                     {
                         // The service ended a zipped historical data transmission. We can't continue
@@ -160,8 +163,8 @@ namespace DTCServer
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="messageBytes"></param>
-        /// <param name="binaryReader"></param>
-        private void ProcessClientRequest(DTCMessageType messageType, byte[] messageBytes, ref BinaryReader binaryReader)
+        /// <param name="cancellationToken"></param>
+        private async Task ProcessClientRequestAsync(DTCMessageType messageType, byte[] messageBytes, CancellationToken cancellationToken)
         {
 //#if DEBUG
 //            var port = ((IPEndPoint)_tcpClient.Client.LocalEndPoint).Port;
@@ -194,7 +197,7 @@ namespace DTCServer
                 case DTCMessageType.Heartbeat:
                     _lastHeartbeatReceivedTime = DateTime.Now;
                     var heartbeat = _currentCodec.Load<Heartbeat>(messageType, messageBytes);
-                    SendResponse(DTCMessageType.Heartbeat, heartbeat);
+                    await SendResponseAsync(DTCMessageType.Heartbeat, heartbeat, cancellationToken).ConfigureAwait(false);
                     _callback(this, messageType, heartbeat); // send this to the callback for informational purposes
                     break;
                 case DTCMessageType.Logoff:
@@ -234,7 +237,7 @@ namespace DTCServer
                         ProtocolVersion = encodingRequest.ProtocolVersion,
                         Encoding = newEncoding
                     };
-                    SendResponse(DTCMessageType.EncodingResponse, encodingResponse);
+                    await SendResponseAsync(DTCMessageType.EncodingResponse, encodingResponse, cancellationToken).ConfigureAwait(false);
 
                     // BE SURE to set this immediately AFTER the SendResponse line above
                     SetCurrentCodec(encodingResponse.Encoding);
@@ -405,7 +408,7 @@ namespace DTCServer
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
                 case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(ProcessClientRequest)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(ProcessClientRequestAsync)}.");
             }
         }
 
@@ -426,7 +429,8 @@ namespace DTCServer
         /// <typeparam name="T"></typeparam>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        public void SendResponse<T>(DTCMessageType messageType, T message) where T : IMessage
+        /// <param name="cancellationToken"></param>
+        public async Task SendResponseAsync<T>(DTCMessageType messageType, T message, CancellationToken cancellationToken) where T : IMessage
         {
 #if DEBUG
 //            if (messageType != DTCMessageType.Heartbeat)
@@ -446,16 +450,20 @@ namespace DTCServer
                 return;
             }
 
-            DebugHelpers.AddResponseSent(messageType, _currentCodec);
+            //DebugHelpers.AddResponseSent(messageType, _currentCodec);
 #endif
-            _currentCodec.Write(messageType, message);
+            s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponseAsync)} is writing with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");
+            if (messageType == DTCMessageType.LogonResponse)
+            {}
+            await _currentCodec.WriteAsync(messageType, message, cancellationToken).ConfigureAwait(false);
+            s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponseAsync)} wrote with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");
             if (messageType == DTCMessageType.HistoricalPriceDataResponseHeader)
             {
                 var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
                 if (historicalPriceDataResponseHeader.UseZLibCompression != 0)
                 {
                     // Switch to writing zipped
-                    s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponse)} is switching server stream to write zipped.");
+                    s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponseAsync)} is switching server stream to write zipped.");
                     _currentCodec.WriteSwitchToZipped();
                     _useHeartbeat = false;
                 }
@@ -503,14 +511,22 @@ namespace DTCServer
             switch (encoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    _currentCodec = new CodecBinary(_networkStreamServer, ClientOrServer.Server);
+                    if (!(_currentCodec is CodecBinary))
+                    {
+                        _currentCodec = new CodecBinary(_networkStreamServer, ClientOrServer.Server);
+                        s_logger.Debug($"_currCodec changed to Binary in {nameof(ClientHandler)}");
+                    }
                     break;
                 case EncodingEnum.BinaryWithVariableLengthStrings:
                 case EncodingEnum.JsonEncoding:
                 case EncodingEnum.JsonCompactEncoding:
                     throw new NotImplementedException($"Not implemented in {nameof(ClientHandler)}: {nameof(encoding)}");
                 case EncodingEnum.ProtocolBuffers:
-                    _currentCodec = new CodecProtobuf(_networkStreamServer, ClientOrServer.Server);
+                    if (!(_currentCodec is CodecProtobuf))
+                    {
+                        _currentCodec = new CodecProtobuf(_networkStreamServer, ClientOrServer.Server);
+                        s_logger.Debug($"_currCodec changed to Protobuf in {nameof(ClientHandler)}");
+                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(encoding), encoding, null);

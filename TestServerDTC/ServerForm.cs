@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DTCCommon.Extensions;
@@ -53,7 +54,9 @@ namespace TestServer
         {
             btnStartPrimary.Enabled = false;
             btnStopPrimary.Enabled = true;
-            _serverPrimary = new Server(_exampleService.HandleRequest, _ipAddress, PortListener, 30000);
+            _serverPrimary =
+                new Server(async (clientHandler, messageType, message) => await _exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None),
+                    _ipAddress, PortListener, 30000);
             try
             {
                 await _serverPrimary.RunAsync().ConfigureAwait(false);
@@ -75,7 +78,9 @@ namespace TestServer
         {
             btnStartHistorical.Enabled = false;
             btnStopHistorical.Enabled = true;
-            _serverHistorical = new Server(_exampleService.HandleRequest, _ipAddress, PortHistorical, 30000);
+            _serverHistorical =
+                new Server(async (clientHandler, messageType, message) => await _exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None), _ipAddress,
+                    PortHistorical, 30000);
             try
             {
                 await _serverHistorical.RunAsync().ConfigureAwait(false);

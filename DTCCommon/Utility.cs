@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
 using DTCPB;
+using Google.Protobuf;
 
 namespace DTCCommon
 {
     public static class Utility
     {
+
         /// <summary>
         /// Write a header
         /// </summary>

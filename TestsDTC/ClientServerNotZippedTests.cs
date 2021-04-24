@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon.Exceptions;
@@ -36,7 +37,7 @@ namespace TestsDTC
             {
                 exampleService = new ExampleService();
             }
-            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, timeoutNoActivity);
+            var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None), IPAddress.Loopback, port, timeoutNoActivity);
             Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
@@ -61,8 +62,8 @@ namespace TestsDTC
         [Fact]
         public async Task HistoricalPriceDataRecordResponseTickNotZippedTest()
         {
-            const int TimeoutNoActivity = 10000;
-            const int TimeoutForConnect = 10000;
+            const int TimeoutNoActivity = int.MaxValue; // 10000;
+            const int TimeoutForConnect = int.MaxValue; // 10000;
             const bool UseZLibCompression = false;
             var isFinalRecordReceived = false;
             var sw = Stopwatch.StartNew();
@@ -73,7 +74,7 @@ namespace TestsDTC
 
             using (var server = StartExampleServer(TimeoutNoActivity, port, exampleService))
             {
-                using (var clientHistorical = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port, EncodingEnum.BinaryEncoding)
+                using (var clientHistorical = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port, EncodingEnum.ProtocolBuffers)
                     .ConfigureAwait(false))
                 {
                     while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
@@ -132,7 +133,7 @@ namespace TestsDTC
                     };
                     var endDateTime = request.EndDateTimeUtc;
                     sw.Restart();
-                    clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
+                    await clientHistorical.SendRequestAsync(DTCMessageType.HistoricalPriceDataRequest, request, CancellationToken.None).ConfigureAwait(false);
                     while (!isFinalRecordReceived)
                     {
                         await Task.Delay(100).ConfigureAwait(false);

@@ -15,6 +15,7 @@
     <TargetFrameworkProfile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -66,6 +67,7 @@
             <Protobuf Include="protos\enums.proto" Link="protos\enums.proto" />-->
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BufferBuilder.cs" />
     <Compile Include="Codecs\Codec.cs" />
     <Compile Include="Codecs\CodecBinary.cs" />
     <Compile Include="Codecs\CodecProtobuf.cs" />
@@ -80,7 +82,7 @@
     <Compile Include="Extensions\StreamExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="MessageStructs.cs" />
-    <Compile Include="MessageWithType.cs" />
+    <Compile Include="MessageDTC.cs" />
     <Compile Include="Partials\HistoricalPriceDataRecordResponse Header.cs" />
     <Compile Include="Partials\HistoricalPriceDataRequest.cs" />
     <Compile Include="Partials\HistoricalPriceDataRecordResponse.cs" />

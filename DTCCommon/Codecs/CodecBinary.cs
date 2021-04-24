@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using DTCCommon.Enums;
 using DTCCommon.Extensions;
 using DTCPB;
-using NLog;
 using uint8_t = System.Byte;
 using int32_t = System.Int32;
 
@@ -34,12 +35,10 @@ namespace DTCCommon.Codecs
         private const int CLIENT_SERVER_NAME_LENGTH = 48;
         private const int GENERAL_IDENTIFIER_LENGTH = 64;
 
-        public override void Write<T>(DTCMessageType messageType, T message)
+        public override EncodingEnum Encoding => EncodingEnum.BinaryEncoding;
+
+        public override async Task WriteAsync<T>(DTCMessageType messageType, T message, CancellationToken cancellationToken)
         {
-            if (_binaryWriter == null)
-            {
-                return;
-            }
             //Logger.Debug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
             int sizeExcludingHeader;
             switch (messageType)
@@ -48,55 +47,11 @@ namespace DTCCommon.Codecs
                     throw new ArgumentException(messageType.ToString());
                 case DTCMessageType.LogonRequest:
                     var logonRequest = message as LogonRequest;
-                    sizeExcludingHeader =
-                        4
-                        + USERNAME_PASSWORD_LENGTH
-                        + USERNAME_PASSWORD_LENGTH
-                        + GENERAL_IDENTIFIER_LENGTH
-                        + 4
-                        + 4
-                        + 4
-                        + 4
-                        + TRADE_ACCOUNT_LENGTH
-                        + GENERAL_IDENTIFIER_LENGTH
-                        + 32;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(logonRequest.ProtocolVersion);
-                    _binaryWriter.Write(logonRequest.Username.ToFixedBytes(USERNAME_PASSWORD_LENGTH));
-                    _binaryWriter.Write(logonRequest.Password.ToFixedBytes(USERNAME_PASSWORD_LENGTH));
-                    _binaryWriter.Write(logonRequest.GeneralTextData.ToFixedBytes(GENERAL_IDENTIFIER_LENGTH));
-                    _binaryWriter.Write(logonRequest.Integer1);
-                    _binaryWriter.Write(logonRequest.Integer2);
-                    _binaryWriter.Write(logonRequest.HeartbeatIntervalInSeconds);
-                    _binaryWriter.Write((int)logonRequest.TradeMode);
-                    _binaryWriter.Write(logonRequest.TradeAccount.ToFixedBytes(TRADE_ACCOUNT_LENGTH));
-                    _binaryWriter.Write(logonRequest.HardwareIdentifier.ToFixedBytes(GENERAL_IDENTIFIER_LENGTH));
-                    _binaryWriter.Write(logonRequest.ClientName.ToFixedBytes(32));
+                    await WriteLogonRequestAsync<T>(messageType, logonRequest, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.LogonResponse:
                     var logonResponse = message as LogonResponse;
-                    sizeExcludingHeader = 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + 4 * 1 + SYMBOL_EXCHANGE_DELIMITER_LENGTH + 8 * 1 + 4;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(logonResponse.ProtocolVersion);
-                    _binaryWriter.Write((int)logonResponse.Result);
-                    _binaryWriter.Write(logonResponse.ResultText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
-                    _binaryWriter.Write(logonResponse.ReconnectAddress.ToFixedBytes(64));
-                    _binaryWriter.Write(logonResponse.Integer1);
-                    _binaryWriter.Write(logonResponse.ServerName.ToFixedBytes(60));
-                    _binaryWriter.Write((byte)logonResponse.MarketDepthUpdatesBestBidAndAsk);
-                    _binaryWriter.Write((byte)logonResponse.TradingIsSupported);
-                    _binaryWriter.Write((byte)logonResponse.OCOOrdersSupported);
-                    _binaryWriter.Write((byte)logonResponse.OrderCancelReplaceSupported);
-                    _binaryWriter.Write(logonResponse.SymbolExchangeDelimiter.ToFixedBytes(SYMBOL_EXCHANGE_DELIMITER_LENGTH));
-                    _binaryWriter.Write((byte)logonResponse.SecurityDefinitionsSupported);
-                    _binaryWriter.Write((byte)logonResponse.HistoricalPriceDataSupported);
-                    _binaryWriter.Write((byte)logonResponse.ResubscribeWhenMarketDataFeedAvailable);
-                    _binaryWriter.Write((byte)logonResponse.MarketDepthIsSupported);
-                    _binaryWriter.Write((byte)logonResponse.OneHistoricalPriceDataRequestPerConnection);
-                    _binaryWriter.Write((byte)logonResponse.BracketOrdersSupported);
-                    _binaryWriter.Write((byte)logonResponse.UseIntegerPriceOrderMessages);
-                    _binaryWriter.Write((byte)logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount);
-                    _binaryWriter.Write(logonResponse.MarketDataSupported);
+                    await WriteLogonResponseAsync<T>(messageType, logonResponse, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.Heartbeat:
                     if (_disabledHeartbeats)
@@ -104,121 +59,48 @@ namespace DTCCommon.Codecs
                         return;
                     }
                     var heartbeat = message as Heartbeat;
-                    Utility.WriteHeader(_binaryWriter, 12, messageType);
-                    _binaryWriter.Write(heartbeat.NumDroppedMessages);
-                    _binaryWriter.Write(heartbeat.CurrentDateTime);
+                    await WriteHeartbeatAsync<T>(messageType, heartbeat, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.Logoff:
-                    try
-                    {
-                        var logoff = message as Logoff;
-                        sizeExcludingHeader = TEXT_DESCRIPTION_LENGTH + 1;
-                        Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                        _binaryWriter.Write(logoff.Reason.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
-                        _binaryWriter.Write((byte)logoff.DoNotReconnect);
-                    }
-                    catch (IOException ex)
-                    {
-                        // Ignore this exception, which happens on Dispose() if the stream has already gone away, as when the ClientHandler finishes sending zipped historical records 
-                        var tmp = ex;
-                    }
+                    var logoff = message as Logoff;
+                    await WriteLogoffAsync<T>(messageType, logoff, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.EncodingRequest:
-                    WriteEncodingRequest(messageType, message);
+                    var encodingRequest = message as EncodingRequest;
+                    await WriteEncodingRequestAsync(messageType, encodingRequest, cancellationToken);
                     return;
                 case DTCMessageType.EncodingResponse:
-                    WriteEncodingResponse(messageType, message);
+                    var encodingResponse = message as EncodingResponse;
+                    await WriteEncodingResponseAsync(messageType, encodingResponse, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = message as MarketDataRequest;
-                    sizeExcludingHeader = 4 + 2 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write((int)marketDataRequest.RequestAction);
-                    _binaryWriter.Write((ushort)marketDataRequest.SymbolID);
-                    _binaryWriter.Write(marketDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
-                    _binaryWriter.Write(marketDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+                    await WriteMarketDataRequestAsync(messageType, marketDataRequest, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.MarketDataReject:
                     var marketDataReject = message as MarketDataReject;
-                    sizeExcludingHeader = 2 + TEXT_DESCRIPTION_LENGTH;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write((ushort)marketDataReject.SymbolID);
-                    _binaryWriter.Write(marketDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+                    await WriteMarketDataRejectAsync(messageType, marketDataReject, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.MarketDataFeedStatus:
                     var marketDataFeedStatus = message as MarketDataFeedStatus;
-                    sizeExcludingHeader = 4;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write((int)marketDataFeedStatus.Status);
+                    await WriteMarketDataFeedStatusAsync(messageType, marketDataFeedStatus, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.ExchangeListRequest:
                     var exchangeListRequest = message as ExchangeListRequest;
-                    sizeExcludingHeader = 4;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(exchangeListRequest.RequestID);
+                    await WriteExchangeListRequestAsync(messageType, exchangeListRequest, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.ExchangeListResponse:
                     var exchangeListResponse = message as ExchangeListResponse;
-                    sizeExcludingHeader = 4 + EXCHANGE_LENGTH + 1 + EXCHANGE_DESCRIPTION_LENGTH;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(exchangeListResponse.RequestID);
-                    _binaryWriter.Write(exchangeListResponse.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
-                    _binaryWriter.Write((byte)exchangeListResponse.IsFinalMessage);
-                    _binaryWriter.Write(exchangeListResponse.Description.ToFixedBytes(EXCHANGE_DESCRIPTION_LENGTH));
+                    await WriteExchangeListResponseAsync(messageType, exchangeListResponse, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
                     var securityDefinitionForSymbolRequest = message as SecurityDefinitionForSymbolRequest;
-                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(securityDefinitionForSymbolRequest.RequestID);
-                    _binaryWriter.Write(securityDefinitionForSymbolRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
-                    _binaryWriter.Write(securityDefinitionForSymbolRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+                    await WriteSecurityDefinitionForSymbolRequestAsync(messageType, securityDefinitionForSymbolRequest, cancellationToken)
+                        .ConfigureAwait(false);
                     return;
                 case DTCMessageType.SecurityDefinitionResponse:
                     var securityDefinitionResponse = message as SecurityDefinitionResponse;
-                    sizeExcludingHeader =
-                        4
-                        + SYMBOL_LENGTH
-                        + EXCHANGE_LENGTH
-                        + 4
-                        + SYMBOL_DESCRIPTION_LENGTH
-                        + 3 * 4
-                        + 4
-                        + 2 * 4
-                        + UNDERLYING_SYMBOL_LENGTH
-                        + 4
-                        + 4
-                        + 4
-                        + 7 * 4
-                        + 4
-                        + 4
-                        + SYMBOL_LENGTH;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(securityDefinitionResponse.RequestID);
-                    _binaryWriter.Write(securityDefinitionResponse.Symbol.ToFixedBytes(SYMBOL_LENGTH));
-                    _binaryWriter.Write(securityDefinitionResponse.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
-                    _binaryWriter.Write((int)securityDefinitionResponse.SecurityType);
-                    _binaryWriter.Write(securityDefinitionResponse.Description.ToFixedBytes(SYMBOL_DESCRIPTION_LENGTH));
-                    _binaryWriter.Write(securityDefinitionResponse.MinPriceIncrement);
-                    _binaryWriter.Write((int)securityDefinitionResponse.PriceDisplayFormat);
-                    _binaryWriter.Write(securityDefinitionResponse.CurrencyValuePerIncrement);
-                    _binaryWriter.Write(securityDefinitionResponse.IsFinalMessage);
-                    _binaryWriter.Write(securityDefinitionResponse.FloatToIntPriceMultiplier);
-                    _binaryWriter.Write(securityDefinitionResponse.IntToFloatPriceDivisor);
-                    _binaryWriter.Write(securityDefinitionResponse.UnderlyingSymbol.ToFixedBytes(UNDERLYING_SYMBOL_LENGTH));
-                    _binaryWriter.Write(securityDefinitionResponse.UpdatesBidAskOnly);
-                    _binaryWriter.Write(securityDefinitionResponse.StrikePrice);
-                    _binaryWriter.Write((int)securityDefinitionResponse.PutOrCall);
-                    _binaryWriter.Write(securityDefinitionResponse.ShortInterest);
-                    _binaryWriter.Write((uint)securityDefinitionResponse.SecurityExpirationDate);
-                    _binaryWriter.Write(securityDefinitionResponse.BuyRolloverInterest);
-                    _binaryWriter.Write(securityDefinitionResponse.SellRolloverInterest);
-                    _binaryWriter.Write(securityDefinitionResponse.EarningsPerShare);
-                    _binaryWriter.Write(securityDefinitionResponse.SharesOutstanding);
-                    _binaryWriter.Write(securityDefinitionResponse.IntToFloatQuantityDivisor);
-                    _binaryWriter.Write(securityDefinitionResponse.HasMarketDepthData);
-                    _binaryWriter.Write(securityDefinitionResponse.DisplayPriceMultiplier);
-                    _binaryWriter.Write(securityDefinitionResponse.ExchangeSymbol.ToFixedBytes(SYMBOL_LENGTH));
+                    await WriteSecurityDefinitionResponseAsync(messageType, securityDefinitionResponse, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.SecurityDefinitionReject:
                     var securityDefinitionReject = message as SecurityDefinitionReject;
@@ -366,14 +248,238 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
                 case DTCMessageType.HistoricalMarketDepthDataReject:
                 case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}");
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(WriteAsync)}: {messageType}");
                 default:
                     throw new ArgumentOutOfRangeException(messageType.ToString(), messageType, null);
             }
         }
 
-        public override T Load<T>(DTCMessageType messageType, byte[] bytes, int index = 0)
+        private async Task WriteSecurityDefinitionResponseAsync(DTCMessageType messageType, SecurityDefinitionResponse securityDefinitionResponse,
+            CancellationToken cancellationToken)
         {
+            const int sizeExcludingHeader =
+                4
+                + SYMBOL_LENGTH
+                + EXCHANGE_LENGTH
+                + 4
+                + SYMBOL_DESCRIPTION_LENGTH
+                + 3 * 4
+                + 4
+                + 2 * 4
+                + UNDERLYING_SYMBOL_LENGTH
+                + 4
+                + 4
+                + 4
+                + 7 * 4
+                + 4
+                + 4
+                + SYMBOL_LENGTH;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(securityDefinitionResponse.RequestID);
+            bufferBuilder.Add(securityDefinitionResponse.Symbol.ToFixedBytes(SYMBOL_LENGTH));
+            bufferBuilder.Add(securityDefinitionResponse.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+            bufferBuilder.Add((int)securityDefinitionResponse.SecurityType);
+            bufferBuilder.Add(securityDefinitionResponse.Description.ToFixedBytes(SYMBOL_DESCRIPTION_LENGTH));
+            bufferBuilder.Add(securityDefinitionResponse.MinPriceIncrement);
+            bufferBuilder.Add((int)securityDefinitionResponse.PriceDisplayFormat);
+            bufferBuilder.Add(securityDefinitionResponse.CurrencyValuePerIncrement);
+            bufferBuilder.Add(securityDefinitionResponse.IsFinalMessage);
+            bufferBuilder.Add(securityDefinitionResponse.FloatToIntPriceMultiplier);
+            bufferBuilder.Add(securityDefinitionResponse.IntToFloatPriceDivisor);
+            bufferBuilder.Add(securityDefinitionResponse.UnderlyingSymbol.ToFixedBytes(UNDERLYING_SYMBOL_LENGTH));
+            bufferBuilder.Add(securityDefinitionResponse.UpdatesBidAskOnly);
+            bufferBuilder.Add(securityDefinitionResponse.StrikePrice);
+            bufferBuilder.Add((int)securityDefinitionResponse.PutOrCall);
+            bufferBuilder.Add(securityDefinitionResponse.ShortInterest);
+            bufferBuilder.Add((uint)securityDefinitionResponse.SecurityExpirationDate);
+            bufferBuilder.Add(securityDefinitionResponse.BuyRolloverInterest);
+            bufferBuilder.Add(securityDefinitionResponse.SellRolloverInterest);
+            bufferBuilder.Add(securityDefinitionResponse.EarningsPerShare);
+            bufferBuilder.Add(securityDefinitionResponse.SharesOutstanding);
+            bufferBuilder.Add(securityDefinitionResponse.IntToFloatQuantityDivisor);
+            bufferBuilder.Add(securityDefinitionResponse.HasMarketDepthData);
+            bufferBuilder.Add(securityDefinitionResponse.DisplayPriceMultiplier);
+            bufferBuilder.Add(securityDefinitionResponse.ExchangeSymbol.ToFixedBytes(SYMBOL_LENGTH));
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteSecurityDefinitionForSymbolRequestAsync(DTCMessageType messageType,
+            SecurityDefinitionForSymbolRequest securityDefinitionForSymbolRequest, CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(securityDefinitionForSymbolRequest.RequestID);
+            bufferBuilder.Add(securityDefinitionForSymbolRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
+            bufferBuilder.Add(securityDefinitionForSymbolRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteExchangeListResponseAsync(DTCMessageType messageType, ExchangeListResponse exchangeListResponse,
+            CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4 + EXCHANGE_LENGTH + 1 + EXCHANGE_DESCRIPTION_LENGTH;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(exchangeListResponse.RequestID);
+            bufferBuilder.Add(exchangeListResponse.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+            bufferBuilder.Add((byte)exchangeListResponse.IsFinalMessage);
+            bufferBuilder.Add(exchangeListResponse.Description.ToFixedBytes(EXCHANGE_DESCRIPTION_LENGTH));
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteExchangeListRequestAsync(DTCMessageType messageType, ExchangeListRequest exchangeListRequest,
+            CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(exchangeListRequest.RequestID);
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteMarketDataFeedStatusAsync(DTCMessageType messageType, MarketDataFeedStatus marketDataFeedStatus,
+            CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add((int)marketDataFeedStatus.Status);
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteMarketDataRejectAsync(DTCMessageType messageType, MarketDataReject marketDataReject, CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 2 + TEXT_DESCRIPTION_LENGTH;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add((ushort)marketDataReject.SymbolID);
+            bufferBuilder.Add(marketDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteMarketDataRequestAsync(DTCMessageType messageType, MarketDataRequest marketDataRequest, CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4 + 2 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add((int)marketDataRequest.RequestAction);
+            bufferBuilder.Add((ushort)marketDataRequest.SymbolID);
+            bufferBuilder.Add(marketDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
+            bufferBuilder.Add(marketDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteLogoffAsync<T>(DTCMessageType messageType, Logoff logoff, CancellationToken cancellationToken)
+        {
+            try
+            {
+                const int sizeExcludingHeader = TEXT_DESCRIPTION_LENGTH + 1;
+                const int size = sizeExcludingHeader + 4;
+                using var bufferBuilder = new BufferBuilder(size);
+                bufferBuilder.AddHeader(messageType);
+
+                bufferBuilder.Add(logoff.Reason.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+                bufferBuilder.Add((byte)logoff.DoNotReconnect);
+                await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            }
+            catch (IOException ex)
+            {
+                // Ignore this exception, which happens on Dispose() if the stream has already gone away, as when the ClientHandler finishes sending zipped historical records 
+                var tmp = ex;
+            }
+        }
+
+        private async Task WriteHeartbeatAsync<T>(DTCMessageType messageType, Heartbeat heartbeat, CancellationToken cancellationToken)
+        {
+            const int size = 16;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(heartbeat.NumDroppedMessages);
+            bufferBuilder.Add(heartbeat.CurrentDateTime);
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteLogonResponseAsync<T>(DTCMessageType messageType, LogonResponse logonResponse, CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + 4 * 1 + SYMBOL_EXCHANGE_DELIMITER_LENGTH + 8 * 1 + 4;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(logonResponse.ProtocolVersion);
+            bufferBuilder.Add((int)logonResponse.Result);
+            bufferBuilder.Add(logonResponse.ResultText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+            bufferBuilder.Add(logonResponse.ReconnectAddress.ToFixedBytes(64));
+            bufferBuilder.Add(logonResponse.Integer1);
+            bufferBuilder.Add(logonResponse.ServerName.ToFixedBytes(60));
+            bufferBuilder.Add((byte)logonResponse.MarketDepthUpdatesBestBidAndAsk);
+            bufferBuilder.Add((byte)logonResponse.TradingIsSupported);
+            bufferBuilder.Add((byte)logonResponse.OCOOrdersSupported);
+            bufferBuilder.Add((byte)logonResponse.OrderCancelReplaceSupported);
+            bufferBuilder.Add(logonResponse.SymbolExchangeDelimiter.ToFixedBytes(SYMBOL_EXCHANGE_DELIMITER_LENGTH));
+            bufferBuilder.Add((byte)logonResponse.SecurityDefinitionsSupported);
+            bufferBuilder.Add((byte)logonResponse.HistoricalPriceDataSupported);
+            bufferBuilder.Add((byte)logonResponse.ResubscribeWhenMarketDataFeedAvailable);
+            bufferBuilder.Add((byte)logonResponse.MarketDepthIsSupported);
+            bufferBuilder.Add((byte)logonResponse.OneHistoricalPriceDataRequestPerConnection);
+            bufferBuilder.Add((byte)logonResponse.BracketOrdersSupported);
+            bufferBuilder.Add((byte)logonResponse.UseIntegerPriceOrderMessages);
+            bufferBuilder.Add((byte)logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount);
+            bufferBuilder.Add(logonResponse.MarketDataSupported);
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteLogonRequestAsync<T>(DTCMessageType messageType, LogonRequest logonRequest, CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4
+                                            + USERNAME_PASSWORD_LENGTH
+                                            + USERNAME_PASSWORD_LENGTH
+                                            + GENERAL_IDENTIFIER_LENGTH
+                                            + 4
+                                            + 4
+                                            + 4
+                                            + 4
+                                            + TRADE_ACCOUNT_LENGTH
+                                            + GENERAL_IDENTIFIER_LENGTH
+                                            + 32;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(logonRequest.ProtocolVersion);
+            bufferBuilder.Add(logonRequest.Username.ToFixedBytes(USERNAME_PASSWORD_LENGTH));
+            bufferBuilder.Add(logonRequest.Password.ToFixedBytes(USERNAME_PASSWORD_LENGTH));
+            bufferBuilder.Add(logonRequest.GeneralTextData.ToFixedBytes(GENERAL_IDENTIFIER_LENGTH));
+            bufferBuilder.Add(logonRequest.Integer1);
+            bufferBuilder.Add(logonRequest.Integer2);
+            bufferBuilder.Add(logonRequest.HeartbeatIntervalInSeconds);
+            bufferBuilder.Add((int)logonRequest.TradeMode);
+            bufferBuilder.Add(logonRequest.TradeAccount.ToFixedBytes(TRADE_ACCOUNT_LENGTH));
+            bufferBuilder.Add(logonRequest.HardwareIdentifier.ToFixedBytes(GENERAL_IDENTIFIER_LENGTH));
+            bufferBuilder.Add(logonRequest.ClientName.ToFixedBytes(32));
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        public override T Load<T>(DTCMessageType messageType, byte[] bytes)
+        {
+            var index = 0;
             var result = new T();
             switch (messageType)
             {
@@ -775,6 +881,5 @@ namespace DTCCommon.Codecs
                     throw new ArgumentOutOfRangeException(messageType.ToString(), messageType, null);
             }
         }
-
     }
 }

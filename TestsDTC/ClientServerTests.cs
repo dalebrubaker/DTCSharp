@@ -61,7 +61,7 @@ namespace TestsDTC
             {
                 exampleService = new ExampleService();
             }
-            var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, timeoutNoActivity);
+            var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None), IPAddress.Loopback, port, timeoutNoActivity);
             try
             {
                 //TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(true));
@@ -379,7 +379,7 @@ namespace TestsDTC
 
                     // Now subscribe to the data
                     sw.Restart();
-                    var symbolId = client1.SubscribeMarketData(1, "ESZ6", "");
+                    var symbolId = await client1.SubscribeMarketDataAsync(1, "ESZ6", "").ConfigureAwait(false);
                     Assert.Equal(1u, symbolId);
                     while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
                     {
@@ -392,7 +392,7 @@ namespace TestsDTC
                     Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numTrades);
                     Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numBidAsks);
 
-                    client1.UnsubscribeMarketData(symbolId);
+                    await client1.UnsubscribeMarketDataAsync(symbolId).ConfigureAwait(false);
                 }
             }
         }

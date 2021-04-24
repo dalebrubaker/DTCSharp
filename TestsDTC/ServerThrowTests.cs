@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
-using DTCCommon;
 using DTCServer;
 using TestServer;
 using Xunit;
@@ -32,7 +32,10 @@ namespace TestsDTC
         {
             var exampleService = new ExampleService();
             var port = ClientServerTests.NextServerPort;
-            using (var server = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, 1000))
+            using (var server =
+                new Server(
+                    (clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None),
+                    IPAddress.Loopback, port, 1000))
             {
                 try
                 {
@@ -44,7 +47,10 @@ namespace TestsDTC
                     throw;
                 }
                 await Task.Delay(200).ConfigureAwait(false);
-                using (var server2 = new Server(exampleService.HandleRequest, IPAddress.Loopback, port, 1000))
+                using (var server2 =
+                    new Server(
+                        (clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None),
+                        IPAddress.Loopback, port, 1000))
                 {
                     await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync()).ConfigureAwait(false);
                     await Task.Delay(100).ConfigureAwait(false);
