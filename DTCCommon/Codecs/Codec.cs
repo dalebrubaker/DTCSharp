@@ -17,21 +17,19 @@ namespace DTCCommon.Codecs
     {
         protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
-        protected Stream _stream; // normally a NetworkStream can be a MemoryStream for a unit test
+        protected readonly Stream _stream; // normally a NetworkStream but can be a MemoryStream for a unit test
         private readonly ClientOrServer _clientOrServer;
         private bool _isZippedStream;
         private BinaryReader _binaryReader;
         private DeflateStream _deflateStream;
         private readonly byte[] _bufferHeader;
 
-        protected BinaryWriter _binaryWriter;
         protected bool _disabledHeartbeats;
 
         protected Codec(Stream stream, ClientOrServer clientOrServer)
         {
             _stream = stream;
             _clientOrServer = clientOrServer;
-            _binaryWriter = new BinaryWriter(stream);
             _binaryReader = new BinaryReader(stream);
             _bufferHeader = new byte[4];
         }

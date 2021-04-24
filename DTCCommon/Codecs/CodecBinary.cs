@@ -40,7 +40,6 @@ namespace DTCCommon.Codecs
         public override async Task WriteAsync<T>(DTCMessageType messageType, T message, CancellationToken cancellationToken)
         {
             //Logger.Debug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
-            int sizeExcludingHeader;
             switch (messageType)
             {
                 case DTCMessageType.MessageTypeUnset:
@@ -104,64 +103,24 @@ namespace DTCCommon.Codecs
                     return;
                 case DTCMessageType.SecurityDefinitionReject:
                     var securityDefinitionReject = message as SecurityDefinitionReject;
-                    sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(securityDefinitionReject.RequestID);
-                    _binaryWriter.Write(securityDefinitionReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+                    await WriteSecurityDefinitionRejectAsync(messageType, securityDefinitionReject, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
-                    sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 4 + 8 + 8 + 4 + 3 * 1;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(historicalPriceDataRequest.RequestID);
-                    _binaryWriter.Write(historicalPriceDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
-                    _binaryWriter.Write(historicalPriceDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
-                    _binaryWriter.Write((int)historicalPriceDataRequest.RecordInterval);
-                    _binaryWriter.Write(0); // 4 bytes for alignment on 8-byte boundary
-                    _binaryWriter.Write(historicalPriceDataRequest.StartDateTime);
-                    _binaryWriter.Write(historicalPriceDataRequest.EndDateTime);
-                    _binaryWriter.Write(historicalPriceDataRequest.MaxDaysToReturn);
-                    _binaryWriter.Write((byte)historicalPriceDataRequest.UseZLibCompression);
-                    _binaryWriter.Write((byte)historicalPriceDataRequest.RequestDividendAdjustedStockData);
-                    _binaryWriter.Write((byte)historicalPriceDataRequest.Integer1);
+                    await WriteHistoricalPriceDataRequestAsync(messageType, historicalPriceDataRequest, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
                     // Logger.Debug($"{nameof(CodecBinary)} is writing {messageType} {message}");
                     var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
-                    sizeExcludingHeader = 4 + 4 + 2 + 2 + 4;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(historicalPriceDataResponseHeader.RequestID);
-                    _binaryWriter.Write((int)historicalPriceDataResponseHeader.RecordInterval);
-                    _binaryWriter.Write((byte)historicalPriceDataResponseHeader.UseZLibCompression);
-                    _binaryWriter.Write((byte)historicalPriceDataResponseHeader.NoRecordsToReturn);
-                    _binaryWriter.Write((short)0); // align for packing
-                    _binaryWriter.Write(historicalPriceDataResponseHeader.IntToFloatPriceDivisor);
+                    await WriteHistoricalPriceDataResponseHeaderAsync(messageType, historicalPriceDataResponseHeader, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.HistoricalPriceDataReject:
                     var historicalPriceDataReject = message as HistoricalPriceDataReject;
-                    sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH + 2 + 2;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(historicalPriceDataReject.RequestID);
-                    _binaryWriter.Write(historicalPriceDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
-                    _binaryWriter.Write((short)historicalPriceDataReject.RejectReasonCode);
-                    _binaryWriter.Write((ushort)historicalPriceDataReject.RetryTimeInSeconds);
+                    await WriteHistoricalPriceDataRejectAsync(messageType, historicalPriceDataReject, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
                     var historicalPriceDataRecordResponse = message as HistoricalPriceDataRecordResponse;
-                    sizeExcludingHeader = 4 + 9 * 8 + 1;
-                    Utility.WriteHeader(_binaryWriter, sizeExcludingHeader, messageType);
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.RequestID);
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.StartDateTime);
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.OpenPrice);
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.HighPrice);
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.LowPrice);
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.LastPrice);
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.Volume);
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.NumTrades);
-                    _binaryWriter.Write(0); // for 8-byte packing boundary
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.BidVolume);
-                    _binaryWriter.Write(historicalPriceDataRecordResponse.AskVolume);
-                    _binaryWriter.Write((byte)historicalPriceDataRecordResponse.IsFinalRecord);
+                    await WriteHistoricalPriceDataRecordResponseAsync(messageType, historicalPriceDataRecordResponse, cancellationToken).ConfigureAwait(false);
                     return;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     // Probably no longer used after version SierraChart version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
@@ -252,6 +211,92 @@ namespace DTCCommon.Codecs
                 default:
                     throw new ArgumentOutOfRangeException(messageType.ToString(), messageType, null);
             }
+        }
+
+        private async Task WriteHistoricalPriceDataRecordResponseAsync(DTCMessageType messageType, HistoricalPriceDataRecordResponse historicalPriceDataRecordResponse, CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4 + 9 * 8 + 1;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(historicalPriceDataRecordResponse.RequestID);
+            bufferBuilder.Add(historicalPriceDataRecordResponse.StartDateTime);
+            bufferBuilder.Add(historicalPriceDataRecordResponse.OpenPrice);
+            bufferBuilder.Add(historicalPriceDataRecordResponse.HighPrice);
+            bufferBuilder.Add(historicalPriceDataRecordResponse.LowPrice);
+            bufferBuilder.Add(historicalPriceDataRecordResponse.LastPrice);
+            bufferBuilder.Add(historicalPriceDataRecordResponse.Volume);
+            bufferBuilder.Add(historicalPriceDataRecordResponse.NumTrades);
+            bufferBuilder.Add(0); // for 8-byte packing boundary
+            bufferBuilder.Add(historicalPriceDataRecordResponse.BidVolume);
+            bufferBuilder.Add(historicalPriceDataRecordResponse.AskVolume);
+            bufferBuilder.Add((byte)historicalPriceDataRecordResponse.IsFinalRecord);
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteHistoricalPriceDataRejectAsync(DTCMessageType messageType, HistoricalPriceDataReject historicalPriceDataReject, CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH + 2 + 2;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(historicalPriceDataReject.RequestID);
+            bufferBuilder.Add(historicalPriceDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+            bufferBuilder.Add((short)historicalPriceDataReject.RejectReasonCode);
+            bufferBuilder.Add((ushort)historicalPriceDataReject.RetryTimeInSeconds);
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteHistoricalPriceDataResponseHeaderAsync(DTCMessageType messageType, HistoricalPriceDataResponseHeader historicalPriceDataResponseHeader, CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4 + 4 + 2 + 2 + 4;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(historicalPriceDataResponseHeader.RequestID);
+            bufferBuilder.Add((int)historicalPriceDataResponseHeader.RecordInterval);
+            bufferBuilder.Add((byte)historicalPriceDataResponseHeader.UseZLibCompression);
+            bufferBuilder.Add((byte)historicalPriceDataResponseHeader.NoRecordsToReturn);
+            bufferBuilder.Add((short)0); // align for packing
+            bufferBuilder.Add(historicalPriceDataResponseHeader.IntToFloatPriceDivisor);
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteHistoricalPriceDataRequestAsync(DTCMessageType messageType, HistoricalPriceDataRequest historicalPriceDataRequest, CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 4 + 8 + 8 + 4 + 3 * 1;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(historicalPriceDataRequest.RequestID);
+            bufferBuilder.Add(historicalPriceDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
+            bufferBuilder.Add(historicalPriceDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+            bufferBuilder.Add((int)historicalPriceDataRequest.RecordInterval);
+            bufferBuilder.Add(0); // 4 bytes for alignment on 8-byte boundary
+            bufferBuilder.Add(historicalPriceDataRequest.StartDateTime);
+            bufferBuilder.Add(historicalPriceDataRequest.EndDateTime);
+            bufferBuilder.Add(historicalPriceDataRequest.MaxDaysToReturn);
+            bufferBuilder.Add((byte)historicalPriceDataRequest.UseZLibCompression);
+            bufferBuilder.Add((byte)historicalPriceDataRequest.RequestDividendAdjustedStockData);
+            bufferBuilder.Add((byte)historicalPriceDataRequest.Integer1);
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task WriteSecurityDefinitionRejectAsync(DTCMessageType messageType, SecurityDefinitionReject securityDefinitionReject,
+            CancellationToken cancellationToken)
+        {
+            const int sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH;
+            const int size = sizeExcludingHeader + 4;
+            using var bufferBuilder = new BufferBuilder(size);
+            bufferBuilder.AddHeader(messageType);
+
+            bufferBuilder.Add(securityDefinitionReject.RequestID);
+            bufferBuilder.Add(securityDefinitionReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
+            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
         }
 
         private async Task WriteSecurityDefinitionResponseAsync(DTCMessageType messageType, SecurityDefinitionResponse securityDefinitionResponse,
