@@ -9,7 +9,7 @@ using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
 using NLog;
-using TestServer;
+using TestsDTCServer;
 using Xunit;
 using Xunit.Abstractions;
 

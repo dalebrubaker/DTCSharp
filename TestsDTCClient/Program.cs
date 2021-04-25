@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace TestClientDTC
+namespace TestsDTCClient
 {
     internal static class Program
     {

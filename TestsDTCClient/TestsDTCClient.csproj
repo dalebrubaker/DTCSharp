@@ -7,8 +7,8 @@
     <ProjectGuid>{E68D3DEB-5492-4B8D-A909-AE5EB70102A4}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TestClientDTC</RootNamespace>
-    <AssemblyName>TestClientDTC</AssemblyName>
+    <RootNamespace>TestsDTCClient</RootNamespace>
+    <AssemblyName>TestsDTCClient</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

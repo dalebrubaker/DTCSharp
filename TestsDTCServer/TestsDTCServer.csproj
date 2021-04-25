@@ -7,8 +7,8 @@
     <ProjectGuid>{ACB16562-535A-488A-BB19-BAD950CBF8DE}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TestServer</RootNamespace>
-    <AssemblyName>TestServerDTC</AssemblyName>
+    <RootNamespace>TestsDTCServer</RootNamespace>
+    <AssemblyName>TestsDTCServer</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

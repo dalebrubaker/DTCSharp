@@ -8,7 +8,7 @@ using DTCServer;
 using Google.Protobuf;
 using NLog;
 
-namespace TestServer
+namespace TestsDTCServer
 {
     /// <summary>
     /// The service implementation that provides responses to client requests.

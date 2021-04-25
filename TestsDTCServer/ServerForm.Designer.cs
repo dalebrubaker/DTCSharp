@@ -1,4 +1,4 @@
-﻿namespace TestServer
+﻿namespace TestsDTCServer
 {
     partial class ServerForm
     {
@@ -40,7 +40,7 @@
             this.btnStopHistorical = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.txtServer = new System.Windows.Forms.TextBox();
-            this.logControl1 = new TestServer.LogControl();
+            this.logControl1 = new LogControl();
             this.lblUsingIpAddress = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 

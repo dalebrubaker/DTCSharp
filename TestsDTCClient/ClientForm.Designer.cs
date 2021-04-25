@@ -1,4 +1,4 @@
-﻿namespace TestClientDTC
+﻿namespace TestsDTCClient
 {
     partial class ClientForm
     {
@@ -45,13 +45,13 @@
             this.label10 = new System.Windows.Forms.Label();
             this.txtUsername = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
-            this.logControlConnect = new TestClientDTC.LogControl();
+            this.logControlConnect = new LogControl();
             this.tabPageSymbols = new System.Windows.Forms.TabPage();
             this.btnSecurityDefinition = new System.Windows.Forms.Button();
             this.btnExchanges = new System.Windows.Forms.Button();
             this.label4 = new System.Windows.Forms.Label();
             this.txtSymbolDef = new System.Windows.Forms.TextBox();
-            this.logControlSymbols = new TestClientDTC.LogControl();
+            this.logControlSymbols = new LogControl();
             this.tabPageLevel1 = new System.Windows.Forms.TabPage();
             this.btnSubscribeCallbacks2 = new System.Windows.Forms.Button();
             this.cbShowBidAsk2 = new System.Windows.Forms.CheckBox();
@@ -65,7 +65,7 @@
             this.btnSubscribeEvents1 = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
             this.txtSymbolLevel1_1 = new System.Windows.Forms.TextBox();
-            this.logControlLevel1 = new TestClientDTC.LogControl();
+            this.logControlLevel1 = new LogControl();
             this.tabPageHistorical = new System.Windows.Forms.TabPage();
             this.cbZip = new System.Windows.Forms.CheckBox();
             this.btnGetHistoricalMinutes = new System.Windows.Forms.Button();
@@ -74,7 +74,7 @@
             this.btnGetHistoricalTicks = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.txtSymbolHistorical = new System.Windows.Forms.TextBox();
-            this.logControlHistorical = new TestClientDTC.LogControl();
+            this.logControlHistorical = new LogControl();
             this.timerLevel1Update = new System.Windows.Forms.Timer(this.components);
             this.cbxEncoding = new System.Windows.Forms.ComboBox();
             this.label11 = new System.Windows.Forms.Label();

@@ -9,7 +9,7 @@ using DTCCommon.Extensions;
 using DTCServer;
 using static DTCCommon.WindowConfig;
 
-namespace TestServer
+namespace TestsDTCServer
 {
     public partial class ServerForm : Form
     {

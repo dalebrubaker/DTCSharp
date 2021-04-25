@@ -58,9 +58,9 @@
       <Project>{ed55fc12-c152-4644-9427-7ef6cc11365e}</Project>
       <Name>DTCServer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\TestServerDTC\TestServerDTC.csproj">
+    <ProjectReference Include="..\TestsDTCServer\TestsDTCServer.csproj">
       <Project>{acb16562-535a-488a-bb19-bad950cbf8de}</Project>
-      <Name>TestServerDTC</Name>
+      <Name>TestsDTCServer</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

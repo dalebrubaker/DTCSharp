@@ -1,4 +1,4 @@
-﻿namespace TestServer
+﻿namespace TestsDTCServer
 {
     partial class LogControl
     {

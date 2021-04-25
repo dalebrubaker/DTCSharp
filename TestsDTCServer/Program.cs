@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace TestServer
+namespace TestsDTCServer
 {
     internal static class Program
     {

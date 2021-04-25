@@ -8,7 +8,7 @@ using DTCCommon;
 using DTCCommon.Extensions;
 using DTCPB;
 
-namespace TestClientDTC
+namespace TestsDTCClient
 {
     public partial class ClientForm : Form
     {

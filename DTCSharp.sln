@@ -15,11 +15,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		DTCProtocol.3.protoPriorVersion = DTCProtocol.3.protoPriorVersion
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestServerDTC", "TestServerDTC\TestServerDTC.csproj", "{ACB16562-535A-488A-BB19-BAD950CBF8DE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestsDTCServer", "TestsDTCServer\TestsDTCServer.csproj", "{ACB16562-535A-488A-BB19-BAD950CBF8DE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestsDTC", "TestsDTC\TestsDTC.csproj", "{36C6832D-45A4-45EC-AC29-78D3A0F29098}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestClientDTC", "TestClientDTC\TestClientDTC.csproj", "{E68D3DEB-5492-4B8D-A909-AE5EB70102A4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestsDTCClient", "TestsDTCClient\TestsDTCClient.csproj", "{E68D3DEB-5492-4B8D-A909-AE5EB70102A4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
