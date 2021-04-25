@@ -32,3 +32,13 @@ Future
 =============
 For a simple JSON implementation, consider conversion to/from Protobuf classes
         See https://medium.com/google-cloud/making-newtonsoft-json-and-protocol-buffers-play-nicely-together-fe92079cc91c
+
+Encoding
+=============
+
+See docs at https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
+
+The INITIAL encoding request and response are in binary encoding.
+A later encoding request could be in the current protocol. In that case, the encoding response
+        would come back in the new protocol. Wait for all messages to be received in the old protocol,
+        then switch to reading & writing the new protocol.
