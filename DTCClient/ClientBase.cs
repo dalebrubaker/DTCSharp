@@ -280,6 +280,14 @@ namespace DTCClient
             temp?.Invoke(this, message);
         }
 
+        public event EventHandler<IMessage> EveryMessageFromServer;
+
+        protected void OnEveryEventFromServer(IMessage protobuf)
+        {
+            var tmp = EveryMessageFromServer;
+            tmp?.Invoke(this, protobuf);
+        }
+
         /// <summary>
         /// internal for unit tests
         /// </summary>

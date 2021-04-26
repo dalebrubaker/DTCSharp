@@ -402,19 +402,67 @@ namespace DTCClient
         /// <param name="messageDTC"></param>
         protected override void ProcessMessage(MessageDTC messageDTC)
         {
-            //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");\
+            //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
+            OnEveryEventFromServer(messageDTC.Message);
             switch (messageDTC.MessageType)
             {
                 case DTCMessageType.LogonResponse:
                     base.ProcessMessage(messageDTC);
                     LogonResponse = messageDTC.Message as LogonResponse;
-                    
+
                     // Note that SierraChart does allow more than OneHistoricalPriceDataRequestPerConnection 
                     break;
                 case DTCMessageType.Heartbeat:
                 case DTCMessageType.Logoff:
                 case DTCMessageType.EncodingResponse:
                     base.ProcessMessage(messageDTC);
+                    break;
+                case DTCMessageType.HistoricalPriceDataResponseHeader:
+                    var historicalPriceDataResponseHeader = messageDTC.Message as HistoricalPriceDataResponseHeader;
+                    if (historicalPriceDataResponseHeader.UseZLibCompression == 1)
+                    {
+                        // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
+                        Logger.Debug($"{nameof(Client)}.{nameof(ProcessMessage)} is switching client stream to read zipped.");
+
+                        _currentCodec.ReadSwitchToZipped();
+                        _useHeartbeat = false;
+                    }
+                    ThrowEvent(historicalPriceDataResponseHeader, HistoricalPriceDataResponseHeaderEvent);
+                    break;
+                case DTCMessageType.HistoricalPriceDataRecordResponse:
+                    var historicalPriceDataRecordResponse = messageDTC.Message as HistoricalPriceDataRecordResponse;
+                    if (historicalPriceDataRecordResponse.IsFinalRecordBool)
+                    {
+                    }
+                    if (historicalPriceDataRecordResponse.IsFinalRecordBool && _currentCodec.IsZippedStream)
+                    {
+                        // Switch back from reading zlib to regular networkStream
+                        _currentCodec.EndZippedWriting();
+                    }
+                    ThrowEvent(historicalPriceDataRecordResponse, HistoricalPriceDataRecordResponseEvent);
+                    break;
+                case DTCMessageType.HistoricalPriceDataTickRecordResponse:
+                    var historicalPriceDataTickRecordResponse = messageDTC.Message as HistoricalPriceDataTickRecordResponse;
+                    if (historicalPriceDataTickRecordResponse.IsFinalRecordBool && _currentCodec.IsZippedStream)
+                    {
+                        // Switch back from reading zlib to regular networkStream
+                        _currentCodec.EndZippedWriting();
+                    }
+                    ThrowEvent(historicalPriceDataTickRecordResponse, HistoricalPriceDataTickRecordResponseEvent);
+                    break;
+                case DTCMessageType.HistoricalPriceDataReject:
+                    var historicalPriceDataReject = messageDTC.Message as HistoricalPriceDataReject;
+                    ThrowEvent(historicalPriceDataReject, HistoricalPriceDataRejectEvent);
+                    break;
+                case DTCMessageType.HistoricalPriceDataRecordResponseInt:
+                    ThrowEvent(messageDTC.Message as HistoricalPriceDataRecordResponse_Int, HistoricalPriceDataRecordResponseIntEvent);
+                    break;
+                case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
+                    ThrowEvent(messageDTC.Message as HistoricalPriceDataTickRecordResponse_Int, HistoricalPriceDataTickRecordResponseIntEvent);
+                    break;
+                case DTCMessageType.SecurityDefinitionResponse:
+                    var securityDefinitionResponse = messageDTC.Message as SecurityDefinitionResponse;
+                    ThrowEvent(securityDefinitionResponse, SecurityDefinitionResponseEvent);
                     break;
                 case DTCMessageType.MarketDataReject:
                     ThrowEvent(messageDTC.Message as MarketDataReject, MarketDataRejectEvent);
@@ -524,9 +572,6 @@ namespace DTCClient
                 case DTCMessageType.ExchangeListResponse:
                     ThrowEvent(messageDTC.Message as ExchangeListResponse, ExchangeListResponseEvent);
                     break;
-                case DTCMessageType.SecurityDefinitionResponse:
-                    ThrowEvent(messageDTC.Message as SecurityDefinitionResponse, SecurityDefinitionResponseEvent);
-                    break;
                 case DTCMessageType.SecurityDefinitionReject:
                     ThrowEvent(messageDTC.Message as SecurityDefinitionReject, SecurityDefinitionRejectEvent);
                     break;
@@ -542,98 +587,6 @@ namespace DTCClient
                 case DTCMessageType.GeneralLogMessage:
                     ThrowEvent(messageDTC.Message as GeneralLogMessage, GeneralLogMessageEvent);
                     break;
-                case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    var historicalPriceDataResponseHeader = messageDTC.Message as HistoricalPriceDataResponseHeader;
-                    if (historicalPriceDataResponseHeader.UseZLibCompression == 1)
-                    {
-                        // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
-                        Logger.Debug($"{nameof(Client)}.{nameof(ProcessMessage)} is switching client stream to read zipped.");
-
-                        _currentCodec.ReadSwitchToZipped();
-                        _useHeartbeat = false;
-                    }
-                    ThrowEvent(historicalPriceDataResponseHeader, HistoricalPriceDataResponseHeaderEvent);
-                    break;
-                case DTCMessageType.HistoricalPriceDataReject:
-                    ThrowEvent(messageDTC.Message as HistoricalPriceDataReject, HistoricalPriceDataRejectEvent);
-                    break;
-                case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    var historicalPriceDataRecordResponse = messageDTC.Message as HistoricalPriceDataRecordResponse;
-                    ThrowEvent(historicalPriceDataRecordResponse, HistoricalPriceDataRecordResponseEvent);
-                    if (historicalPriceDataRecordResponse.IsFinalRecordBool)
-                    {}
-                    if (historicalPriceDataRecordResponse.IsFinalRecordBool && _currentCodec.IsZippedStream)
-                    {
-                        // Switch back from reading zlib to regular networkStream
-                        _currentCodec.EndZippedWriting();
-                    }
-                    break;
-                case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                    var historicalPriceDataTickRecordResponse = messageDTC.Message as HistoricalPriceDataTickRecordResponse;
-                    ThrowEvent(historicalPriceDataTickRecordResponse, HistoricalPriceDataTickRecordResponseEvent);
-                    if (historicalPriceDataTickRecordResponse.IsFinalRecordBool && _currentCodec.IsZippedStream)
-                    {
-                        // Switch back from reading zlib to regular networkStream
-                        _currentCodec.EndZippedWriting();
-                    }
-                    break;
-                case DTCMessageType.HistoricalPriceDataRecordResponseInt:
-                    ThrowEvent(messageDTC.Message as HistoricalPriceDataRecordResponse_Int, HistoricalPriceDataRecordResponseIntEvent);
-                    break;
-                case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
-                    ThrowEvent(messageDTC.Message as HistoricalPriceDataTickRecordResponse_Int, HistoricalPriceDataTickRecordResponseIntEvent);
-                    break;
-                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator:
-                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator2:
-                case DTCMessageType.MarketDataUpdateTradeNoTimestamp:
-                case DTCMessageType.MarketDataUpdateBidAskNoTimestamp:
-                case DTCMessageType.MarketDepthSnapshotLevelFloat:
-                case DTCMessageType.MarketDepthUpdateLevelFloatWithMilliseconds:
-                case DTCMessageType.MarketDepthUpdateLevelNoTimestamp:
-                case DTCMessageType.TradingSymbolStatus:
-                case DTCMessageType.SubmitFlattenPositionOrder:
-                case DTCMessageType.HistoricalOrderFillsReject:
-                case DTCMessageType.AccountBalanceAdjustment:
-                case DTCMessageType.AccountBalanceAdjustmentReject:
-                case DTCMessageType.AccountBalanceAdjustmentComplete:
-                case DTCMessageType.HistoricalAccountBalancesRequest:
-                case DTCMessageType.HistoricalAccountBalancesReject:
-                case DTCMessageType.HistoricalAccountBalanceResponse:
-                case DTCMessageType.AlertMessage:
-                case DTCMessageType.JournalEntryAdd:
-                case DTCMessageType.JournalEntriesRequest:
-                case DTCMessageType.JournalEntriesReject:
-                case DTCMessageType.JournalEntryResponse:
-                case DTCMessageType.HistoricalPriceDataResponseTrailer:
-                case DTCMessageType.HistoricalMarketDepthDataRequest:
-                case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
-                case DTCMessageType.HistoricalMarketDepthDataReject:
-                case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                case DTCMessageType.MessageTypeUnset:
-                case DTCMessageType.LogonRequest:
-                case DTCMessageType.EncodingRequest:
-                case DTCMessageType.MarketDataRequest:
-                case DTCMessageType.MarketDepthRequest:
-                case DTCMessageType.SubmitNewSingleOrder:
-                case DTCMessageType.SubmitNewSingleOrderInt:
-                case DTCMessageType.SubmitNewOcoOrder:
-                case DTCMessageType.SubmitNewOcoOrderInt:
-                case DTCMessageType.CancelOrder:
-                case DTCMessageType.CancelReplaceOrder:
-                case DTCMessageType.CancelReplaceOrderInt:
-                case DTCMessageType.OpenOrdersRequest:
-                case DTCMessageType.HistoricalOrderFillsRequest:
-                case DTCMessageType.CurrentPositionsRequest:
-                case DTCMessageType.TradeAccountsRequest:
-                case DTCMessageType.ExchangeListRequest:
-                case DTCMessageType.SymbolsForExchangeRequest:
-                case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
-                case DTCMessageType.SymbolsForUnderlyingRequest:
-                case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                case DTCMessageType.SymbolSearchRequest:
-                case DTCMessageType.AccountBalanceRequest:
-                case DTCMessageType.HistoricalPriceDataRequest:
-                    throw new NotImplementedException($"{messageDTC}");
                 default:
                     throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessage)}.");
             }

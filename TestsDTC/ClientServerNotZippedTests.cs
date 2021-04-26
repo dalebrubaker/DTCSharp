@@ -8,6 +8,8 @@ using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
+using FluentAssertions;
+using Google.Protobuf;
 using NLog;
 using TestServer;
 using Xunit;
@@ -72,83 +74,90 @@ namespace TestsDTC
             var exampleService = new ExampleService(10, 20);
             var port = ClientServerTests.NextServerPort;
 
-            using (var server = StartExampleServer(TimeoutNoActivity, port, exampleService))
+            using var server = StartExampleServer(TimeoutNoActivity, port, exampleService);
+            using var clientHistorical = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port, EncodingEnum.ProtocolBuffers)
+                .ConfigureAwait(false);
+            while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
             {
-                using (var clientHistorical = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port, EncodingEnum.ProtocolBuffers)
-                    .ConfigureAwait(false))
+                // Wait for the client to connect
+                await Task.Delay(1).ConfigureAwait(false);
+            }
+            Assert.Equal(1, server.NumberOfClientHandlers);
+            while (server.NumberOfClientHandlersConnected == 0 && sw.ElapsedMilliseconds < 1000)
+            {
+                await Task.Delay(1).ConfigureAwait(false);
+            }
+            Assert.Equal(1, server.NumberOfClientHandlersConnected);
+
+            // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
+            var loginResponse = await clientHistorical.LogonAsync(0, false, TimeoutForConnect).ConfigureAwait(true);
+            Assert.NotNull(loginResponse);
+
+            var numHistoricalPriceDataResponseHeader = 0;
+            var numTrades = 0;
+
+            // Set up the handler to capture the HistoricalPriceDataResponseHeader event
+            void ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent(object sender, HistoricalPriceDataResponseHeader e)
+            {
+                _output.WriteLine($"Client1 received a HistoricalPriceDataResponseHeader after {sw.ElapsedMilliseconds} msecs");
+                numHistoricalPriceDataResponseHeader++;
+            }
+
+            clientHistorical.HistoricalPriceDataResponseHeaderEvent += ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent;
+
+            // Set up the handler to capture the HistoricalPriceDataRecordResponse events
+            void ClientHistoricalOnHistoricalPriceDataResponseEvent(object sender, HistoricalPriceDataRecordResponse trade)
+            {
+                if (trade.StartDateTime != 0)
                 {
-                    while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
-                    {
-                        // Wait for the client to connect
-                        await Task.Delay(1).ConfigureAwait(false);
-                    }
-                    Assert.Equal(1, server.NumberOfClientHandlers);
-                    while (server.NumberOfClientHandlersConnected == 0 && sw.ElapsedMilliseconds < 1000)
-                    {
-                        await Task.Delay(1).ConfigureAwait(false);
-                    }
-                    Assert.Equal(1, server.NumberOfClientHandlersConnected);
-
-                    // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
-                    var loginResponse = await clientHistorical.LogonAsync(0, false, TimeoutForConnect).ConfigureAwait(true);
-                    Assert.NotNull(loginResponse);
-
-                    var numHistoricalPriceDataResponseHeader = 0;
-                    var numTrades = 0;
-
-                    // Set up the handler to capture the HistoricalPriceDataResponseHeader event
-                    void ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent(object sender, HistoricalPriceDataResponseHeader e)
-                    {
-                        _output.WriteLine($"Client1 received a HistoricalPriceDataResponseHeader after {sw.ElapsedMilliseconds} msecs");
-                        numHistoricalPriceDataResponseHeader++;
-                    }
-
-                    clientHistorical.HistoricalPriceDataResponseHeaderEvent += ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent;
-
-                    // Set up the handler to capture the HistoricalPriceDataRecordResponse events
-                    void ClientHistoricalOnHistoricalPriceDataResponseEvent(object sender, HistoricalPriceDataRecordResponse trade)
-                    {
-                        if (trade.StartDateTime != 0)
-                        {
-                            // Ignore per  https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData
-                            numTrades++;
-                        }
-                        if (trade.IsFinalRecord != 0)
-                        {
-                            isFinalRecordReceived = true;
-                        }
-                    }
-
-                    clientHistorical.HistoricalPriceDataRecordResponseEvent += ClientHistoricalOnHistoricalPriceDataResponseEvent;
-
-                    // Now request the data
-                    var request = new HistoricalPriceDataRequest
-                    {
-                        RequestID = 1,
-                        Symbol = "ESZ6",
-                        Exchange = "",
-                        RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
-                        StartDateTime = DateTime.MinValue.UtcToDtcDateTime(),
-                        EndDateTime = DateTime.MaxValue.UtcToDtcDateTime(),
-                        MaxDaysToReturn = 1, // ignored in this test
-                        UseZLibCompression = UseZLibCompression ? 1 : 0,
-                        RequestDividendAdjustedStockData = 0,
-                        Integer1 = 0,
-                    };
-                    var endDateTime = request.EndDateTimeUtc;
-                    sw.Restart();
-                    clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
-                    while (!isFinalRecordReceived)
-                    {
-                        await Task.Delay(100).ConfigureAwait(false);
-                    }
-                    var elapsed = sw.ElapsedMilliseconds;
-                    _output.WriteLine($"Client1 received all {numTrades} historical trades in {elapsed} msecs");
-
-                    Assert.Equal(1, numHistoricalPriceDataResponseHeader);
-                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend, numTrades);
+                    // Ignore per  https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData
+                    numTrades++;
+                }
+                if (trade.IsFinalRecord != 0)
+                {
+                    isFinalRecordReceived = true;
                 }
             }
+
+            clientHistorical.HistoricalPriceDataRecordResponseEvent += ClientHistoricalOnHistoricalPriceDataResponseEvent;
+
+            var countEvents = 0;
+            void ClientHistoricalOnEveryMessageFromServer(object sender, IMessage protobuf)
+            {
+                countEvents++;
+            }
+            
+            clientHistorical.EveryMessageFromServer += ClientHistoricalOnEveryMessageFromServer;
+
+            // Now request the data
+            var request = new HistoricalPriceDataRequest
+            {
+                RequestID = 1,
+                Symbol = "ESZ6",
+                Exchange = "",
+                RecordInterval = HistoricalDataIntervalEnum.IntervalTick,
+                StartDateTime = DateTime.MinValue.UtcToDtcDateTime(),
+                EndDateTime = DateTime.MaxValue.UtcToDtcDateTime(),
+                MaxDaysToReturn = 1, // ignored in this test
+                UseZLibCompression = UseZLibCompression ? 1 : 0,
+                RequestDividendAdjustedStockData = 0,
+                Integer1 = 0,
+            };
+            var endDateTime = request.EndDateTimeUtc;
+            sw.Restart();
+            clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
+            while (!isFinalRecordReceived)
+            {
+                await Task.Delay(100).ConfigureAwait(false);
+            }
+            var elapsed = sw.ElapsedMilliseconds;
+            _output.WriteLine($"Client1 received all {numTrades} historical trades in {elapsed} msecs");
+
+            Assert.Equal(1, numHistoricalPriceDataResponseHeader);
+            Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend, numTrades);
+
+            countEvents.Should().BeGreaterThan(0);
         }
+
     }
 }

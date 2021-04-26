@@ -44,7 +44,6 @@ namespace DTCServer
             _ctsRequestReader = new CancellationTokenSource();
             _networkStreamServer = _tcpClient.GetStream();
             _currentCodec = new CodecBinary(_networkStreamServer);
-            //_receiverQueue = new BlockingCollection<>()
         }
 
         public string RemoteEndPoint { get; }
@@ -169,6 +168,8 @@ namespace DTCServer
         private void ProcessClientRequest(DTCMessageType messageType, byte[] messageBytes)
         {
             var protobuf = _currentCodec.GetProtobuf(messageType, messageBytes);
+            OnEveryEventFromClient(protobuf);
+
             switch (messageType)
             {
                 case DTCMessageType.LogonRequest:
@@ -341,6 +342,14 @@ namespace DTCServer
                 default:
                     throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(ProcessClientRequest)}.");
             }
+        }
+
+        public event EventHandler<IMessage> EveryMessageFromClient;
+        
+        private void OnEveryEventFromClient(IMessage protobuf)
+        {
+            var tmp = EveryMessageFromClient;
+            tmp?.Invoke(this, protobuf);
         }
 
         private void DisposeTimerHeartbeat()
