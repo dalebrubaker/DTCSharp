@@ -4,13 +4,13 @@ using Xunit;
 
 namespace TestsDTC
 {
-    public class UnitTests : IDisposable
+    public class DateTimeTests : IDisposable
     {
         public void Dispose()
         {
             Console.WriteLine("Disposing");
         }
-
+        
         [Fact]
         public void ScDateTimeTest()
         {

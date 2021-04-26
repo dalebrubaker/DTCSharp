@@ -23,11 +23,18 @@ namespace DTCCommon.Codecs
         private const int ORDER_FREE_FORM_TEXT_LENGTH = 48;
         private const int CLIENT_SERVER_NAME_LENGTH = 48;
         private const int GENERAL_IDENTIFIER_LENGTH = 64;
+        private const int CURRENCY_CODE_LENGTH = 8;
 
         public T ConvertToProtobuf<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new()
         {
-            var index = 0;
             var result = new T();
+            ConvertToProtobuf(messageType, bytes, result);
+            return result;
+        }
+
+        public void ConvertToProtobuf(DTCMessageType messageType, byte[] bytes, IMessage result)
+        {
+            var index = 0;
             switch (messageType)
             {
                 case DTCMessageType.MessageTypeUnset:
@@ -55,8 +62,7 @@ namespace DTCCommon.Codecs
                     logonRequest.HardwareIdentifier = bytes.StringFromNullTerminatedBytes(index);
                     index += GENERAL_IDENTIFIER_LENGTH;
                     logonRequest.ClientName = bytes.StringFromNullTerminatedBytes(index);
-                    index += 32;
-                    return result;
+                    return;
                 case DTCMessageType.LogonResponse:
                     var logonResponse = result as LogonResponse;
                     logonResponse.ProtocolVersion = BitConverter.ToInt32(bytes, index);
@@ -86,28 +92,37 @@ namespace DTCCommon.Codecs
                     logonResponse.UseIntegerPriceOrderMessages = bytes[index++];
                     logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount = bytes[index++];
                     logonResponse.MarketDataSupported = BitConverter.ToUInt32(bytes, index);
-                    index += 4;
-                    return result;
+                    return;
                 case DTCMessageType.Heartbeat:
                     var heartbeat = result as Heartbeat;
                     heartbeat.NumDroppedMessages = BitConverter.ToUInt32(bytes, index);
                     index += 4;
                     heartbeat.CurrentDateTime = BitConverter.ToInt64(bytes, index);
-                    return result;
+                    return;
                 case DTCMessageType.Logoff:
                     var logoff = result as Logoff;
                     logoff.Reason = bytes.StringFromNullTerminatedBytes(index);
                     index += TEXT_DESCRIPTION_LENGTH;
                     logoff.DoNotReconnect = bytes[index++];
-                    return result;
+                    return;
                 case DTCMessageType.EncodingRequest:
                     // EncodingResponse comes back as binary for all protocol versions
-                    LoadEncodingRequest(bytes, ref result);
-                    return result;
+                    var encodingRequest = result as EncodingRequest;
+                    encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    encodingRequest.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    encodingRequest.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
+                    return;
                 case DTCMessageType.EncodingResponse:
                     // EncodingResponse comes back as binary for all protocol versions
-                    LoadEncodingResponse(bytes, ref result);
-                    return result;
+                    var encodingResponse = result as EncodingResponse;
+                    encodingResponse.ProtocolVersion = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    encodingResponse.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    encodingResponse.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
+                    return;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = result as MarketDataRequest;
                     marketDataRequest.RequestAction = (RequestActionEnum)BitConverter.ToInt32(bytes, index);
@@ -118,19 +133,20 @@ namespace DTCCommon.Codecs
                     index += SYMBOL_LENGTH;
                     marketDataRequest.Exchange = bytes.StringFromNullTerminatedBytes(index);
                     index += EXCHANGE_LENGTH;
-                    return result;
+                    marketDataRequest.IntervalForSnapshotUpdatesInMilliseconds = BitConverter.ToUInt32(bytes, index);
+                    return;
                 case DTCMessageType.MarketDataReject:
                     var marketDataReject = result as MarketDataReject;
                     marketDataReject.SymbolID = BitConverter.ToUInt16(bytes, index);
                     index += 2;
                     marketDataReject.RejectText = bytes.StringFromNullTerminatedBytes(index);
                     index += TEXT_DESCRIPTION_LENGTH;
-                    return result;
+                    return;
                 case DTCMessageType.MarketDataFeedStatus:
                     var marketDataFeedStatus = result as MarketDataFeedStatus;
                     marketDataFeedStatus.Status = (MarketDataFeedStatusEnum)BitConverter.ToInt32(bytes, index);
                     index += 4;
-                    return result;
+                    return;
                 case DTCMessageType.MarketDataFeedSymbolStatus:
                 case DTCMessageType.SubmitNewSingleOrder:
                 case DTCMessageType.SubmitNewSingleOrderInt:
@@ -154,7 +170,7 @@ namespace DTCCommon.Codecs
                     var exchangeListRequest = result as ExchangeListRequest;
                     exchangeListRequest.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
-                    return result;
+                    return;
                 case DTCMessageType.ExchangeListResponse:
                     var exchangeListResponse = result as ExchangeListResponse;
                     exchangeListResponse.RequestID = BitConverter.ToInt32(bytes, index);
@@ -164,7 +180,7 @@ namespace DTCCommon.Codecs
                     exchangeListResponse.IsFinalMessage = bytes[index++];
                     exchangeListResponse.Description = bytes.StringFromNullTerminatedBytes(index);
                     index += EXCHANGE_DESCRIPTION_LENGTH;
-                    return result;
+                    return;
                 case DTCMessageType.SymbolsForExchangeRequest:
                 case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
                 case DTCMessageType.SymbolsForUnderlyingRequest:
@@ -177,7 +193,7 @@ namespace DTCCommon.Codecs
                     index += SYMBOL_LENGTH;
                     securityDefinitionForSymbolRequest.Exchange = bytes.StringFromNullTerminatedBytes(index);
                     index += EXCHANGE_LENGTH;
-                    return result;
+                    return;
                 case DTCMessageType.SecurityDefinitionResponse:
                     var securityDefinitionResponse = result as SecurityDefinitionResponse;
                     securityDefinitionResponse.RequestID = BitConverter.ToInt32(bytes, index);
@@ -230,7 +246,20 @@ namespace DTCCommon.Codecs
                     index += 4;
                     securityDefinitionResponse.ExchangeSymbol = bytes.StringFromNullTerminatedBytes(index);
                     index += SYMBOL_LENGTH;
-                    return result;
+                    securityDefinitionResponse.InitialMarginRequirement = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.MaintenanceMarginRequirement = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.Currency = bytes.StringFromNullTerminatedBytes(index);
+                    index += CURRENCY_CODE_LENGTH;
+                    securityDefinitionResponse.ContractSize = BitConverter.ToSingle(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.OpenInterest = BitConverter.ToUInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.RolloverDate = BitConverter.ToInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.IsDelayed = BitConverter.ToUInt32(bytes, index);
+                    return;
                 case DTCMessageType.SymbolSearchRequest:
                     throw new NotImplementedException();
                 case DTCMessageType.SecurityDefinitionReject:
@@ -239,7 +268,7 @@ namespace DTCCommon.Codecs
                     index += 4;
                     securityDefinitionReject.RejectText = bytes.StringFromNullTerminatedBytes(index);
                     index += TEXT_DESCRIPTION_LENGTH;
-                    return result;
+                    return;
                 case DTCMessageType.AccountBalanceRequest:
                     throw new NotImplementedException();
                 case DTCMessageType.AccountBalanceReject:
@@ -251,12 +280,12 @@ namespace DTCCommon.Codecs
                     index = 0;
                     userMessage.UserMessage_ = bytes.StringFromNullTerminatedBytes(index);
                     index += TEXT_MESSAGE_LENGTH;
-                    return result;
+                    return;
                 case DTCMessageType.GeneralLogMessage:
                     var generalLogMessage = result as GeneralLogMessage;
                     generalLogMessage.MessageText = bytes.StringFromNullTerminatedBytes(index);
                     index += 128;
-                    return result;
+                    return;
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = result as HistoricalPriceDataRequest;
                     historicalPriceDataRequest.RequestID = BitConverter.ToInt32(bytes, index);
@@ -277,7 +306,7 @@ namespace DTCCommon.Codecs
                     historicalPriceDataRequest.UseZLibCompression = bytes[index++];
                     historicalPriceDataRequest.RequestDividendAdjustedStockData = bytes[index++];
                     historicalPriceDataRequest.Integer1 = bytes[index++];
-                    return result;
+                    return;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
                     var historicalPriceDataResponseHeader = result as HistoricalPriceDataResponseHeader;
                     historicalPriceDataResponseHeader.RequestID = BitConverter.ToInt32(bytes, index);
@@ -290,7 +319,7 @@ namespace DTCCommon.Codecs
                     historicalPriceDataResponseHeader.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, index);
 
                     //Logger.Debug($"{nameof(CodecBinary)} loaded {messageType} {result}");
-                    return result;
+                    return;
                 case DTCMessageType.HistoricalPriceDataReject:
                     var historicalPriceDataReject = result as HistoricalPriceDataReject;
                     historicalPriceDataReject.RequestID = BitConverter.ToInt32(bytes, index);
@@ -301,7 +330,7 @@ namespace DTCCommon.Codecs
                     index += 2;
                     historicalPriceDataReject.RetryTimeInSeconds = BitConverter.ToUInt16(bytes, index);
                     index += 2;
-                    return result;
+                    return;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
                     var historicalPriceDataRecordResponse = result as HistoricalPriceDataRecordResponse;
                     historicalPriceDataRecordResponse.RequestID = BitConverter.ToInt32(bytes, index);
@@ -330,7 +359,7 @@ namespace DTCCommon.Codecs
                     {
                     }
                     historicalPriceDataRecordResponse.IsFinalRecord = bytes[index++];
-                    return result;
+                    return;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     // Probably no longer used after version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
                     var historicalPriceDataTickRecordResponse = result as HistoricalPriceDataTickRecordResponse;
@@ -346,7 +375,7 @@ namespace DTCCommon.Codecs
                     historicalPriceDataTickRecordResponse.Volume = BitConverter.ToDouble(bytes, index);
                     index += 8;
                     historicalPriceDataTickRecordResponse.IsFinalRecord = bytes[index++];
-                    return result;
+                    return;
                 case DTCMessageType.MarketDataSnapshot:
                 case DTCMessageType.MarketDataSnapshotInt:
                 case DTCMessageType.MarketDataUpdateTrade:
@@ -410,31 +439,14 @@ namespace DTCCommon.Codecs
             }
         }
 
-        private static void LoadEncodingResponse<T>(byte[] bytes, ref T result) where T : IMessage, new()
+        public IMessage ConvertToProtobuf(DTCMessageType messageType, byte[] messageBytes)
         {
-            var index = 0;
-
-            // EncodingResponse comes back as binary for all protocol versions
-            var encodingResponse = result as EncodingResponse;
-            encodingResponse.ProtocolVersion = BitConverter.ToInt32(bytes, index);
-            index += 4;
-            encodingResponse.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
-            index += 4;
-            encodingResponse.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
+            var result = EmptyProtobufs.GetEmptyProtobuf(messageType);
+            this.ConvertToProtobuf(messageType, messageBytes, result);
+            return result;
         }
 
-        private static void LoadEncodingRequest<T>(byte[] bytes, ref T result) where T : IMessage<T>, new()
-        {
-            var index = 0;
-            var encodingRequest = result as EncodingRequest;
-            encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, index);
-            index += 4;
-            encodingRequest.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
-            index += 4;
-            encodingRequest.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
-        }
-
-        public byte[] ConvertToBuffer<T>(DTCMessageType messageType, T message) where T : IMessage<T>, new()
+        public byte[] ConvertToBuffer(DTCMessageType messageType, IMessage message)
         {
             //Logger.Debug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
             switch (messageType)
@@ -443,16 +455,16 @@ namespace DTCCommon.Codecs
                     throw new ArgumentException(messageType.ToString());
                 case DTCMessageType.LogonRequest:
                     var logonRequest = message as LogonRequest;
-                    return ConvertToBufferLogonRequest<T>(messageType, logonRequest);
+                    return ConvertToBufferLogonRequest(messageType, logonRequest);
                 case DTCMessageType.LogonResponse:
                     var logonResponse = message as LogonResponse;
-                    return ConvertToBufferLogonResponse<T>(messageType, logonResponse);
+                    return ConvertToBufferLogonResponse(messageType, logonResponse);
                 case DTCMessageType.Heartbeat:
                     var heartbeat = message as Heartbeat;
-                    return ConvertToBufferHeartbeat<T>(messageType, heartbeat);
+                    return ConvertToBufferHeartbeat(messageType, heartbeat);
                 case DTCMessageType.Logoff:
                     var logoff = message as Logoff;
-                    return ConvertToBufferLogoff<T>(messageType, logoff);
+                    return ConvertToBufferLogoff(messageType, logoff);
                 case DTCMessageType.EncodingRequest:
                     var encodingRequest = message as EncodingRequest;
                     return ConvertToBufferEncodingRequest(messageType, encodingRequest);
@@ -600,7 +612,6 @@ namespace DTCCommon.Codecs
         protected byte[] ConvertToBufferEncodingResponse(DTCMessageType messageType, EncodingResponse encodingResponse)
         {
             using var bufferBuilder = new BufferBuilder(12);
-            bufferBuilder.Add((short)messageType);
             bufferBuilder.Add(encodingResponse.ProtocolVersion);
             bufferBuilder.Add((int)encodingResponse.Encoding); // enum size is 4
             var protocolType = encodingResponse.ProtocolType.ToFixedBytes(4);
@@ -682,23 +693,29 @@ namespace DTCCommon.Codecs
 
         private byte[] ConvertToBufferSecurityDefinitionResponse(DTCMessageType messageType, SecurityDefinitionResponse securityDefinitionResponse)
         {
-            const int SizeExcludingHeader =
-                4
-                + SYMBOL_LENGTH
-                + EXCHANGE_LENGTH
-                + 4
-                + SYMBOL_DESCRIPTION_LENGTH
-                + 3 * 4
-                + 4
-                + 2 * 4
-                + UNDERLYING_SYMBOL_LENGTH
-                + 4
-                + 4
-                + 4
-                + 7 * 4
-                + 4
-                + 4
-                + SYMBOL_LENGTH;
+            const int SizeExcludingHeader = 4
+                                            + SYMBOL_LENGTH
+                                            + EXCHANGE_LENGTH
+                                            + 4
+                                            + SYMBOL_DESCRIPTION_LENGTH
+                                            + 3 * 4
+                                            + 4
+                                            + 2 * 4
+                                            + UNDERLYING_SYMBOL_LENGTH
+                                            + 4
+                                            + 4
+                                            + 4
+                                            + 7 * 4
+                                            + 4
+                                            + 4
+                                            + SYMBOL_LENGTH // for ExchangeSymbol
+                                            + 4
+                                            + 4
+                                            + CURRENCY_CODE_LENGTH
+                                            + 4
+                                            + 4
+                                            + 4
+                                            + 4; // down through IsDelayed
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
             bufferBuilder.Add(securityDefinitionResponse.RequestID);
             bufferBuilder.Add(securityDefinitionResponse.Symbol.ToFixedBytes(SYMBOL_LENGTH));
@@ -725,6 +742,13 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(securityDefinitionResponse.HasMarketDepthData);
             bufferBuilder.Add(securityDefinitionResponse.DisplayPriceMultiplier);
             bufferBuilder.Add(securityDefinitionResponse.ExchangeSymbol.ToFixedBytes(SYMBOL_LENGTH));
+            bufferBuilder.Add(securityDefinitionResponse.InitialMarginRequirement);
+            bufferBuilder.Add(securityDefinitionResponse.MaintenanceMarginRequirement);
+            bufferBuilder.Add(securityDefinitionResponse.Currency.ToFixedBytes(CURRENCY_CODE_LENGTH));
+            bufferBuilder.Add(securityDefinitionResponse.ContractSize);
+            bufferBuilder.Add(securityDefinitionResponse.OpenInterest);
+            bufferBuilder.Add(securityDefinitionResponse.RolloverDate); // DateTime4byte per  https://dtcprotocol.org/index.php?page=doc/DTCMessages_SymbolDiscoverySecurityDefinitionsMessages.php#Messages-SECURITY_DEFINITION_RESPONSE
+            bufferBuilder.Add(securityDefinitionResponse.IsDelayed);
             return bufferBuilder.Buffer;
         }
 
@@ -777,16 +801,17 @@ namespace DTCCommon.Codecs
 
         private byte[] ConvertToBufferMarketDataRequest(DTCMessageType messageType, MarketDataRequest marketDataRequest)
         {
-            const int SizeExcludingHeader = 4 + 2 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
+            const int SizeExcludingHeader = 4 + 2 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
             bufferBuilder.Add((int)marketDataRequest.RequestAction);
             bufferBuilder.Add((ushort)marketDataRequest.SymbolID);
             bufferBuilder.Add(marketDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
             bufferBuilder.Add(marketDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
+            bufferBuilder.Add(marketDataRequest.IntervalForSnapshotUpdatesInMilliseconds);
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferLogoff<T>(DTCMessageType messageType, Logoff logoff)
+        private byte[] ConvertToBufferLogoff(DTCMessageType messageType, Logoff logoff)
         {
             try
             {
@@ -804,7 +829,7 @@ namespace DTCCommon.Codecs
             }
         }
 
-        private byte[] ConvertToBufferHeartbeat<T>(DTCMessageType messageType, Heartbeat heartbeat)
+        private byte[] ConvertToBufferHeartbeat(DTCMessageType messageType, Heartbeat heartbeat)
         {
             using var bufferBuilder = new BufferBuilder(12);
             bufferBuilder.Add(heartbeat.NumDroppedMessages);
@@ -812,7 +837,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferLogonResponse<T>(DTCMessageType messageType, LogonResponse logonResponse)
+        private byte[] ConvertToBufferLogonResponse(DTCMessageType messageType, LogonResponse logonResponse)
         {
             const int SizeExcludingHeader = 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + 4 * 1 + SYMBOL_EXCHANGE_DELIMITER_LENGTH + 8 * 1 + 4;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -839,7 +864,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferLogonRequest<T>(DTCMessageType messageType, LogonRequest logonRequest)
+        private byte[] ConvertToBufferLogonRequest(DTCMessageType messageType, LogonRequest logonRequest)
         {
             const int SizeExcludingHeader = 4
                                             + USERNAME_PASSWORD_LENGTH

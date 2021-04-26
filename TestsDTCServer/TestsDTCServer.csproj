@@ -116,8 +116,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf">
-      <Version>3.15.8</Version>
+    <PackageReference Include="fluentassertions">
+      <Version>5.10.3</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

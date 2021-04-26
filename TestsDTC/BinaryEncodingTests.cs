@@ -24,7 +24,8 @@ namespace TestsDTC
             using var codec = new CodecBinary(ms);
             codec.Write(messageType, message);
             var bytes = ms.ToArray();
-            Utility.ReadHeader(bytes, out var sizeExcludingHeader, out var messageTypeHeader);
+            var sizeExcludingHeader = BitConverter.ToUInt16(bytes, 0) - 4;
+            var messageTypeHeader = (DTCMessageType)BitConverter.ToUInt16(bytes, 2);
             Assert.Equal(messageType, messageTypeHeader);
             var messageBytes = new byte[sizeExcludingHeader];
             Array.Copy(bytes, 4, messageBytes, 0, sizeExcludingHeader);

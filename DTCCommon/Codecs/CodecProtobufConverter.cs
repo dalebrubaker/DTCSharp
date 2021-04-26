@@ -12,7 +12,14 @@ namespace DTCCommon.Codecs
             return result;
         }
 
-        public byte[] ConvertToBuffer<T>(DTCMessageType messageType, T message) where T : IMessage<T>, new()
+        public IMessage ConvertToProtobuf(DTCMessageType messageType, byte[] messageBytes)
+        {
+            var result = EmptyProtobufs.GetEmptyProtobuf(messageType);
+            result.MergeFrom(messageBytes);
+            return result;
+        }
+
+        public byte[] ConvertToBuffer(DTCMessageType messageType, IMessage message)
         {
             return message.ToByteArray();
         }

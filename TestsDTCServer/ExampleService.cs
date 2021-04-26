@@ -136,7 +136,7 @@ namespace TestsDTCServer
             temp?.Invoke(this, message);
         }
 
-        public void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage
+        public void HandleRequest(ClientHandler clientHandler, DTCMessageType messageType, IMessage message)
         {
             switch (messageType)
             {
@@ -187,14 +187,14 @@ namespace TestsDTCServer
                         case RequestActionEnum.RequestActionUnset:
                             break;
                         case RequestActionEnum.Subscribe:
-                            SendSnapshot<T>(clientHandler);
-                            SendMarketData<T>(clientHandler, marketDataRequest);
+                            SendSnapshot(clientHandler);
+                            SendMarketData(clientHandler, marketDataRequest);
                             break;
                         case RequestActionEnum.Unsubscribe:
                             // stop sending data
                             break;
                         case RequestActionEnum.Snapshot:
-                            SendSnapshot<T>(clientHandler);
+                            SendSnapshot(clientHandler);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -304,7 +304,7 @@ namespace TestsDTCServer
             OnMessage(msg);
         }
 
-        private void SendMarketData<T>(ClientHandler clientHandler, MarketDataRequest marketDataRequest) where T : IMessage
+        private void SendMarketData(ClientHandler clientHandler, MarketDataRequest marketDataRequest)
         {
             var numSentMarketData = 0;
             var numSentBidAsks = 0;
@@ -326,7 +326,7 @@ namespace TestsDTCServer
             s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
         }
 
-        private static void SendSnapshot<T>(ClientHandler clientHandler) where T : IMessage
+        private static void SendSnapshot(ClientHandler clientHandler)
         {
             // First we send a snapshot, then bids and asks
             var marketDataSnapshot = new MarketDataSnapshot
