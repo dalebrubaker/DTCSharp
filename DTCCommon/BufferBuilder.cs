@@ -113,12 +113,12 @@ namespace DTCCommon
         {
             try
             {
-                Logger.Debug($"{this} writing {Buffer.Length:N0} bytes to stream");
+                //Logger.Debug($"{this} writing {Buffer.Length:N0} bytes to stream");
                 if (Buffer.Length == 11)
                 {
                 }
                 await stream.WriteAsync(Buffer, 0, Buffer.Length, cancellationToken).ConfigureAwait(false);
-                Logger.Debug($"{this} wrote {Buffer.Length:N0} bytes to stream");
+                //Logger.Debug($"{this} wrote {Buffer.Length:N0} bytes to stream");
             }
             catch (Exception e)
             {

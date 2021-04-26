@@ -4,7 +4,7 @@ namespace DTCPB
 {
     public partial class HistoricalPriceDataResponseHeader
     {
-        public bool IsZipped
+        public bool UseZLibCompressionBool
         {
             get => useZLibCompression_ != 0;
             set => useZLibCompression_ = value ? 1u : 0u;

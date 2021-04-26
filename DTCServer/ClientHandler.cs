@@ -111,6 +111,7 @@ namespace DTCServer
             var binaryReader = new BinaryReader(_networkStreamServer); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!_ctsRequestReader.Token.IsCancellationRequested)
             {
+                var prevMessageType = DTCMessageType.MessageTypeUnset;
                 try
                 {
                     //if (!stream.DataAvailable)
@@ -120,6 +121,7 @@ namespace DTCServer
                     //}
                     s_logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(RequestReaderLoopAsync)} to read a message with {_currentCodec.Encoding}");
                     var (messageType, messageBytes) = await _currentCodec.ReadMessageAsync(_ctsRequestReader.Token);
+                    prevMessageType = messageType;
                     if (messageType == DTCMessageType.LogonRequest)
                     {
                     }
@@ -151,6 +153,10 @@ namespace DTCServer
                 }
                 catch (Exception ex)
                 {
+                    if (_isDisposed)
+                    {
+                        break;
+                    }
                     var typeName = ex.GetType().Name;
                     throw;
                 }
@@ -478,7 +484,6 @@ namespace DTCServer
         public void EndZippedWriting()
         {
             _currentCodec.EndZippedWriting();
-            Dispose();
         }
 
         public void Dispose()
@@ -490,7 +495,7 @@ namespace DTCServer
                 DisposeTimerHeartbeat();
                 OnDisconnected(new Error("Disposed"));
                 _ctsRequestReader.Cancel();
-                _currentCodec?.Close();
+                _currentCodec?.Dispose();
                 _currentCodec = null;
                 _tcpClient?.Close();
                 _tcpClient = null;

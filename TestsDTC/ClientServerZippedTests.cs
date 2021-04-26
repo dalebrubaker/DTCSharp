@@ -101,7 +101,11 @@ namespace TestsDTC
                     // Set up the handler to capture the HistoricalPriceDataRecordResponse events
                     void HistoricalPriceDataRecordResponseEvent(object s, HistoricalPriceDataRecordResponse trade)
                     {
-                        numTrades++;
+                        if (trade.StartDateTime != 0)
+                        {
+                            // Ignore per  https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#HistoricalPriceData
+                            numTrades++;
+                        }
                         if (trade.IsFinalRecord != 0)
                         {
                             isFinalRecordReceived = true;
@@ -134,7 +138,7 @@ namespace TestsDTC
                     _output.WriteLine($"Client1 received all {numTrades} historical trades in {elapsed} msecs");
 
                     Assert.Equal(1, numHistoricalPriceDataResponseHeader);
-                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend + 1, numTrades); // Plus 1 because of empty Final record
+                    Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend, numTrades);
                 }
             }
         }

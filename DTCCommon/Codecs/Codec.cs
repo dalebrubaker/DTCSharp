@@ -12,22 +12,24 @@ using NLog;
 
 namespace DTCCommon.Codecs
 {
-    public abstract class Codec
+    public abstract class Codec : IDisposable
     {
         protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
-        
-        protected string _ownerName;
 
+        private string _ownerName;
 
         protected Stream _stream; // normally a NetworkStream but can be a MemoryStream for a unit test
-        private bool _isZippedStream;
+        public bool IsZippedStream { get; private set; }
         private DeflateStream _deflateStream;
         private readonly byte[] _bufferHeader;
 
         protected bool _disabledHeartbeats;
+        private bool _isDisposed;
 
         protected Codec(Stream stream)
         {
+            var frame = new StackFrame(2);
+            _ownerName = frame.GetMethod().DeclaringType.Name;
             _stream = stream;
             _bufferHeader = new byte[4];
         }
@@ -61,6 +63,10 @@ namespace DTCCommon.Codecs
         public async Task<MessageDTC> GetMessageDTCAsync(CancellationToken cancellationToken)
         {
             var (messageType, bytes) = await ReadMessageAsync(cancellationToken);
+            if (messageType == DTCMessageType.MessageTypeUnset)
+            {
+                return new MessageDTC(messageType, null);
+            }
             return ReadMessageDTC(messageType, bytes);
         }
 
@@ -280,6 +286,10 @@ namespace DTCCommon.Codecs
 
         public async Task<(DTCMessageType messageType, byte[] bytes)> ReadMessageAsync(CancellationToken cancellationToken)
         {
+            if (_isDisposed)
+            {
+                return (DTCMessageType.MessageTypeUnset, new byte[0]);
+            }
             try
             {
                 var numBytes = await _stream.ReadAsync(_bufferHeader, 0, 2, cancellationToken).ConfigureAwait(false);
@@ -339,7 +349,6 @@ namespace DTCCommon.Codecs
             }
         }
 
-
         protected async Task WriteEncodingRequestAsync(DTCMessageType messageType, EncodingRequest encodingRequest, CancellationToken cancellationToken)
         {
             // EncodingRequest goes as binary for all protocol versions
@@ -353,7 +362,7 @@ namespace DTCCommon.Codecs
             await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
         }
 
-            protected static void LoadEncodingResponse<T>(byte[] bytes, int index, ref T result) where T : IMessage, new()
+        protected static void LoadEncodingResponse<T>(byte[] bytes, int index, ref T result) where T : IMessage, new()
         {
             // EncodingResponse comes back as binary for all protocol versions
             var encodingResponse = result as EncodingResponse;
@@ -393,34 +402,37 @@ namespace DTCCommon.Codecs
         /// <exception cref="DTCSharpException"></exception>
         public void ReadSwitchToZipped()
         {
-            if (_isZippedStream)
+            if (IsZippedStream)
             {
                 throw new DTCSharpException("Why?");
             }
             // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
-            var binaryReader = new BinaryReader(_stream);
-            var zlibCmf = binaryReader.ReadByte(); // 120 = 0111 1000 means Deflate 
+            var buffer = new byte[2];
+            _stream.Read(buffer, 0, 2);
+            var zlibCmf = buffer[0];
             if (zlibCmf != 120)
             {
+                // 120 = 0111 1000 means Deflate
                 throw new DTCSharpException($"Unexpected zlibCmf header byte {zlibCmf}, expected 120");
             }
-            var zlibFlg = binaryReader.ReadByte(); // 156 = 1001 1100
+            var zlibFlg = buffer[1];
             if (zlibFlg != 156)
             {
+                // 156 = 1001 1100
                 throw new DTCSharpException($"Unexpected zlibFlg header byte {zlibFlg}, expected 156");
             }
             try
             {
-                _isZippedStream = true;
                 _disabledHeartbeats = true;
-                var deflateStream = new DeflateStream(_stream, CompressionMode.Decompress);
-                
-                // Does redefining _stream also corrupt deflateStream?  We want to read deflateStream but write _stream
-                _stream = deflateStream;
-                
-                
-                //_binaryReader = new BinaryReader(deflateStream);
-                // Can't write this stream_binaryWriter = new BinaryWriter(deflateStream);
+
+                // Leave the underlying stream open
+                _deflateStream = new DeflateStream(_stream, CompressionMode.Decompress, true);
+
+                // Change future reads/writes to use deflateStream
+                _stream = _deflateStream;
+
+                // Must not set this earlier!
+                IsZippedStream = true;
             }
             catch (Exception ex)
             {
@@ -436,18 +448,19 @@ namespace DTCCommon.Codecs
         /// <exception cref="DTCSharpException"></exception>
         public void WriteSwitchToZipped()
         {
-            if (_isZippedStream)
+            if (IsZippedStream)
             {
                 throw new DTCSharpException("Why?");
             }
 
             // Write the 2-byte header that Sierra Chart has coming from ZLib. See https://tools.ietf.org/html/rfc1950
-            using var binaryWriter = new BinaryWriter(_stream);
-            binaryWriter.Write((byte)120); // zlibCmf 120 = 0111 1000 means Deflate 
-            binaryWriter.Write((byte)156); // zlibFlg 156 = 1001 1100
+            var buffer = new byte[2];
+            buffer[0] = 120; // zlibCmf 120 = 0111 1000 means Deflate 
+            buffer[1] = 156; // zlibFlg 156 = 1001 1100 6 = 1001 1100
+            _stream.Write(buffer, 0, 2);
             try
             {
-                _isZippedStream = true;
+                IsZippedStream = true;
                 _disabledHeartbeats = true;
                 _deflateStream = new DeflateStream(_stream, CompressionMode.Compress, true);
                 _deflateStream.Flush();
@@ -463,25 +476,32 @@ namespace DTCCommon.Codecs
             Logger.Debug("Switched to zipped in {nameof(WriteSwitchToZipped)} {this}", this, nameof(WriteSwitchToZipped));
         }
 
-        public void Close()
-        {
-            // _binaryReader?.Close();
-            // _binaryWriter?.Close();
-        }
-
         public void EndZippedWriting()
         {
-            _deflateStream.Close();
-            _deflateStream?.Dispose();
+            // Switch _stream from _deflateStream back to the _tcpClient.NetworkStream
+            _stream = _deflateStream.BaseStream;
+            // Do NOT dispose of the underlying NetworkStream, which is owned by the _tcpClient
+            _deflateStream.Close(); // also does Dispose
             _deflateStream = null;
-            Close();
-            // _binaryWriter = null;
-            // _binaryReader = null;
+            IsZippedStream = false;
+        }
+
+        public void Dispose()
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+            
+            // Do NOT dispose of the underlying NetworkStream, which is owned by the _tcpClient
+            //_stream?.Dispose();
+            _isDisposed = true;
+            _deflateStream?.Dispose();
         }
 
         public override string ToString()
         {
-            return $"{GetType().Name} owned by {_ownerName} {Encoding}";
+            return $"{Encoding} owned by {_ownerName} ";
         }
     }
 }

@@ -17,8 +17,6 @@ namespace DTCCommon.Codecs
     {
         public CodecBinary(Stream stream) : base(stream)
         {
-            var stackTrace = new StackTrace();
-            _ownerName = stackTrace.GetFrame(1).GetMethod().Name;
         }
 
         // Text string lengths. Copied from DTCProtocol.h

@@ -159,7 +159,7 @@ namespace TestsDTCServer
 
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
-                    HistoricalPriceDataResponseHeader.IsZipped = historicalPriceDataRequest.IsZipped;
+                    HistoricalPriceDataResponseHeader.UseZLibCompressionBool = historicalPriceDataRequest.IsZipped;
                     await clientHandler.SendResponseAsync(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader, cancellationToken).ConfigureAwait(false);
                     var numSent = 0;
                     for (int i = 0; i < HistoricalPriceDataRecordResponses.Count; i++)

@@ -406,6 +406,11 @@ namespace DTCClient
             switch (messageDTC.MessageType)
             {
                 case DTCMessageType.LogonResponse:
+                    base.ProcessMessage(messageDTC);
+                    LogonResponse = messageDTC.Message as LogonResponse;
+                    
+                    // Note that SierraChart does allow more than OneHistoricalPriceDataRequestPerConnection 
+                    break;
                 case DTCMessageType.Heartbeat:
                 case DTCMessageType.Logoff:
                 case DTCMessageType.EncodingResponse:
@@ -553,17 +558,22 @@ namespace DTCClient
                     ThrowEvent(messageDTC.Message as HistoricalPriceDataReject, HistoricalPriceDataRejectEvent);
                     break;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    ThrowEvent(messageDTC.Message as HistoricalPriceDataRecordResponse, HistoricalPriceDataRecordResponseEvent);
-// #if DEBUG
-//                     var requestsSent2 = DebugHelpers.RequestsSent;
-//                     var requestsReceived2 = DebugHelpers.RequestsReceived;
-//                     var responsesReceived2 = DebugHelpers.ResponsesReceived;
-//                     var responsesSent2 = DebugHelpers.ResponsesSent;
-// #endif
+                    var historicalPriceDataRecordResponse = messageDTC.Message as HistoricalPriceDataRecordResponse;
+                    ThrowEvent(historicalPriceDataRecordResponse, HistoricalPriceDataRecordResponseEvent);
+                    if (historicalPriceDataRecordResponse.IsFinalRecordBool && _currentCodec.IsZippedStream)
+                    {
+                        // Switch back from reading zlib to regular networkStream
+                        _currentCodec.EndZippedWriting();
+                    }
                     break;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     var historicalPriceDataTickRecordResponse = messageDTC.Message as HistoricalPriceDataTickRecordResponse;
                     ThrowEvent(historicalPriceDataTickRecordResponse, HistoricalPriceDataTickRecordResponseEvent);
+                    if (historicalPriceDataTickRecordResponse.IsFinalRecordBool && _currentCodec.IsZippedStream)
+                    {
+                        // Switch back from reading zlib to regular networkStream
+                        _currentCodec.EndZippedWriting();
+                    }
                     break;
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
                     ThrowEvent(messageDTC.Message as HistoricalPriceDataRecordResponse_Int, HistoricalPriceDataRecordResponseIntEvent);

@@ -320,13 +320,15 @@ namespace DTCClient
         private async Task ServerMessageReaderAsync()
         {
             //_isProducerRunning = true;
+            MessageDTC prevMessageDTC = null;
             try
             {
                 while (!_ctsProducer.IsCancellationRequested)
                 {
-                    Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} to read a message with {_currentCodec.Encoding}");
+                    //Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} to read a message with {_currentCodec.Encoding}");
                     var message = await ReadMessageDTCAsync(_ctsProducer.Token);
-                    Logger.Debug($"Did in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} read a message with {_currentCodec.Encoding}");
+                    //Logger.Debug($"Did in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} read a message with {_currentCodec.Encoding}");
+                    prevMessageDTC = message;
                     if (_ctsProducer.IsCancellationRequested)
                     {
                         // Changed _currentCodec, so unblocked this way
@@ -338,16 +340,44 @@ namespace DTCClient
                         // Probably an exception
                         throw new DTCSharpException("Why?");
                     }
-                    Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} to add to messageQueue: {message}");
+                    //Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} to add to messageQueue: {message}");
                     _serverMessageQueue.Add(message, _ctsProducer.Token);
-                    Logger.Debug($"{nameof(Client)}.{nameof(ServerMessageReaderAsync)} added to messageQueue: {message}");
-
+                    //Logger.Debug($"{nameof(Client)}.{nameof(ServerMessageReaderAsync)} added to messageQueue: {message}");
+                    
                     if (message.MessageType == DTCMessageType.EncodingResponse)
                     {
                         var encodingResponse = message.Message as EncodingResponse;
                         while (encodingResponse.Encoding != _currentCodec.Encoding)
                         {
                             // Wait for this message to be processed before reading messages with the new encoding
+                            await Task.Delay(1).ConfigureAwait(false);
+                        }
+                        Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
+                    }
+                    else if (message.MessageType == DTCMessageType.HistoricalPriceDataResponseHeader)
+                    {
+                        var historicalPriceDataResponseHeader = message.Message as HistoricalPriceDataResponseHeader;
+                        while (historicalPriceDataResponseHeader.UseZLibCompressionBool && !_currentCodec.IsZippedStream)
+                        {
+                            // Wait for this message to be processed before reading zipped messages
+                            await Task.Delay(1).ConfigureAwait(false);
+                        }
+                        Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
+                    }
+                    else if (_currentCodec.IsZippedStream && message.MessageType == DTCMessageType.HistoricalPriceDataRecordResponse)
+                    {
+                        while (_currentCodec.IsZippedStream)
+                        {
+                            // Wait for this message to be processed (where the stream is switched back to not-zipped) before going back to reading not-zipped messages
+                            await Task.Delay(1).ConfigureAwait(false);
+                        }
+                        Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
+                    }
+                    else if (_currentCodec.IsZippedStream && message.MessageType == DTCMessageType.HistoricalPriceDataTickRecordResponse)
+                    {
+                        while (_currentCodec.IsZippedStream)
+                        {
+                            // Wait for this message to be processed (where the stream is switched back to not-zipped) before going back to reading not-zipped messages
                             await Task.Delay(1).ConfigureAwait(false);
                         }
                         Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
@@ -499,10 +529,10 @@ namespace DTCClient
                     DoNotReconnect = 1u,
                     Reason = "Client Disposed"
                 }, default(CancellationToken));
+                _currentCodec.Dispose();
                 _ctsProducer.Cancel(true);
                 _ctsConsumer.Cancel(true);
                 _ctsTasks.Cancel(true);
-                _currentCodec.Close();
                 Disconnect(new Error("Disposing"));
             }
             GC.SuppressFinalize(this);
@@ -515,7 +545,7 @@ namespace DTCClient
         protected void Disconnect(Error error)
         {
             OnDisconnected(error);
-            Dispose();
+            //Dispose();
         }
 
         public override string ToString()

@@ -13,8 +13,6 @@ namespace DTCCommon.Codecs
     {
         public CodecProtobuf(Stream stream) : base(stream)
         {
-            var stackTrace = new StackTrace();
-            _ownerName = stackTrace.GetFrame(1).GetMethod().Name;
         }
 
         public override EncodingEnum Encoding => EncodingEnum.ProtocolBuffers;
