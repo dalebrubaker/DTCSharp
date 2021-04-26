@@ -28,15 +28,15 @@ namespace DTCClient
         private NetworkStream _networkStream;
         protected Codec _currentCodec;
         protected CancellationTokenSource _ctsProducer; // cancellation for the blocking collections
-        protected CancellationTokenSource _ctsConsumer; // cancellation for the blocking collections
+        private CancellationTokenSource _ctsConsumer; // cancellation for the blocking collections
         private CancellationTokenSource _ctsTasks; // cancellation for the tasks
         private int _nextRequestId;
         protected bool _useHeartbeat;
         private bool _isConnected;
         private readonly BlockingCollection<MessageDTC> _messageQueue;
-        private ConfiguredTaskAwaitable<Task> _taskConsumer;
+        private Task _taskConsumer;
 
-        private ConfiguredTaskAwaitable<Task> _taskProducer;
+        private Task _taskProducer;
         //private bool _isProducerRunning;
 
         /// <summary>
@@ -154,17 +154,16 @@ namespace DTCClient
             {
                 OnDisconnected(new Error(sex.Message));
             }
-            // Every Codec must write the encoding request as binary
             _networkStream = _tcpClient.GetStream();
-            _currentCodec = new CodecBinary(_networkStream);
+
+            // The initial protocol must be Binary, and can switch only when receiving and EncodingResponse
+            SetCurrentCodec(EncodingEnum.BinaryEncoding);
             Logger.Debug("Initial setting of _currentCodec is Binary");
             _ctsProducer = new CancellationTokenSource();
             _ctsConsumer = new CancellationTokenSource();
             _ctsTasks = new CancellationTokenSource();
-            _taskConsumer = Task.Factory.StartNew(ConsumerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current)
-                .ConfigureAwait(false);
-            _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current)
-                .ConfigureAwait(false);
+            _taskConsumer = Task.Factory.StartNew(ConsumerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
@@ -383,7 +382,7 @@ namespace DTCClient
         /// <summary>
         /// Consumer, processes the messages from the _messageQueue
         /// </summary>
-        private async Task ConsumerLoopAsync()
+        private void ConsumerLoopAsync()
         {
             while (!_messageQueue.IsCompleted)
             {
@@ -408,7 +407,7 @@ namespace DTCClient
                 }
                 if (message != null)
                 {
-                    await ProcessMessageAsync(message).ConfigureAwait(false);
+                    ProcessMessage(message);
                 }
             }
         }
@@ -417,7 +416,7 @@ namespace DTCClient
         /// Process the message represented by bytes.
         /// </summary>
         /// <param name="messageDTC"></param>
-        protected virtual async Task ProcessMessageAsync(MessageDTC messageDTC)
+        protected virtual void ProcessMessage(MessageDTC messageDTC)
         {
             //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
             // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
@@ -435,14 +434,14 @@ namespace DTCClient
                     ThrowEvent(messageDTC.Message as Logoff, LogoffEvent);
                     break;
                 case DTCMessageType.EncodingResponse:
-                    // Note that we must use binary encoding here on the first usage after connect, 
+                    // Note that we must use binary encoding here on the FIRST usage after connect, 
                     //    per http://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#EncodingRequest
                     var encodingResponse = messageDTC.Message as EncodingResponse;
-                    await SetCurrentCodecAsync(encodingResponse.Encoding).ConfigureAwait(false);
+                    SetCurrentCodec(encodingResponse.Encoding);
                     ThrowEvent(encodingResponse, EncodingResponseEvent);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessageAsync)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessage)}.");
             }
         }
 
@@ -450,50 +449,27 @@ namespace DTCClient
         /// This must be called whenever the encoding changes, immediately AFTER the EncodingResponse is sent to the client
         /// </summary>
         /// <param name="encoding"></param>
-        private async Task SetCurrentCodecAsync(EncodingEnum encoding)
+        private void SetCurrentCodec(EncodingEnum encoding)
         {
+            if (encoding == _currentCodec?.Encoding)
+            {
+                return;
+            }
             switch (encoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    if (!(_currentCodec is CodecBinary))
-                    {
-                        await ChangeToNewCodecAsync(new CodecBinary(_networkStream)).ConfigureAwait(false);
-                        Logger.Debug($"_currCodec changed to Binary in {nameof(Client)}");
-                    }
+                    _currentCodec = new CodecBinary(_networkStream);
                     break;
                 case EncodingEnum.BinaryWithVariableLengthStrings:
                 case EncodingEnum.JsonEncoding:
                 case EncodingEnum.JsonCompactEncoding:
                     throw new NotImplementedException($"Not implemented in {nameof(Client)}: {nameof(encoding)}");
                 case EncodingEnum.ProtocolBuffers:
-                    if (!(_currentCodec is CodecProtobuf))
-                    {
-                        await ChangeToNewCodecAsync(new CodecProtobuf(_networkStream)).ConfigureAwait(false);
-                    }
+                    _currentCodec = new CodecProtobuf(_networkStream);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(encoding), encoding, null);
             }
-        }
-
-        private async Task ChangeToNewCodecAsync(Codec codec)
-        {
-            // Stop the ProducerLoop while we change to a new codec
-            //_cts.Cancel();
-            _ctsProducer.Cancel(false);
-            _currentCodec = codec;
-            while (!_messageQueue.IsCompleted || _messageQueue.Count > 0) // || _isProducerRunning)
-            {
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            var taskProducer = _taskProducer;
-            var taskConsumer = _taskConsumer;
-
-            // _messageQueue = new BlockingCollection<MessageDTC>();
-            //_cts = new CancellationTokenSource();
-            // _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
-            // _taskConsumer = Task.Factory.StartNew(ConsumerLoopAsync, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
-            Logger.Debug($"_currCodec changed to Protobuf in {nameof(Client)}");
         }
 
         public void Dispose()

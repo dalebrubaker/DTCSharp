@@ -400,7 +400,7 @@ namespace DTCClient
         /// binaryReader may be changed to use a new DeflateStream if we change to zipped
         /// </summary>
         /// <param name="messageDTC"></param>
-        protected override async Task ProcessMessageAsync(MessageDTC messageDTC)
+        protected override void ProcessMessage(MessageDTC messageDTC)
         {
             //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");\
             switch (messageDTC.MessageType)
@@ -409,7 +409,7 @@ namespace DTCClient
                 case DTCMessageType.Heartbeat:
                 case DTCMessageType.Logoff:
                 case DTCMessageType.EncodingResponse:
-                    await base.ProcessMessageAsync(messageDTC).ConfigureAwait(false);
+                    base.ProcessMessage(messageDTC);
                     break;
                 case DTCMessageType.MarketDataReject:
                     ThrowEvent(messageDTC.Message as MarketDataReject, MarketDataRejectEvent);
@@ -542,7 +542,7 @@ namespace DTCClient
                     if (historicalPriceDataResponseHeader.UseZLibCompression == 1)
                     {
                         // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
-                        Logger.Debug($"{nameof(Client)}.{nameof(ProcessMessageAsync)} is switching client stream to read zipped.");
+                        Logger.Debug($"{nameof(Client)}.{nameof(ProcessMessage)} is switching client stream to read zipped.");
 
                         _currentCodec.ReadSwitchToZipped();
                         _useHeartbeat = false;
@@ -629,7 +629,7 @@ namespace DTCClient
                     var responsesReceived = DebugHelpers.ResponsesReceived;
                     var responsesSent = DebugHelpers.ResponsesSent;
 #endif
-                    throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessageAsync)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessage)}.");
             }
         }
     }
