@@ -1,4 +1,4 @@
-﻿namespace TestsDTCServer
+﻿namespace TestServer
 {
     partial class ServerForm
     {

@@ -7,7 +7,7 @@ using DTCClient;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
-using TestsDTCServer;
+using TestServer;
 using Xunit;
 using Xunit.Abstractions;
 

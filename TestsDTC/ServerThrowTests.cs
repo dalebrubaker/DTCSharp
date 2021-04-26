@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using DTCServer;
-using TestsDTCServer;
+using TestServer;
 using Xunit;
 using Xunit.Abstractions;
 

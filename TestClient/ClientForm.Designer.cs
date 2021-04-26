@@ -1,4 +1,4 @@
-﻿namespace TestsDTCClient
+﻿namespace TestClient
 {
     partial class ClientForm
     {
