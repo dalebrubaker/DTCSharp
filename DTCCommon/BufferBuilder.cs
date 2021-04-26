@@ -1,11 +1,7 @@
 ﻿// unset
 using System;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using DTCCommon.Codecs;
-using DTCPB;
-using NLog;
+using DTCCommon.Exceptions;
 
 namespace DTCCommon
 {
@@ -26,7 +22,17 @@ namespace DTCCommon
             _binaryWriter = new BinaryWriter(_memoryStream);
         }
 
-        public byte[] Buffer => _memoryStream.ToArray();
+        public byte[] Buffer
+        {
+            get
+            {
+                if (_memoryStream.Length != _size)
+                {
+                    throw new DTCSharpException("Buffer length is not the expected size");
+                }
+                return _memoryStream.ToArray();
+            }
+        }
 
         public void Add(short value)
         {
@@ -89,6 +95,11 @@ namespace DTCCommon
         }
 
         public void Add(char[] value)
+        {
+            _binaryWriter.Write(value);
+        }
+
+        public void Add(string value)
         {
             _binaryWriter.Write(value);
         }

@@ -42,3 +42,7 @@ The INITIAL encoding request and response are in binary encoding.
 A later encoding request could be in the current protocol. In that case, the encoding response
         would come back in the new protocol. Wait for all messages to be received in the old protocol,
         then switch to reading & writing the new protocol.
+
+C++ Definitions
+=============
+See https://dtcprotocol.org/DTC_Files/DTCProtocol.h for Text String lengths etc.
