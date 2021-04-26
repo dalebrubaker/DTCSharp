@@ -214,7 +214,6 @@ namespace DTCServer
                     break;
                 case DTCMessageType.EncodingRequest:
                     // This is an exception where we don't make a callback. 
-                    //     This requires an immediate response using BinaryEncoding then set the _currentCodec before another message can be processed
                     var encodingRequest = _currentCodec.Load<EncodingRequest>(messageType, messageBytes);
                     var newEncoding = EncodingEnum.BinaryEncoding;
                     switch (encodingRequest.Encoding)
@@ -431,7 +430,6 @@ namespace DTCServer
         /// <typeparam name="T"></typeparam>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        /// <param name="cancellationToken"></param>
         public void SendResponse<T>(DTCMessageType messageType, T message) where T : IMessage
         {
 #if DEBUG
@@ -452,8 +450,8 @@ namespace DTCServer
                 return;
             }
 #endif
-            s_logger.Debug(
-                $"{nameof(ClientHandler)}.{nameof(SendResponse)} is writing with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");
+            // s_logger.Debug(
+            //     $"{nameof(ClientHandler)}.{nameof(SendResponse)} is writing with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");
             if (messageType == DTCMessageType.LogonResponse)
             {
             }
@@ -470,6 +468,8 @@ namespace DTCServer
                     _useHeartbeat = false;
                 }
             }
+            
+            // TODO handle writing zip and stopping zip after last record, as per Client
         }
 
         /// <summary>
@@ -509,25 +509,23 @@ namespace DTCServer
         /// <param name="encoding"></param>
         private void SetCurrentCodec(EncodingEnum encoding)
         {
+            if (encoding == _currentCodec.Encoding)
+            {
+                return;
+            }
             switch (encoding)
             {
                 case EncodingEnum.BinaryEncoding:
-                    if (!(_currentCodec is CodecBinary))
-                    {
-                        _currentCodec = new CodecBinary(_networkStreamServer);
-                        s_logger.Debug($"_currCodec changed to Binary in {nameof(ClientHandler)}");
-                    }
+                    _currentCodec = new CodecBinary(_networkStreamServer);
+                    //s_logger.Debug($"_currCodec changed to Binary in {nameof(ClientHandler)}");
                     break;
                 case EncodingEnum.BinaryWithVariableLengthStrings:
                 case EncodingEnum.JsonEncoding:
                 case EncodingEnum.JsonCompactEncoding:
                     throw new NotImplementedException($"Not implemented in {nameof(ClientHandler)}: {nameof(encoding)}");
                 case EncodingEnum.ProtocolBuffers:
-                    if (!(_currentCodec is CodecProtobuf))
-                    {
-                        _currentCodec = new CodecProtobuf(_networkStreamServer);
-                        s_logger.Debug($"_currCodec changed to Protobuf in {nameof(ClientHandler)}");
-                    }
+                    _currentCodec = new CodecProtobuf(_networkStreamServer);
+                    s_logger.Debug($"_currCodec changed to Protobuf in {nameof(ClientHandler)}");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(encoding), encoding, null);

@@ -27,9 +27,7 @@ namespace DTCClient
         private DateTime _lastHeartbeatReceivedTime;
         private NetworkStream _networkStream;
         protected Codec _currentCodec;
-        protected CancellationTokenSource _ctsProducer; // cancellation for the blocking collections
-        private CancellationTokenSource _ctsConsumer; // cancellation for the blocking collections
-        private CancellationTokenSource _ctsTasks; // cancellation for the tasks
+        private CancellationTokenSource _cts;
         private int _nextRequestId;
         protected bool _useHeartbeat;
         private bool _isConnected;
@@ -164,11 +162,9 @@ namespace DTCClient
             // The initial protocol must be Binary, and can switch only when receiving and EncodingResponse
             SetCurrentCodec(EncodingEnum.BinaryEncoding);
             Logger.Debug("Initial setting of _currentCodec is Binary");
-            _ctsProducer = new CancellationTokenSource();
-            _ctsConsumer = new CancellationTokenSource();
-            _ctsTasks = new CancellationTokenSource();
-            _taskConsumer = Task.Factory.StartNew(ServerMessageProcessorAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
-            _taskProducer = Task.Factory.StartNew(ServerMessageReaderAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            _cts = new CancellationTokenSource();
+            _taskConsumer = Task.Factory.StartNew(ServerMessageProcessorAsync, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            _taskProducer = Task.Factory.StartNew(ServerMessageReaderAsync, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
@@ -310,15 +306,15 @@ namespace DTCClient
         {
             try
             {
-                while (!_ctsProducer.IsCancellationRequested)
+                while (!_cts.IsCancellationRequested)
                 {
                     Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} to read a message using {_currentCodec}");
                     var message = ReadMessageDTC();
                     Logger.Debug($"Did in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} read message={message} using {_currentCodec}");
-                    if (_ctsProducer.IsCancellationRequested)
+                    if (_cts.IsCancellationRequested)
                     {
                         // Changed _currentCodec, so unblocked this way
-                        _ctsProducer = new CancellationTokenSource();
+                        _cts = new CancellationTokenSource();
                         continue;
                     }
                     if (message == null)
@@ -327,7 +323,7 @@ namespace DTCClient
                         throw new DTCSharpException("Why?");
                     }
                     //Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} to add to messageQueue: {message}");
-                    _serverMessageQueue.Add(message, _ctsProducer.Token);
+                    _serverMessageQueue.Add(message, _cts.Token);
                     //Logger.Debug($"{nameof(Client)}.{nameof(ServerMessageReaderAsync)} added to messageQueue: {message}");
                     
                     if (message.MessageType == DTCMessageType.EncodingResponse)
@@ -388,7 +384,7 @@ namespace DTCClient
 
         private MessageDTC ReadMessageDTC()
         {
-            while (!_ctsProducer.Token.IsCancellationRequested)
+            while (!_cts.IsCancellationRequested)
             {
                 try
                 {
@@ -399,7 +395,7 @@ namespace DTCClient
                 catch (IOException ex)
                 {
                     // Ignore this if it results from disconnect (cancellation)
-                    if (_ctsProducer.Token.IsCancellationRequested)
+                    if (_cts.IsCancellationRequested)
                     {
                         Disconnect(new Error("Read error.", ex));
                         return null;
@@ -428,7 +424,7 @@ namespace DTCClient
                 MessageDTC message = null;
                 try
                 {
-                    message = _serverMessageQueue.Take(_ctsConsumer.Token);
+                    message = _serverMessageQueue.Take(_cts.Token);
                     //Logger.Debug($"{nameof(Client)}.{nameof(ServerMessageProcessorAsync)} took from messageQueue: {message}");
                 }
                 catch (InvalidOperationException)
@@ -523,9 +519,7 @@ namespace DTCClient
                     Reason = "Client Disposed"
                 });
                 _currentCodec.Dispose();
-                _ctsProducer.Cancel(true);
-                _ctsConsumer.Cancel(true);
-                _ctsTasks.Cancel(true);
+                _cts.Cancel(true);
                 Disconnect(new Error("Disposing"));
             }
             GC.SuppressFinalize(this);
