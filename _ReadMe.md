@@ -46,3 +46,14 @@ A later encoding request could be in the current protocol. In that case, the enc
 C++ Definitions
 =============
 See https://dtcprotocol.org/DTC_Files/DTCProtocol.h for Text String lengths etc.
+
+Protocol Buffers
+================
+DTCSharp is very protobuf-centric, casting events with protobuf-generated classes and converting 
+        other encodings to and from protobufs for internal use.
+The DTCCommon.csproj files includes XML that uses Grpc.Tools to generate the protobuf classes,
+        which are compile to the .\obj folder whenever the DTCProtocol.proto file changes.
+Some protobuf classes are extended by partial classes in the Partials directory.
+
+
+
