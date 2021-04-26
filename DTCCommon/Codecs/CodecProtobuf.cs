@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using DTCCommon.Enums;
 using DTCPB;
 using Google.Protobuf;
 
@@ -10,7 +10,7 @@ namespace DTCCommon.Codecs
 {
     public class CodecProtobuf : Codec
     {
-        public CodecProtobuf(Stream stream, ClientOrServer clientOrServer) : base(stream, clientOrServer)
+        public CodecProtobuf(Stream stream, [CallerMemberName] string ownerName = "") : base(stream, ownerName)
         {
         }
 
@@ -37,7 +37,8 @@ namespace DTCCommon.Codecs
                 return;
             }
             if (message is LogonResponse)
-            {}
+            {
+            }
             var bytes = message.ToByteArray();
             using var bufferBuilder = new BufferBuilder(4 + bytes.Length, this);
             bufferBuilder.AddHeader(messageType);

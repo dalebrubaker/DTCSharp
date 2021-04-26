@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using DTCCommon.Enums;
 using DTCCommon.Extensions;
 using DTCPB;
 using uint8_t = System.Byte;
@@ -14,7 +14,7 @@ namespace DTCCommon.Codecs
 {
     public class CodecBinary : Codec
     {
-        public CodecBinary(Stream stream, ClientOrServer clientOrServer) : base(stream, clientOrServer)
+        public CodecBinary(Stream stream, [CallerMemberName] string ownerName = "") : base(stream, ownerName)
         {
             Logger.Info("Starting CodecBinary");
         }
@@ -213,7 +213,8 @@ namespace DTCCommon.Codecs
             }
         }
 
-        private async Task WriteHistoricalPriceDataRecordResponseAsync(DTCMessageType messageType, HistoricalPriceDataRecordResponse historicalPriceDataRecordResponse, CancellationToken cancellationToken)
+        private async Task WriteHistoricalPriceDataRecordResponseAsync(DTCMessageType messageType,
+            HistoricalPriceDataRecordResponse historicalPriceDataRecordResponse, CancellationToken cancellationToken)
         {
             const int sizeExcludingHeader = 4 + 9 * 8 + 1;
             const int size = sizeExcludingHeader + 4;
@@ -235,7 +236,8 @@ namespace DTCCommon.Codecs
             await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task WriteHistoricalPriceDataRejectAsync(DTCMessageType messageType, HistoricalPriceDataReject historicalPriceDataReject, CancellationToken cancellationToken)
+        private async Task WriteHistoricalPriceDataRejectAsync(DTCMessageType messageType, HistoricalPriceDataReject historicalPriceDataReject,
+            CancellationToken cancellationToken)
         {
             const int sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH + 2 + 2;
             const int size = sizeExcludingHeader + 4;
@@ -249,7 +251,8 @@ namespace DTCCommon.Codecs
             await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task WriteHistoricalPriceDataResponseHeaderAsync(DTCMessageType messageType, HistoricalPriceDataResponseHeader historicalPriceDataResponseHeader, CancellationToken cancellationToken)
+        private async Task WriteHistoricalPriceDataResponseHeaderAsync(DTCMessageType messageType,
+            HistoricalPriceDataResponseHeader historicalPriceDataResponseHeader, CancellationToken cancellationToken)
         {
             const int sizeExcludingHeader = 4 + 4 + 2 + 2 + 4;
             const int size = sizeExcludingHeader + 4;
@@ -265,7 +268,8 @@ namespace DTCCommon.Codecs
             await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task WriteHistoricalPriceDataRequestAsync(DTCMessageType messageType, HistoricalPriceDataRequest historicalPriceDataRequest, CancellationToken cancellationToken)
+        private async Task WriteHistoricalPriceDataRequestAsync(DTCMessageType messageType, HistoricalPriceDataRequest historicalPriceDataRequest,
+            CancellationToken cancellationToken)
         {
             const int sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 4 + 8 + 8 + 4 + 3 * 1;
             const int size = sizeExcludingHeader + 4;

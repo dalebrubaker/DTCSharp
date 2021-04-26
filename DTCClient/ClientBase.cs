@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
-using DTCCommon.Enums;
 using DTCCommon.Exceptions;
 using DTCPB;
 using Google.Protobuf;
@@ -139,7 +138,7 @@ namespace DTCClient
             _tcpClient = new TcpClient
             {
                 NoDelay = true,
-                ReceiveBufferSize = int.MaxValue, 
+                ReceiveBufferSize = int.MaxValue,
                 LingerState = new LingerOption(true, 5)
             };
             var tmp = _tcpClient.SendBufferSize;
@@ -157,13 +156,15 @@ namespace DTCClient
             }
             // Every Codec must write the encoding request as binary
             _networkStream = _tcpClient.GetStream();
-            _currentCodec = new CodecBinary(_networkStream, ClientOrServer.Client);
+            _currentCodec = new CodecBinary(_networkStream);
             Logger.Debug("Initial setting of _currentCodec is Binary");
             _ctsProducer = new CancellationTokenSource();
             _ctsConsumer = new CancellationTokenSource();
             _ctsTasks = new CancellationTokenSource();
-            _taskConsumer = Task.Factory.StartNew(ConsumerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
-            _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current).ConfigureAwait(false);
+            _taskConsumer = Task.Factory.StartNew(ConsumerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current)
+                .ConfigureAwait(false);
+            _taskProducer = Task.Factory.StartNew(ProducerLoopAsync, _ctsTasks.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current)
+                .ConfigureAwait(false);
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
@@ -456,7 +457,7 @@ namespace DTCClient
                 case EncodingEnum.BinaryEncoding:
                     if (!(_currentCodec is CodecBinary))
                     {
-                        await ChangeToNewCodecAsync(new CodecBinary(_networkStream, ClientOrServer.Server)).ConfigureAwait(false);
+                        await ChangeToNewCodecAsync(new CodecBinary(_networkStream)).ConfigureAwait(false);
                         Logger.Debug($"_currCodec changed to Binary in {nameof(Client)}");
                     }
                     break;
@@ -467,7 +468,7 @@ namespace DTCClient
                 case EncodingEnum.ProtocolBuffers:
                     if (!(_currentCodec is CodecProtobuf))
                     {
-                        await ChangeToNewCodecAsync(new CodecProtobuf(_networkStream, ClientOrServer.Server)).ConfigureAwait(false);
+                        await ChangeToNewCodecAsync(new CodecProtobuf(_networkStream)).ConfigureAwait(false);
                     }
                     break;
                 default:

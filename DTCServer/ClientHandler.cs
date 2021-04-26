@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
@@ -7,7 +6,6 @@ using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
-using DTCCommon.Enums;
 using DTCPB;
 using Google.Protobuf;
 using NLog;
@@ -45,7 +43,7 @@ namespace DTCServer
             RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _ctsRequestReader = new CancellationTokenSource();
             _networkStreamServer = _tcpClient.GetStream();
-            _currentCodec = new CodecBinary(_networkStreamServer, ClientOrServer.Server);
+            _currentCodec = new CodecBinary(_networkStreamServer);
             //_receiverQueue = new BlockingCollection<>()
         }
 
@@ -123,7 +121,8 @@ namespace DTCServer
                     s_logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(RequestReaderLoopAsync)} to read a message with {_currentCodec.Encoding}");
                     var (messageType, messageBytes) = await _currentCodec.ReadMessageAsync(_ctsRequestReader.Token);
                     if (messageType == DTCMessageType.LogonRequest)
-                    { }
+                    {
+                    }
                     if (messageType == DTCMessageType.MessageTypeUnset)
                     {
                         // The service has ended
@@ -452,9 +451,11 @@ namespace DTCServer
 
             //DebugHelpers.AddResponseSent(messageType, _currentCodec);
 #endif
-            s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponseAsync)} is writing with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");
+            s_logger.Debug(
+                $"{nameof(ClientHandler)}.{nameof(SendResponseAsync)} is writing with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");
             if (messageType == DTCMessageType.LogonResponse)
-            {}
+            {
+            }
             await _currentCodec.WriteAsync(messageType, message, cancellationToken).ConfigureAwait(false);
             //s_logger.Debug($"{nameof(ClientHandler)}.{nameof(SendResponseAsync)} wrote with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");
             if (messageType == DTCMessageType.HistoricalPriceDataResponseHeader)
@@ -513,7 +514,7 @@ namespace DTCServer
                 case EncodingEnum.BinaryEncoding:
                     if (!(_currentCodec is CodecBinary))
                     {
-                        _currentCodec = new CodecBinary(_networkStreamServer, ClientOrServer.Server);
+                        _currentCodec = new CodecBinary(_networkStreamServer);
                         s_logger.Debug($"_currCodec changed to Binary in {nameof(ClientHandler)}");
                     }
                     break;
@@ -524,7 +525,7 @@ namespace DTCServer
                 case EncodingEnum.ProtocolBuffers:
                     if (!(_currentCodec is CodecProtobuf))
                     {
-                        _currentCodec = new CodecProtobuf(_networkStreamServer, ClientOrServer.Server);
+                        _currentCodec = new CodecProtobuf(_networkStreamServer);
                         s_logger.Debug($"_currCodec changed to Protobuf in {nameof(ClientHandler)}");
                     }
                     break;

@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
-using DTCCommon.Enums;
 using DTCCommon.Exceptions;
 using DTCCommon.Extensions;
 using DTCPB;
@@ -16,19 +15,21 @@ namespace DTCCommon.Codecs
     public abstract class Codec
     {
         protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
+        
+        private readonly string _ownerName;
+
 
         protected Stream _stream; // normally a NetworkStream but can be a MemoryStream for a unit test
-        private readonly ClientOrServer _clientOrServer;
         private bool _isZippedStream;
         private DeflateStream _deflateStream;
         private readonly byte[] _bufferHeader;
 
         protected bool _disabledHeartbeats;
 
-        protected Codec(Stream stream, ClientOrServer clientOrServer)
+        protected Codec(Stream stream, string ownerName)
         {
             _stream = stream;
-            _clientOrServer = clientOrServer;
+            _ownerName = ownerName;
             _bufferHeader = new byte[4];
         }
 
@@ -481,7 +482,7 @@ namespace DTCCommon.Codecs
 
         public override string ToString()
         {
-            return $"{_clientOrServer} {GetType().Name} {Encoding}";
+            return $"{GetType().Name} owned by {_ownerName} {Encoding}";
         }
     }
 }
