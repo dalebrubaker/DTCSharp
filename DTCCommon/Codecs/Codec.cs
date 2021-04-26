@@ -16,7 +16,7 @@ namespace DTCCommon.Codecs
     {
         protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
         
-        private readonly string _ownerName;
+        protected string _ownerName;
 
 
         protected Stream _stream; // normally a NetworkStream but can be a MemoryStream for a unit test
@@ -26,10 +26,9 @@ namespace DTCCommon.Codecs
 
         protected bool _disabledHeartbeats;
 
-        protected Codec(Stream stream, string ownerName)
+        protected Codec(Stream stream)
         {
             _stream = stream;
-            _ownerName = ownerName;
             _bufferHeader = new byte[4];
         }
 

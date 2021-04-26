@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -10,8 +11,10 @@ namespace DTCCommon.Codecs
 {
     public class CodecProtobuf : Codec
     {
-        public CodecProtobuf(Stream stream, [CallerMemberName] string ownerName = "") : base(stream, ownerName)
+        public CodecProtobuf(Stream stream) : base(stream)
         {
+            var stackTrace = new StackTrace();
+            _ownerName = stackTrace.GetFrame(1).GetMethod().Name;
         }
 
         public override EncodingEnum Encoding => EncodingEnum.ProtocolBuffers;
@@ -21,23 +24,6 @@ namespace DTCCommon.Codecs
             if (_disabledHeartbeats && messageType == DTCMessageType.Heartbeat)
             {
                 return;
-            }
-            if (messageType is DTCMessageType.EncodingRequest)
-            {
-                // EncodingRequest goes as binary for all protocol versions
-                var encodingRequest = message as EncodingRequest;
-                await WriteEncodingRequestAsync(messageType, encodingRequest, cancellationToken).ConfigureAwait(false);
-                return;
-            }
-            if (messageType == DTCMessageType.EncodingResponse)
-            {
-                // EncodingResponse goes as binary for all protocol versions
-                var encodingResponse = message as EncodingResponse;
-                await WriteEncodingResponseAsync(messageType, encodingResponse, cancellationToken).ConfigureAwait(false);
-                return;
-            }
-            if (message is LogonResponse)
-            {
             }
             var bytes = message.ToByteArray();
             using var bufferBuilder = new BufferBuilder(4 + bytes.Length, this);

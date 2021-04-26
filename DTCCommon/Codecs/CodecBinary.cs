@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -14,9 +15,10 @@ namespace DTCCommon.Codecs
 {
     public class CodecBinary : Codec
     {
-        public CodecBinary(Stream stream, [CallerMemberName] string ownerName = "") : base(stream, ownerName)
+        public CodecBinary(Stream stream) : base(stream)
         {
-            Logger.Info("Starting CodecBinary");
+            var stackTrace = new StackTrace();
+            _ownerName = stackTrace.GetFrame(1).GetMethod().Name;
         }
 
         // Text string lengths. Copied from DTCProtocol.h
