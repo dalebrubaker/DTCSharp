@@ -635,12 +635,6 @@ namespace DTCClient
                 case DTCMessageType.HistoricalPriceDataRequest:
                     throw new NotImplementedException($"{messageDTC}");
                 default:
-#if DEBUG
-                    var requestsSent = DebugHelpers.RequestsSent;
-                    var requestsReceived = DebugHelpers.RequestsReceived;
-                    var responsesReceived = DebugHelpers.ResponsesReceived;
-                    var responsesSent = DebugHelpers.ResponsesSent;
-#endif
                     throw new ArgumentOutOfRangeException($"Unexpected Message {messageDTC} received by {ClientName} {nameof(ProcessMessage)}.");
             }
         }

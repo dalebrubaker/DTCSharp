@@ -292,16 +292,6 @@ namespace DTCClient
         /// <typeparam name="T"></typeparam>
         protected internal void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
-#if DEBUG
-            //DebugHelpers.AddRequestSent(messageType, _currentCodec);
-            // if (messageType == DTCMessageType.LogonRequest)
-            // {
-            //     var requestsSent = DebugHelpers.RequestsSent;
-            //     var requestsReceived = DebugHelpers.RequestsReceived;
-            //     var responsesReceived = DebugHelpers.ResponsesReceived;
-            //     var responsesSent = DebugHelpers.ResponsesSent;
-            // }
-#endif
             try
             {
                 _currentCodec.Write(messageType, message);

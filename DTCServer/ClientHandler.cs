@@ -451,8 +451,6 @@ namespace DTCServer
             {
                 return;
             }
-
-            //DebugHelpers.AddResponseSent(messageType, _currentCodec);
 #endif
             s_logger.Debug(
                 $"{nameof(ClientHandler)}.{nameof(SendResponse)} is writing with {_currentCodec.Encoding} {messageType}: {message.GetType().Name} {message}");

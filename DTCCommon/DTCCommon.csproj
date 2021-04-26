@@ -72,8 +72,6 @@
     <Compile Include="Codecs\CodecBinary.cs" />
     <Compile Include="Codecs\CodecProtobuf.cs" />
     <Compile Include="Config\WindowConfig.cs" />
-    <Compile Include="Debugging\DebugHelpers.cs" />
-    <Compile Include="Debugging\DebugMessageRow.cs" />
     <Compile Include="Error.cs" />
     <Compile Include="Exceptions\DTCSharpException.cs" />
     <Compile Include="Extensions\DateTimeExtensions.cs" />
