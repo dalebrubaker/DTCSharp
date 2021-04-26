@@ -12,6 +12,7 @@ namespace DTCCommon.Codecs
 {
     public abstract class Codec : IDisposable
     {
+        // ReSharper disable once MemberCanBePrivate.Global
         protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
         private readonly string _ownerName;
@@ -20,13 +21,16 @@ namespace DTCCommon.Codecs
         public bool IsZippedStream => _deflateStream != null;
         private DeflateStream _deflateStream;
         private readonly byte[] _bufferHeader;
-
-        protected bool _disabledHeartbeats;
         private bool _isDisposed;
 
-        protected Stream CurrentStream => _deflateStream ?? _stream;
+        /// <summary>
+        /// The converter to and from Protobuf for the current encoding
+        /// </summary>
+        private readonly ICodecConverter _codecConverter;
 
-        protected Codec(Stream stream)
+        private Stream CurrentStream => _deflateStream ?? _stream;
+
+        protected Codec(Stream stream, ICodecConverter codecConverter)
         {
             var frame = new StackFrame(2);
             var declaringType = frame.GetMethod().DeclaringType;
@@ -36,255 +40,49 @@ namespace DTCCommon.Codecs
             }
             _stream = stream;
             _bufferHeader = new byte[4];
+            _codecConverter = codecConverter;
         }
 
         public abstract EncodingEnum Encoding { get; }
 
         /// <summary>
-        /// Write the ProtocolBuffer IMessage as bytes to the network stream.
+        /// Write the ProtocolBuffer IMessage as messageBytes to the network stream.
+        /// Heartbeats will be skipped if the stream is zipped
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        public abstract void Write<T>(DTCMessageType messageType, T message) where T : IMessage;
-
-        /// <summary>
-        /// Load the message represented by bytes into a new IMessage. Each codec translates the byte stream to a protobuf message.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="messageType"></param>
-        /// <param name="bytes"></param>
-        /// <returns></returns>
-        public abstract T Load<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new();
-
-        private MessageDTC GetMessageWithType<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new()
+        public void Write<T>(DTCMessageType messageType, T message) where T : IMessage
         {
-            var iMessage = Load<T>(messageType, bytes);
-            var result = new MessageDTC(messageType, iMessage);
-            return result;
+            if (messageType == DTCMessageType.Heartbeat && IsZippedStream)
+            {
+                // Refuse to write a heartbeat while we're zipped
+                return;
+            }
+            var buffer = _codecConverter.ConvertToBuffer(messageType, message);
+
+            // Write the header
+            var header = new byte[4];
+            var size = (short)(buffer.Length + 4);
+            header[0] = (byte)size;
+            header[1] = (byte)((uint)size >> 8);
+            var msgType = (short)messageType;
+            header[2] = (byte)msgType;
+            header[3] = (byte)((uint)msgType >> 8);
+            CurrentStream.Write(header, 0, 4);
+
+            CurrentStream.Write(buffer, 0, buffer.Length);
         }
 
         public MessageDTC GetMessageDTC()
         {
-            var (messageType, bytes) = ReadMessage();
+            var (messageType, messageBytes) = ReadMessage();
             if (messageType == DTCMessageType.MessageTypeUnset)
             {
                 return new MessageDTC(messageType, null);
             }
-            return ReadMessageDTC(messageType, bytes);
-        }
-
-        private MessageDTC ReadMessageDTC(DTCMessageType messageType, byte[] bytes)
-        {
-            switch (messageType)
-            {
-                case DTCMessageType.MessageTypeUnset:
-                    // Perhaps an exception in ReadMessage()
-                    return null;
-                case DTCMessageType.LogonRequest:
-                    return GetMessageWithType<LogonRequest>(messageType, bytes);
-                case DTCMessageType.LogonResponse:
-                    return GetMessageWithType<LogonResponse>(messageType, bytes);
-                case DTCMessageType.Heartbeat:
-                    return GetMessageWithType<Heartbeat>(messageType, bytes);
-                case DTCMessageType.Logoff:
-                    return GetMessageWithType<Logoff>(messageType, bytes);
-                case DTCMessageType.EncodingRequest:
-                    return GetMessageWithType<EncodingRequest>(messageType, bytes);
-                case DTCMessageType.EncodingResponse:
-                    return GetMessageWithType<EncodingResponse>(messageType, bytes);
-                case DTCMessageType.MarketDataRequest:
-                    return GetMessageWithType<MarketDataRequest>(messageType, bytes);
-                case DTCMessageType.MarketDataReject:
-                    return GetMessageWithType<MarketDataReject>(messageType, bytes);
-                case DTCMessageType.MarketDataSnapshot:
-                    return GetMessageWithType<MarketDataSnapshot>(messageType, bytes);
-                case DTCMessageType.MarketDataSnapshotInt:
-                    return GetMessageWithType<MarketDataSnapshot_Int>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateTrade:
-                    return GetMessageWithType<MarketDataUpdateTrade>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateTradeCompact:
-                    return GetMessageWithType<MarketDataUpdateTradeCompact>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateTradeInt:
-                    return GetMessageWithType<MarketDataUpdateTrade_Int>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateLastTradeSnapshot:
-                    return GetMessageWithType<MarketDataUpdateLastTradeSnapshot>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator:
-                    return GetMessageWithType<MarketDataUpdateTradeWithUnbundledIndicator>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator2:
-                    return GetMessageWithType<MarketDataUpdateTradeWithUnbundledIndicator2>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateTradeNoTimestamp:
-                    return GetMessageWithType<MarketDataUpdateTradeNoTimestamp>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateBidAsk:
-                    return GetMessageWithType<MarketDataUpdateBidAsk>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateBidAskCompact:
-                    return GetMessageWithType<MarketDataUpdateBidAskCompact>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateBidAskNoTimestamp:
-                    return GetMessageWithType<MarketDataUpdateBidAskNoTimeStamp>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateBidAskInt:
-                    return GetMessageWithType<MarketDataUpdateBidAsk_Int>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionOpen:
-                    return GetMessageWithType<MarketDataUpdateSessionOpen>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionOpenInt:
-                    return GetMessageWithType<MarketDataUpdateSessionOpen_Int>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionHigh:
-                    return GetMessageWithType<MarketDataUpdateSessionHigh>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionHighInt:
-                    return GetMessageWithType<MarketDataUpdateSessionHigh_Int>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionLow:
-                    return GetMessageWithType<MarketDataUpdateSessionLow>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionLowInt:
-                    return GetMessageWithType<MarketDataUpdateSessionLow_Int>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionVolume:
-                    return GetMessageWithType<MarketDataUpdateSessionVolume>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateOpenInterest:
-                    return GetMessageWithType<MarketDataUpdateOpenInterest>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionSettlement:
-                    return GetMessageWithType<MarketDataUpdateSessionSettlement>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionSettlementInt:
-                    return GetMessageWithType<MarketDataUpdateSessionSettlement_Int>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateSessionNumTrades:
-                    return GetMessageWithType<MarketDataUpdateSessionNumTrades>(messageType, bytes);
-                case DTCMessageType.MarketDataUpdateTradingSessionDate:
-                    return GetMessageWithType<MarketDataUpdateTradingSessionDate>(messageType, bytes);
-                case DTCMessageType.MarketDepthRequest:
-                    return GetMessageWithType<MarketDepthRequest>(messageType, bytes);
-                case DTCMessageType.MarketDepthReject:
-                    return GetMessageWithType<MarketDepthReject>(messageType, bytes);
-                case DTCMessageType.MarketDepthSnapshotLevel:
-                    return GetMessageWithType<MarketDepthSnapshotLevel>(messageType, bytes);
-                case DTCMessageType.MarketDepthSnapshotLevelInt:
-                    return GetMessageWithType<MarketDepthSnapshotLevel_Int>(messageType, bytes);
-                case DTCMessageType.MarketDepthSnapshotLevelFloat:
-                    return GetMessageWithType<MarketDepthSnapshotLevelFloat>(messageType, bytes);
-                case DTCMessageType.MarketDepthUpdateLevel:
-                    return GetMessageWithType<MarketDepthUpdateLevel>(messageType, bytes);
-                case DTCMessageType.MarketDepthUpdateLevelFloatWithMilliseconds:
-                    return GetMessageWithType<MarketDepthUpdateLevelFloatWithMilliseconds>(messageType, bytes);
-                case DTCMessageType.MarketDepthUpdateLevelNoTimestamp:
-                    return GetMessageWithType<MarketDepthUpdateLevelNoTimestamp>(messageType, bytes);
-                case DTCMessageType.MarketDepthUpdateLevelInt:
-                    return GetMessageWithType<MarketDepthUpdateLevel_Int>(messageType, bytes);
-                case DTCMessageType.MarketDataFeedStatus:
-                    return GetMessageWithType<MarketDataFeedStatus>(messageType, bytes);
-                case DTCMessageType.MarketDataFeedSymbolStatus:
-                    return GetMessageWithType<MarketDataFeedSymbolStatus>(messageType, bytes);
-                case DTCMessageType.TradingSymbolStatus:
-                    return GetMessageWithType<TradingSymbolStatus>(messageType, bytes);
-                case DTCMessageType.SubmitNewSingleOrder:
-                    return GetMessageWithType<SubmitNewSingleOrder>(messageType, bytes);
-                case DTCMessageType.SubmitNewSingleOrderInt:
-                    return GetMessageWithType<SubmitNewSingleOrderInt>(messageType, bytes);
-                case DTCMessageType.SubmitNewOcoOrder:
-                    return GetMessageWithType<SubmitNewOCOOrder>(messageType, bytes);
-                case DTCMessageType.SubmitNewOcoOrderInt:
-                    return GetMessageWithType<SubmitNewOCOOrderInt>(messageType, bytes);
-                case DTCMessageType.SubmitFlattenPositionOrder:
-                    return GetMessageWithType<SubmitFlattenPositionOrder>(messageType, bytes);
-                case DTCMessageType.CancelOrder:
-                    return GetMessageWithType<CancelOrder>(messageType, bytes);
-                case DTCMessageType.CancelReplaceOrder:
-                    return GetMessageWithType<CancelReplaceOrder>(messageType, bytes);
-                case DTCMessageType.CancelReplaceOrderInt:
-                    return GetMessageWithType<CancelReplaceOrderInt>(messageType, bytes);
-                case DTCMessageType.OpenOrdersRequest:
-                    return GetMessageWithType<OpenOrdersRequest>(messageType, bytes);
-                case DTCMessageType.OpenOrdersReject:
-                    return GetMessageWithType<OpenOrdersReject>(messageType, bytes);
-                case DTCMessageType.OrderUpdate:
-                    return GetMessageWithType<OrderUpdate>(messageType, bytes);
-                case DTCMessageType.HistoricalOrderFillsRequest:
-                    return GetMessageWithType<HistoricalOrderFillsRequest>(messageType, bytes);
-                case DTCMessageType.HistoricalOrderFillResponse:
-                    return GetMessageWithType<HistoricalOrderFillResponse>(messageType, bytes);
-                case DTCMessageType.HistoricalOrderFillsReject:
-                    return GetMessageWithType<HistoricalOrderFillsReject>(messageType, bytes);
-                case DTCMessageType.CurrentPositionsRequest:
-                    return GetMessageWithType<CurrentPositionsRequest>(messageType, bytes);
-                case DTCMessageType.CurrentPositionsReject:
-                    return GetMessageWithType<CurrentPositionsReject>(messageType, bytes);
-                case DTCMessageType.PositionUpdate:
-                    return GetMessageWithType<PositionUpdate>(messageType, bytes);
-                case DTCMessageType.TradeAccountsRequest:
-                    return GetMessageWithType<TradeAccountsRequest>(messageType, bytes);
-                case DTCMessageType.TradeAccountResponse:
-                    return GetMessageWithType<TradeAccountResponse>(messageType, bytes);
-                case DTCMessageType.ExchangeListRequest:
-                    return GetMessageWithType<ExchangeListRequest>(messageType, bytes);
-                case DTCMessageType.ExchangeListResponse:
-                    return GetMessageWithType<ExchangeListResponse>(messageType, bytes);
-                case DTCMessageType.SymbolsForExchangeRequest:
-                    return GetMessageWithType<SymbolsForExchangeRequest>(messageType, bytes);
-                case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
-                    return GetMessageWithType<UnderlyingSymbolsForExchangeRequest>(messageType, bytes);
-                case DTCMessageType.SymbolsForUnderlyingRequest:
-                    return GetMessageWithType<SymbolsForUnderlyingRequest>(messageType, bytes);
-                case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    return GetMessageWithType<SecurityDefinitionForSymbolRequest>(messageType, bytes);
-                case DTCMessageType.SecurityDefinitionResponse:
-                    return GetMessageWithType<SecurityDefinitionResponse>(messageType, bytes);
-                case DTCMessageType.SymbolSearchRequest:
-                    return GetMessageWithType<SymbolSearchRequest>(messageType, bytes);
-                case DTCMessageType.SecurityDefinitionReject:
-                    return GetMessageWithType<SecurityDefinitionReject>(messageType, bytes);
-                case DTCMessageType.AccountBalanceRequest:
-                    return GetMessageWithType<AccountBalanceRequest>(messageType, bytes);
-                case DTCMessageType.AccountBalanceReject:
-                    return GetMessageWithType<AccountBalanceReject>(messageType, bytes);
-                case DTCMessageType.AccountBalanceUpdate:
-                    return GetMessageWithType<AccountBalanceUpdate>(messageType, bytes);
-                case DTCMessageType.AccountBalanceAdjustment:
-                    return GetMessageWithType<AccountBalanceAdjustment>(messageType, bytes);
-                case DTCMessageType.AccountBalanceAdjustmentReject:
-                    return GetMessageWithType<AccountBalanceAdjustmentReject>(messageType, bytes);
-                case DTCMessageType.AccountBalanceAdjustmentComplete:
-                    return GetMessageWithType<AccountBalanceAdjustmentComplete>(messageType, bytes);
-                case DTCMessageType.HistoricalAccountBalancesRequest:
-                    return GetMessageWithType<HistoricalAccountBalancesRequest>(messageType, bytes);
-                case DTCMessageType.HistoricalAccountBalancesReject:
-                    return GetMessageWithType<HistoricalAccountBalancesReject>(messageType, bytes);
-                case DTCMessageType.HistoricalAccountBalanceResponse:
-                    return GetMessageWithType<HistoricalAccountBalanceResponse>(messageType, bytes);
-                case DTCMessageType.UserMessage:
-                    return GetMessageWithType<UserMessage>(messageType, bytes);
-                case DTCMessageType.GeneralLogMessage:
-                    return GetMessageWithType<GeneralLogMessage>(messageType, bytes);
-                case DTCMessageType.AlertMessage:
-                    return GetMessageWithType<AlertMessage>(messageType, bytes);
-                case DTCMessageType.JournalEntryAdd:
-                    return GetMessageWithType<JournalEntryAdd>(messageType, bytes);
-                case DTCMessageType.JournalEntriesRequest:
-                    return GetMessageWithType<JournalEntriesRequest>(messageType, bytes);
-                case DTCMessageType.JournalEntriesReject:
-                    return GetMessageWithType<JournalEntriesReject>(messageType, bytes);
-                case DTCMessageType.JournalEntryResponse:
-                    return GetMessageWithType<JournalEntryResponse>(messageType, bytes);
-                case DTCMessageType.HistoricalPriceDataRequest:
-                    return GetMessageWithType<HistoricalPriceDataRequest>(messageType, bytes);
-                case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    return GetMessageWithType<HistoricalPriceDataResponseHeader>(messageType, bytes);
-                case DTCMessageType.HistoricalPriceDataReject:
-                    return GetMessageWithType<HistoricalPriceDataReject>(messageType, bytes);
-                case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    return GetMessageWithType<HistoricalPriceDataRecordResponse>(messageType, bytes);
-                case DTCMessageType.HistoricalPriceDataTickRecordResponse:
-                    return GetMessageWithType<HistoricalPriceDataTickRecordResponse>(messageType, bytes);
-                case DTCMessageType.HistoricalPriceDataRecordResponseInt:
-                    return GetMessageWithType<HistoricalPriceDataRecordResponse_Int>(messageType, bytes);
-                case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
-                    return GetMessageWithType<HistoricalPriceDataTickRecordResponse_Int>(messageType, bytes);
-                case DTCMessageType.HistoricalPriceDataResponseTrailer:
-                    return GetMessageWithType<HistoricalPriceDataResponseTrailer>(messageType, bytes);
-                case DTCMessageType.HistoricalMarketDepthDataRequest:
-                    return GetMessageWithType<HistoricalMarketDepthDataRequest>(messageType, bytes);
-                case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
-                    return GetMessageWithType<HistoricalMarketDepthDataResponseHeader>(messageType, bytes);
-                case DTCMessageType.HistoricalMarketDepthDataReject:
-                    return GetMessageWithType<HistoricalMarketDepthDataReject>(messageType, bytes);
-                case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                    return GetMessageWithType<HistoricalMarketDepthDataRecordResponse>(messageType, bytes);
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            var iMessage = _codecConverter.ConvertToProtobuf(messageType, messageBytes);
+            var result = new MessageDTC(messageType, iMessage);
+            return result;
         }
 
         public (DTCMessageType messageType, byte[] bytes) ReadMessage()
@@ -301,7 +99,7 @@ namespace DTCCommon.Codecs
                     // There is not a complete record available yet
                     return (DTCMessageType.MessageTypeUnset, new byte[0]);
                 }
-                Debug.Assert(numBytes == 2);
+                MyDebug.Assert(numBytes == 2);
                 var size = BitConverter.ToInt16(_bufferHeader, 0);
                 //Logger.Debug($"{this}.{nameof(ReadMessage)} read size={size} from _stream");
                 if (size < 4)
@@ -310,16 +108,16 @@ namespace DTCCommon.Codecs
                     var moreBytes = CurrentStream.Read(buffer, 0, 10000);
                     // There is not a complete record available yet
                     return (DTCMessageType.MessageTypeUnset, new byte[0]);
-                    // Debug.Assert(size > 4, "If only 4, then message length is 0 bytes");
+                    // MyDebug.Assert(size > 4, "If only 4, then message length is 0 messageBytes");
                 }
-                //Debug.Assert(size > 4, "If only 4, then message length is 0 bytes");
+                //MyDebug.Assert(size > 4, "If only 4, then message length is 0 messageBytes");
                 numBytes = CurrentStream.Read(_bufferHeader, 2, 2);
                 if (numBytes < 2)
                 {
                     // There is not a complete record available yet
                     return (DTCMessageType.MessageTypeUnset, new byte[0]);
                 }
-                Debug.Assert(numBytes == 2);
+                MyDebug.Assert(numBytes == 2);
                 var messageType = (DTCMessageType)BitConverter.ToInt16(_bufferHeader, 2);
                 //Logger.Debug($"{this}.{nameof(ReadMessage)} read messageType={messageType} from _stream");
                 var messageSize = size - 4; // size includes the header
@@ -331,7 +129,7 @@ namespace DTCCommon.Codecs
                     return (DTCMessageType.MessageTypeUnset, new byte[0]);
                 }
                 //Logger.Debug($"{this}.{nameof(ReadMessage)} read {numBytes} messageSize from _stream");
-                Debug.Assert(numBytes == messageSize);
+                MyDebug.Assert(numBytes == messageSize);
                 return (messageType, messageBytes);
             }
             catch (TaskCanceledException)
@@ -349,6 +147,11 @@ namespace DTCCommon.Codecs
                 Logger.Error(ex, ex.Message);
                 throw;
             }
+        }
+
+        public IMessage GetProtobuf(DTCMessageType messageType, byte[] messageBytes)
+        {
+            return _codecConverter.ConvertToProtobuf(messageType, messageBytes);
         }
 
         /// <summary>
@@ -378,8 +181,6 @@ namespace DTCCommon.Codecs
             }
             try
             {
-                _disabledHeartbeats = true;
-
                 // Leave the underlying stream open
                 _deflateStream = new DeflateStream(_stream, CompressionMode.Decompress, true);
             }
@@ -409,11 +210,8 @@ namespace DTCCommon.Codecs
             _stream.Write(buffer, 0, 2);
             try
             {
-                _disabledHeartbeats = true;
                 _deflateStream = new DeflateStream(_stream, CompressionMode.Compress, true);
                 _deflateStream.Flush();
-                // can't read this stream _binaryReader = new BinaryReader(deflateStream);
-                //_binaryWriter = new BinaryWriter(_deflateStream);
             }
             catch (Exception ex)
             {

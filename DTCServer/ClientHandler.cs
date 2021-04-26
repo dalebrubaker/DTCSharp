@@ -168,15 +168,7 @@ namespace DTCServer
         /// <param name="messageBytes"></param>
         private void ProcessClientRequest(DTCMessageType messageType, byte[] messageBytes)
         {
-//#if DEBUG
-//            var port = ((IPEndPoint)_tcpClient.Client.LocalEndPoint).Port;
-//            if (port == 49998)
-//            {
-//#pragma warning disable 219
-//                var debug = 1;
-//#pragma warning restore 219
-//            }
-//#endif
+            var protobuf = _currentCodec.GetProtobuf(messageType, messageBytes);
             switch (messageType)
             {
                 case DTCMessageType.LogonRequest:
@@ -184,7 +176,7 @@ namespace DTCServer
                     {
                         DisposeTimerHeartbeat();
                     }
-                    var logonRequest = _currentCodec.Load<LogonRequest>(messageType, messageBytes);
+                    var logonRequest = protobuf as LogonRequest;
                     _useHeartbeat = logonRequest.HeartbeatIntervalInSeconds > 0;
                     if (_useHeartbeat)
                     {
@@ -198,12 +190,12 @@ namespace DTCServer
                     break;
                 case DTCMessageType.Heartbeat:
                     _lastHeartbeatReceivedTime = DateTime.Now;
-                    var heartbeat = _currentCodec.Load<Heartbeat>(messageType, messageBytes);
+                    var heartbeat = protobuf as Heartbeat;
                     SendResponse(DTCMessageType.Heartbeat, heartbeat);
                     _callback(this, messageType, heartbeat); // send this to the callback for informational purposes
                     break;
                 case DTCMessageType.Logoff:
-                    var logoffRequest = _currentCodec.Load<Logoff>(messageType, messageBytes);
+                    var logoffRequest = protobuf as Logoff;
                     if (_useHeartbeat && _timerHeartbeat != null)
                     {
                         // stop the heartbeat
@@ -213,8 +205,7 @@ namespace DTCServer
                     _callback(this, messageType, logoffRequest); // send this to the callback for informational purposes
                     break;
                 case DTCMessageType.EncodingRequest:
-                    // This is an exception where we don't make a callback. 
-                    var encodingRequest = _currentCodec.Load<EncodingRequest>(messageType, messageBytes);
+                    var encodingRequest = protobuf as EncodingRequest;
                     var newEncoding = EncodingEnum.BinaryEncoding;
                     switch (encodingRequest.Encoding)
                     {
@@ -247,88 +238,27 @@ namespace DTCServer
                     OnConnected("Handler connected");
                     break;
                 case DTCMessageType.MarketDataRequest:
-                    var marketDataRequest = _currentCodec.Load<MarketDataRequest>(messageType, messageBytes);
-                    _callback(this, messageType, marketDataRequest);
-                    break;
                 case DTCMessageType.MarketDepthRequest:
-                    var marketDepthRequest = _currentCodec.Load<MarketDepthRequest>(messageType, messageBytes);
-                    _callback(this, messageType, marketDepthRequest);
-                    break;
                 case DTCMessageType.SubmitNewSingleOrder:
-                    var submitNewSingleOrder = _currentCodec.Load<SubmitNewSingleOrder>(messageType, messageBytes);
-                    _callback(this, messageType, submitNewSingleOrder);
-                    break;
                 case DTCMessageType.SubmitNewSingleOrderInt:
-                    var submitNewSingleOrderInt = _currentCodec.Load<SubmitNewSingleOrderInt>(messageType, messageBytes);
-                    _callback(this, messageType, submitNewSingleOrderInt);
-                    break;
                 case DTCMessageType.SubmitNewOcoOrder:
-                    var submitNewOcoOrder = _currentCodec.Load<SubmitNewOCOOrder>(messageType, messageBytes);
-                    _callback(this, messageType, submitNewOcoOrder);
-                    break;
                 case DTCMessageType.SubmitNewOcoOrderInt:
-                    var submitNewOcoOrderInt = _currentCodec.Load<SubmitNewOCOOrderInt>(messageType, messageBytes);
-                    _callback(this, messageType, submitNewOcoOrderInt);
-                    break;
                 case DTCMessageType.CancelOrder:
-                    var cancelOrder = _currentCodec.Load<CancelOrder>(messageType, messageBytes);
-                    _callback(this, messageType, cancelOrder);
-                    break;
                 case DTCMessageType.CancelReplaceOrder:
-                    var cancelReplaceOrder = _currentCodec.Load<CancelReplaceOrder>(messageType, messageBytes);
-                    _callback(this, messageType, cancelReplaceOrder);
-                    break;
                 case DTCMessageType.CancelReplaceOrderInt:
-                    var cancelReplaceOrderInt = _currentCodec.Load<CancelReplaceOrderInt>(messageType, messageBytes);
-                    _callback(this, messageType, cancelReplaceOrderInt);
-                    break;
                 case DTCMessageType.OpenOrdersRequest:
-                    var openOrdersRequest = _currentCodec.Load<OpenOrdersRequest>(messageType, messageBytes);
-                    _callback(this, messageType, openOrdersRequest);
-                    break;
                 case DTCMessageType.HistoricalOrderFillsRequest:
-                    var historicalOrderFillsRequest = _currentCodec.Load<HistoricalOrderFillsRequest>(messageType, messageBytes);
-                    _callback(this, messageType, historicalOrderFillsRequest);
-                    break;
                 case DTCMessageType.CurrentPositionsRequest:
-                    var currentPositionsRequest = _currentCodec.Load<CurrentPositionsRequest>(messageType, messageBytes);
-                    _callback(this, messageType, currentPositionsRequest);
-                    break;
                 case DTCMessageType.TradeAccountsRequest:
-                    var tradeAccountsRequest = _currentCodec.Load<TradeAccountsRequest>(messageType, messageBytes);
-                    _callback(this, messageType, tradeAccountsRequest);
-                    break;
                 case DTCMessageType.ExchangeListRequest:
-                    var exchangeListRequest = _currentCodec.Load<ExchangeListRequest>(messageType, messageBytes);
-                    _callback(this, messageType, exchangeListRequest);
-                    break;
                 case DTCMessageType.SymbolsForExchangeRequest:
-                    var symbolsForExchangeRequest = _currentCodec.Load<SymbolsForExchangeRequest>(messageType, messageBytes);
-                    _callback(this, messageType, symbolsForExchangeRequest);
-                    break;
                 case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
-                    var underlyingSymbolsForExchangeRequest = _currentCodec.Load<UnderlyingSymbolsForExchangeRequest>(messageType, messageBytes);
-                    _callback(this, messageType, underlyingSymbolsForExchangeRequest);
-                    break;
                 case DTCMessageType.SymbolsForUnderlyingRequest:
-                    var symbolsForUnderlyingRequest = _currentCodec.Load<SymbolsForUnderlyingRequest>(messageType, messageBytes);
-                    _callback(this, messageType, symbolsForUnderlyingRequest);
-                    break;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    var securityDefinitionForSymbolRequest = _currentCodec.Load<SecurityDefinitionForSymbolRequest>(messageType, messageBytes);
-                    _callback(this, messageType, securityDefinitionForSymbolRequest);
-                    break;
                 case DTCMessageType.SymbolSearchRequest:
-                    var symbolSearchRequest = _currentCodec.Load<SymbolSearchRequest>(messageType, messageBytes);
-                    _callback(this, messageType, symbolSearchRequest);
-                    break;
                 case DTCMessageType.AccountBalanceRequest:
-                    var accountBalanceRequest = _currentCodec.Load<AccountBalanceRequest>(messageType, messageBytes);
-                    _callback(this, messageType, accountBalanceRequest);
-                    break;
                 case DTCMessageType.HistoricalPriceDataRequest:
-                    var historicalPriceDataRequest = _currentCodec.Load<HistoricalPriceDataRequest>(messageType, messageBytes);
-                    _callback(this, messageType, historicalPriceDataRequest);
+                    _callback(this, messageType, protobuf);
                     break;
                 case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator:
                 case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator2:

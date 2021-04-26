@@ -334,7 +334,7 @@ namespace DTCClient
                             // Wait for this message to be processed before reading messages with the new encoding
                             await Task.Delay(1).ConfigureAwait(false);
                         }
-                        Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
+                        MyDebug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
                     }
                     else if (message.MessageType == DTCMessageType.HistoricalPriceDataResponseHeader)
                     {
@@ -344,7 +344,7 @@ namespace DTCClient
                             // Wait for this message to be processed before reading zipped messages
                             await Task.Delay(1).ConfigureAwait(false);
                         }
-                        Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
+                        MyDebug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
                     }
                     else if (_currentCodec.IsZippedStream && message.MessageType == DTCMessageType.HistoricalPriceDataRecordResponse)
                     {
@@ -356,7 +356,7 @@ namespace DTCClient
                                 // Wait for this message to be processed (where the stream is switched back to not-zipped) before going back to reading not-zipped messages
                                 await Task.Delay(1).ConfigureAwait(false);
                             }
-                            Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
+                            MyDebug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
                         }
                     }
                     else if (_currentCodec.IsZippedStream && message.MessageType == DTCMessageType.HistoricalPriceDataTickRecordResponse)
@@ -369,7 +369,7 @@ namespace DTCClient
                                 // Wait for this message to be processed (where the stream is switched back to not-zipped) before going back to reading not-zipped messages
                                 await Task.Delay(1).ConfigureAwait(false);
                             }
-                            Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
+                            MyDebug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
                         }
                     }
                 }

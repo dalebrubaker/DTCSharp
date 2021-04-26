@@ -85,6 +85,7 @@
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="MessageStructs.cs" />
     <Compile Include="MessageDTC.cs" />
+    <Compile Include="MyDebug.cs" />
     <Compile Include="Partials\HistoricalPriceDataRecordResponse Header.cs" />
     <Compile Include="Partials\HistoricalPriceDataRequest.cs" />
     <Compile Include="Partials\HistoricalPriceDataRecordResponse.cs" />

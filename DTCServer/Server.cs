@@ -139,7 +139,7 @@ namespace DTCServer
                 }
                 catch (ObjectDisposedException)
                 {
-                    Debug.Assert(_isDisposed);
+                    MyDebug.Assert(_isDisposed);
                 }
                 catch (InvalidOperationException)
                 {

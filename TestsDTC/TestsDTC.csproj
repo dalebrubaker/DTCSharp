@@ -34,7 +34,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="BinaryEncodingTests.cs" />
     <Compile Include="ClientServerNotZippedTests.cs" />
     <Compile Include="ClientServerZippedTests.cs" />
     <Compile Include="ConverterTests.cs" />
