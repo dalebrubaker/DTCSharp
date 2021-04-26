@@ -17,14 +17,14 @@ namespace DTCCommon.Codecs
         private readonly string _ownerName;
 
         private readonly Stream _stream; // normally a NetworkStream but can be a MemoryStream for a unit test
-        public bool IsZippedStream { get; private set; }
+        public bool IsZippedStream => _deflateStream != null;
         private DeflateStream _deflateStream;
         private readonly byte[] _bufferHeader;
 
         protected bool _disabledHeartbeats;
         private bool _isDisposed;
 
-        protected Stream CurrentStream => IsZippedStream ? _deflateStream : _stream;
+        protected Stream CurrentStream => _deflateStream ?? _stream;
 
         protected Codec(Stream stream)
         {
@@ -382,9 +382,6 @@ namespace DTCCommon.Codecs
 
                 // Leave the underlying stream open
                 _deflateStream = new DeflateStream(_stream, CompressionMode.Decompress, true);
-
-                // Must not set this earlier!
-                IsZippedStream = true;
             }
             catch (Exception ex)
             {
@@ -412,7 +409,6 @@ namespace DTCCommon.Codecs
             _stream.Write(buffer, 0, 2);
             try
             {
-                IsZippedStream = true;
                 _disabledHeartbeats = true;
                 _deflateStream = new DeflateStream(_stream, CompressionMode.Compress, true);
                 _deflateStream.Flush();
@@ -434,7 +430,6 @@ namespace DTCCommon.Codecs
             // Do NOT dispose of the underlying NetworkStream, which is owned by the _tcpClient
             _deflateStream.Close(); // also does Dispose
             _deflateStream = null;
-            IsZippedStream = false;
         }
 
         public void Dispose()
