@@ -24,7 +24,7 @@ namespace DTCCommon.Codecs
                 return;
             }
             var bytes = message.ToByteArray();
-            using var bufferBuilder = new BufferBuilder(4 + bytes.Length, this);
+            using var bufferBuilder = new BufferBuilderOBS(4 + bytes.Length, this);
             bufferBuilder.AddHeader(messageType);
             bufferBuilder.Add(bytes);
             bufferBuilder.Write(CurrentStream);

@@ -68,9 +68,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BufferBuilder.cs" />
+    <Compile Include="BufferBuilderOBS.cs" />
     <Compile Include="Codecs\Codec.cs" />
     <Compile Include="Codecs\CodecBinary.cs" />
+    <Compile Include="Codecs\CodecBinaryConverter.cs" />
     <Compile Include="Codecs\CodecProtobuf.cs" />
+    <Compile Include="Codecs\CodecProtobufConverter.cs" />
+    <Compile Include="Codecs\ICodecConverter.cs" />
     <Compile Include="Config\WindowConfig.cs" />
     <Compile Include="Error.cs" />
     <Compile Include="Exceptions\DTCSharpException.cs" />

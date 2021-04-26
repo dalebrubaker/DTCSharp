@@ -9,9 +9,12 @@ using NLog;
 
 namespace DTCCommon
 {
-    public class BufferBuilder : IDisposable
+    public class BufferBuilderOBS : IDisposable
     {
+        protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
+
         private readonly int _size;
+        private readonly Codec _codec;
         private readonly MemoryStream _memoryStream;
         private readonly BinaryWriter _binaryWriter;
 
@@ -19,14 +22,27 @@ namespace DTCCommon
         /// Start building a buffer
         /// </summary>
         /// <param name="size"></param>
-        public BufferBuilder(int size)
+        /// <param name="codec">For debugging</param>
+        public BufferBuilderOBS(int size, Codec codec)
         {
             _size = size;
+            _codec = codec;
             _memoryStream = new MemoryStream(size);
             _binaryWriter = new BinaryWriter(_memoryStream);
         }
 
         public byte[] Buffer => _memoryStream.ToArray();
+
+        /// <summary>
+        /// Write the header
+        /// </summary>
+        /// <param name="messageType"></param>
+        /// <typeparam name="T"></typeparam>
+        public void AddHeader(DTCMessageType messageType)
+        {
+            Add((short)_size);
+            Add((short)messageType);
+        }
 
         public void Add(short value)
         {
@@ -93,10 +109,33 @@ namespace DTCCommon
             _binaryWriter.Write(value);
         }
 
+        public void Write(Stream stream)
+        {
+            try
+            {
+                //Logger.Debug($"{this} writing {Buffer.Length:N0} bytes to stream");
+                if (Buffer.Length == 11)
+                {
+                }
+                stream.Write(Buffer, 0, Buffer.Length);
+                //Logger.Debug($"{this} wrote {Buffer.Length:N0} bytes to stream");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
         public void Dispose()
         {
             _memoryStream?.Dispose();
             _binaryWriter?.Dispose();
+        }
+
+        public override string ToString()
+        {
+            return $"BufferBuilderOBS on {_codec}";
         }
     }
 }
