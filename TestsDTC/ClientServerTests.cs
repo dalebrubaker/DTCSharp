@@ -204,59 +204,56 @@ namespace TestsDTC
             const int TimeoutNoActivity = int.MaxValue; // 30000;
             const int TimeoutForConnect = int.MaxValue; // 5000;
             var port = NextServerPort;
-            using (var server = StartExampleServer(TimeoutNoActivity, port))
+            using var server = StartExampleServer(TimeoutNoActivity, port);
+
+            // Set up the handler to capture the ClientConnected event
+            void ClientConnected(object s, ClientHandler clientHandler)
             {
-                // Set up the handler to capture the ClientConnected event
-                void ClientConnected(object s, ClientHandler clientHandler)
-                {
-                    _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} connected to {clientHandler}");
-                    numConnects++;
-                }
-
-                server.ClientConnected += ClientConnected;
-
-                // Set up the handler to capture the ClientDisconnected event
-                void ClientDisconnected(object s, ClientHandler clientHandler)
-                {
-                    _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} disconnected from {clientHandler}");
-                    numDisconnects++;
-                }
-
-                server.ClientDisconnected += ClientDisconnected;
-
-                using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
-                {
-                    var sw = Stopwatch.StartNew();
-                    while (numConnects != 1 && sw.ElapsedMilliseconds < 1000)
-                    {
-                        // Wait for the client to connect
-                        await Task.Delay(1).ConfigureAwait(false);
-                    }
-                    Assert.Equal(1, server.NumberOfClientHandlers);
-
-                    var loginResponse = await client1.LogonAsync(1, false, TimeoutForConnect).ConfigureAwait(true);
-                    Assert.NotNull(loginResponse);
-
-                    // Set up the handler to capture the HeartBeat event
-                    var numHeartbeats = 0;
-
-                    void HeartbeatEvent(object s, Heartbeat e)
-                    {
-                        _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
-                        numHeartbeats++;
-                    }
-
-                    client1.HeartbeatEvent += HeartbeatEvent;
-                    sw.Restart();
-                    while (numHeartbeats < 2)
-                    {
-                        // Wait for the first two heartbeats
-                        await Task.Delay(1).ConfigureAwait(false);
-                    }
-                    var elapsed = sw.ElapsedMilliseconds;
-                    _output.WriteLine($"Client1 received first two heartbeats in {elapsed} msecs");
-                }
+                _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} connected to {clientHandler}");
+                numConnects++;
             }
+
+            server.ClientConnected += ClientConnected;
+
+            // Set up the handler to capture the ClientDisconnected event
+            void ClientDisconnected(object s, ClientHandler clientHandler)
+            {
+                _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} disconnected from {clientHandler}");
+                numDisconnects++;
+            }
+
+            server.ClientDisconnected += ClientDisconnected;
+
+            using var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false);
+            var sw = Stopwatch.StartNew();
+            while (numConnects != 1 && sw.ElapsedMilliseconds < 1000)
+            {
+                // Wait for the client to connect
+                await Task.Delay(1).ConfigureAwait(false);
+            }
+            Assert.Equal(1, server.NumberOfClientHandlers);
+
+            var loginResponse = await client1.LogonAsync(1, true, TimeoutForConnect).ConfigureAwait(true);
+            Assert.NotNull(loginResponse);
+
+            // Set up the handler to capture the HeartBeat event
+            var numHeartbeats = 0;
+
+            void HeartbeatEvent(object s, Heartbeat e)
+            {
+                _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
+                numHeartbeats++;
+            }
+
+            client1.HeartbeatEvent += HeartbeatEvent;
+            sw.Restart();
+            while (numHeartbeats < 2)
+            {
+                // Wait for the first two heartbeats
+                await Task.Delay(1).ConfigureAwait(false);
+            }
+            var elapsed = sw.ElapsedMilliseconds;
+            _output.WriteLine($"Client1 received first two heartbeats in {elapsed} msecs");
         }
 
         [Fact]

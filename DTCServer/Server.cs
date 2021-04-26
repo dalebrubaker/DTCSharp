@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -135,6 +136,10 @@ namespace DTCServer
                         clientHandler.Disconnected += ClientHandlerOnDisconnected;
                     }
                     OnClientConnected(clientHandler);
+                }
+                catch (ObjectDisposedException)
+                {
+                    Debug.Assert(_isDisposed);
                 }
                 catch (InvalidOperationException)
                 {
