@@ -129,7 +129,7 @@ namespace TestsDTC
                         Integer1 = 0,
                     };
                     sw.Restart();
-                    await clientHistorical.SendRequestAsync(DTCMessageType.HistoricalPriceDataRequest, request, CancellationToken.None).ConfigureAwait(false);
+                    clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
                     while (!isFinalRecordReceived)
                     {
                         await Task.Delay(100).ConfigureAwait(false);

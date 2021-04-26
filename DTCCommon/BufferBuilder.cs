@@ -109,7 +109,7 @@ namespace DTCCommon
             _binaryWriter.Write(value);
         }
 
-        public async Task WriteAsync(Stream stream, CancellationToken cancellationToken)
+        public void Write(Stream stream)
         {
             try
             {
@@ -117,7 +117,7 @@ namespace DTCCommon
                 if (Buffer.Length == 11)
                 {
                 }
-                await stream.WriteAsync(Buffer, 0, Buffer.Length, cancellationToken).ConfigureAwait(false);
+                stream.Write(Buffer, 0, Buffer.Length);
                 //Logger.Debug($"{this} wrote {Buffer.Length:N0} bytes to stream");
             }
             catch (Exception e)

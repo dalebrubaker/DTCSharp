@@ -442,7 +442,7 @@ namespace TestsDTCClient
             };
             if (_client != null)
             {
-                await _client.SendRequestAsync(DTCMessageType.Logoff, logoffRequest, CancellationToken.None);
+                _client.SendRequest(DTCMessageType.Logoff, logoffRequest);
                 await DisposeClientAsync().ConfigureAwait(false);
             }
         }
@@ -455,7 +455,7 @@ namespace TestsDTCClient
                 RequestID = _client.NextRequestId
             };
             logControlSymbols.LogMessage($"Sent exchangeListRequest, RequestID={exchangeListRequest.RequestID}");
-            await _client.SendRequestAsync(DTCMessageType.ExchangeListRequest, exchangeListRequest, CancellationToken.None);
+            _client.SendRequest(DTCMessageType.ExchangeListRequest, exchangeListRequest);
             if (string.IsNullOrEmpty(_client.LogonResponse.SymbolExchangeDelimiter))
             {
                 logControlSymbols.LogMessage("The LogonResponse.SymbolExchangeDelimiter is empty, so Exchanges probably aren't supported.");
@@ -615,7 +615,7 @@ namespace TestsDTCClient
             }
             logControlLevel1.LogMessage($"Subscribing to market data for {txtSymbolLevel1_1.Text}");
             _symbolId1 = RequireSymbolId(txtSymbolLevel1_1.Text, "");
-            _client.SubscribeMarketDataAsync(_symbolId1, txtSymbolLevel1_1.Text, "");
+            _client.SubscribeMarketData(_symbolId1, txtSymbolLevel1_1.Text, "");
         }
 
         private uint RequireSymbolId(string symbol, string exchange)
@@ -642,7 +642,7 @@ namespace TestsDTCClient
             }
             _ctsLevel1Symbol1?.Cancel();
             _ctsLevel1Symbol1 = null;
-            _client.UnsubscribeMarketDataAsync(_symbolId1);
+            _client.UnsubscribeMarketData(_symbolId1);
         }
 
         private void btnSubscribeEvents2_Click(object sender, EventArgs e)
@@ -655,7 +655,7 @@ namespace TestsDTCClient
             }
             logControlLevel1.LogMessage($"Subscribing to market data for {txtSymbolLevel1_2.Text}");
             _symbolId2 = RequireSymbolId(txtSymbolLevel1_2.Text, "");
-            _client.SubscribeMarketDataAsync(_symbolId2, txtSymbolLevel1_2.Text, "");
+            _client.SubscribeMarketData(_symbolId2, txtSymbolLevel1_2.Text, "");
         }
 
         private void btnUnsubscribe2_Click(object sender, EventArgs e)
@@ -669,7 +669,7 @@ namespace TestsDTCClient
             }
             _ctsLevel1Symbol2?.Cancel();
             _ctsLevel1Symbol2 = null;
-            _client.UnsubscribeMarketDataAsync(_symbolId2);
+            _client.UnsubscribeMarketData(_symbolId2);
         }
 
         private async void btnSubscribeCallbacks1_Click(object sender, EventArgs e)

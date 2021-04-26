@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using DTCCommon.Extensions;
@@ -37,7 +35,7 @@ namespace DTCCommon.Codecs
 
         public override EncodingEnum Encoding => EncodingEnum.BinaryEncoding;
 
-        public override async Task WriteAsync<T>(DTCMessageType messageType, T message, CancellationToken cancellationToken)
+        public override void Write<T>(DTCMessageType messageType, T message)
         {
             //Logger.Debug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
             switch (messageType)
@@ -46,11 +44,11 @@ namespace DTCCommon.Codecs
                     throw new ArgumentException(messageType.ToString());
                 case DTCMessageType.LogonRequest:
                     var logonRequest = message as LogonRequest;
-                    await WriteLogonRequestAsync<T>(messageType, logonRequest, cancellationToken).ConfigureAwait(false);
+                    WriteLogonRequest<T>(messageType, logonRequest);
                     return;
                 case DTCMessageType.LogonResponse:
                     var logonResponse = message as LogonResponse;
-                    await WriteLogonResponseAsync<T>(messageType, logonResponse, cancellationToken).ConfigureAwait(false);
+                    WriteLogonResponse<T>(messageType, logonResponse);
                     return;
                 case DTCMessageType.Heartbeat:
                     if (_disabledHeartbeats)
@@ -58,69 +56,68 @@ namespace DTCCommon.Codecs
                         return;
                     }
                     var heartbeat = message as Heartbeat;
-                    await WriteHeartbeatAsync<T>(messageType, heartbeat, cancellationToken).ConfigureAwait(false);
+                    WriteHeartbeat<T>(messageType, heartbeat);
                     return;
                 case DTCMessageType.Logoff:
                     var logoff = message as Logoff;
-                    await WriteLogoffAsync<T>(messageType, logoff, cancellationToken).ConfigureAwait(false);
+                    WriteLogoff<T>(messageType, logoff);
                     return;
                 case DTCMessageType.EncodingRequest:
                     var encodingRequest = message as EncodingRequest;
-                    await WriteEncodingRequestAsync(messageType, encodingRequest, cancellationToken);
+                    WriteEncodingRequest(messageType, encodingRequest);
                     return;
                 case DTCMessageType.EncodingResponse:
                     var encodingResponse = message as EncodingResponse;
-                    await WriteEncodingResponseAsync(messageType, encodingResponse, cancellationToken).ConfigureAwait(false);
+                    WriteEncodingResponse(messageType, encodingResponse);
                     return;
                 case DTCMessageType.MarketDataRequest:
                     var marketDataRequest = message as MarketDataRequest;
-                    await WriteMarketDataRequestAsync(messageType, marketDataRequest, cancellationToken).ConfigureAwait(false);
+                    WriteMarketDataRequest(messageType, marketDataRequest);
                     return;
                 case DTCMessageType.MarketDataReject:
                     var marketDataReject = message as MarketDataReject;
-                    await WriteMarketDataRejectAsync(messageType, marketDataReject, cancellationToken).ConfigureAwait(false);
+                    WriteMarketDataReject(messageType, marketDataReject);
                     return;
                 case DTCMessageType.MarketDataFeedStatus:
                     var marketDataFeedStatus = message as MarketDataFeedStatus;
-                    await WriteMarketDataFeedStatusAsync(messageType, marketDataFeedStatus, cancellationToken).ConfigureAwait(false);
+                    WriteMarketDataFeedStatus(messageType, marketDataFeedStatus);
                     return;
                 case DTCMessageType.ExchangeListRequest:
                     var exchangeListRequest = message as ExchangeListRequest;
-                    await WriteExchangeListRequestAsync(messageType, exchangeListRequest, cancellationToken).ConfigureAwait(false);
+                    WriteExchangeListRequest(messageType, exchangeListRequest);
                     return;
                 case DTCMessageType.ExchangeListResponse:
                     var exchangeListResponse = message as ExchangeListResponse;
-                    await WriteExchangeListResponseAsync(messageType, exchangeListResponse, cancellationToken).ConfigureAwait(false);
+                    WriteExchangeListResponse(messageType, exchangeListResponse);
                     return;
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
                     var securityDefinitionForSymbolRequest = message as SecurityDefinitionForSymbolRequest;
-                    await WriteSecurityDefinitionForSymbolRequestAsync(messageType, securityDefinitionForSymbolRequest, cancellationToken)
-                        .ConfigureAwait(false);
+                    WriteSecurityDefinitionForSymbolRequest(messageType, securityDefinitionForSymbolRequest);
                     return;
                 case DTCMessageType.SecurityDefinitionResponse:
                     var securityDefinitionResponse = message as SecurityDefinitionResponse;
-                    await WriteSecurityDefinitionResponseAsync(messageType, securityDefinitionResponse, cancellationToken).ConfigureAwait(false);
+                    WriteSecurityDefinitionResponse(messageType, securityDefinitionResponse);
                     return;
                 case DTCMessageType.SecurityDefinitionReject:
                     var securityDefinitionReject = message as SecurityDefinitionReject;
-                    await WriteSecurityDefinitionRejectAsync(messageType, securityDefinitionReject, cancellationToken).ConfigureAwait(false);
+                    WriteSecurityDefinitionReject(messageType, securityDefinitionReject);
                     return;
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
-                    await WriteHistoricalPriceDataRequestAsync(messageType, historicalPriceDataRequest, cancellationToken).ConfigureAwait(false);
+                    WriteHistoricalPriceDataRequest(messageType, historicalPriceDataRequest);
                     return;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
                     // Logger.Debug($"{nameof(CodecBinary)} is writing {messageType} {message}");
                     var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
-                    await WriteHistoricalPriceDataResponseHeaderAsync(messageType, historicalPriceDataResponseHeader, cancellationToken).ConfigureAwait(false);
+                    WriteHistoricalPriceDataResponseHeader(messageType, historicalPriceDataResponseHeader);
                     return;
                 case DTCMessageType.HistoricalPriceDataReject:
                     var historicalPriceDataReject = message as HistoricalPriceDataReject;
-                    await WriteHistoricalPriceDataRejectAsync(messageType, historicalPriceDataReject, cancellationToken).ConfigureAwait(false);
+                    WriteHistoricalPriceDataReject(messageType, historicalPriceDataReject);
                     return;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
                     var historicalPriceDataRecordResponse = message as HistoricalPriceDataRecordResponse;
-                    await WriteHistoricalPriceDataRecordResponseAsync(messageType, historicalPriceDataRecordResponse, cancellationToken).ConfigureAwait(false);
+                    WriteHistoricalPriceDataRecordResponse(messageType, historicalPriceDataRecordResponse);
                     return;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     // Probably no longer used after version SierraChart version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
@@ -207,14 +204,13 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
                 case DTCMessageType.HistoricalMarketDepthDataReject:
                 case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(WriteAsync)}: {messageType}");
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}.{nameof(Write)}: {messageType}");
                 default:
                     throw new ArgumentOutOfRangeException(messageType.ToString(), messageType, null);
             }
         }
 
-        private async Task WriteHistoricalPriceDataRecordResponseAsync(DTCMessageType messageType,
-            HistoricalPriceDataRecordResponse historicalPriceDataRecordResponse, CancellationToken cancellationToken)
+        private void WriteHistoricalPriceDataRecordResponse(DTCMessageType messageType, HistoricalPriceDataRecordResponse historicalPriceDataRecordResponse)
         {
             const int sizeExcludingHeader = 4 + 9 * 8 + 1;
             const int size = sizeExcludingHeader + 4;
@@ -233,11 +229,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(historicalPriceDataRecordResponse.BidVolume);
             bufferBuilder.Add(historicalPriceDataRecordResponse.AskVolume);
             bufferBuilder.Add((byte)historicalPriceDataRecordResponse.IsFinalRecord);
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteHistoricalPriceDataRejectAsync(DTCMessageType messageType, HistoricalPriceDataReject historicalPriceDataReject,
-            CancellationToken cancellationToken)
+        private void WriteHistoricalPriceDataReject(DTCMessageType messageType, HistoricalPriceDataReject historicalPriceDataReject)
         {
             const int sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH + 2 + 2;
             const int size = sizeExcludingHeader + 4;
@@ -248,11 +243,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(historicalPriceDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
             bufferBuilder.Add((short)historicalPriceDataReject.RejectReasonCode);
             bufferBuilder.Add((ushort)historicalPriceDataReject.RetryTimeInSeconds);
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteHistoricalPriceDataResponseHeaderAsync(DTCMessageType messageType,
-            HistoricalPriceDataResponseHeader historicalPriceDataResponseHeader, CancellationToken cancellationToken)
+        private void WriteHistoricalPriceDataResponseHeader(DTCMessageType messageType, HistoricalPriceDataResponseHeader historicalPriceDataResponseHeader)
         {
             const int sizeExcludingHeader = 4 + 4 + 2 + 2 + 4;
             const int size = sizeExcludingHeader + 4;
@@ -265,11 +259,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((byte)historicalPriceDataResponseHeader.NoRecordsToReturn);
             bufferBuilder.Add((short)0); // align for packing
             bufferBuilder.Add(historicalPriceDataResponseHeader.IntToFloatPriceDivisor);
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteHistoricalPriceDataRequestAsync(DTCMessageType messageType, HistoricalPriceDataRequest historicalPriceDataRequest,
-            CancellationToken cancellationToken)
+        private void WriteHistoricalPriceDataRequest(DTCMessageType messageType, HistoricalPriceDataRequest historicalPriceDataRequest)
         {
             const int sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 4 + 8 + 8 + 4 + 3 * 1;
             const int size = sizeExcludingHeader + 4;
@@ -287,11 +280,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((byte)historicalPriceDataRequest.UseZLibCompression);
             bufferBuilder.Add((byte)historicalPriceDataRequest.RequestDividendAdjustedStockData);
             bufferBuilder.Add((byte)historicalPriceDataRequest.Integer1);
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteSecurityDefinitionRejectAsync(DTCMessageType messageType, SecurityDefinitionReject securityDefinitionReject,
-            CancellationToken cancellationToken)
+        private void WriteSecurityDefinitionReject(DTCMessageType messageType, SecurityDefinitionReject securityDefinitionReject)
         {
             const int sizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH;
             const int size = sizeExcludingHeader + 4;
@@ -300,11 +292,10 @@ namespace DTCCommon.Codecs
 
             bufferBuilder.Add(securityDefinitionReject.RequestID);
             bufferBuilder.Add(securityDefinitionReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteSecurityDefinitionResponseAsync(DTCMessageType messageType, SecurityDefinitionResponse securityDefinitionResponse,
-            CancellationToken cancellationToken)
+        private void WriteSecurityDefinitionResponse(DTCMessageType messageType, SecurityDefinitionResponse securityDefinitionResponse)
         {
             const int sizeExcludingHeader =
                 4
@@ -352,11 +343,11 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(securityDefinitionResponse.HasMarketDepthData);
             bufferBuilder.Add(securityDefinitionResponse.DisplayPriceMultiplier);
             bufferBuilder.Add(securityDefinitionResponse.ExchangeSymbol.ToFixedBytes(SYMBOL_LENGTH));
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteSecurityDefinitionForSymbolRequestAsync(DTCMessageType messageType,
-            SecurityDefinitionForSymbolRequest securityDefinitionForSymbolRequest, CancellationToken cancellationToken)
+        private void WriteSecurityDefinitionForSymbolRequest(DTCMessageType messageType,
+            SecurityDefinitionForSymbolRequest securityDefinitionForSymbolRequest)
         {
             const int sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
             const int size = sizeExcludingHeader + 4;
@@ -366,11 +357,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(securityDefinitionForSymbolRequest.RequestID);
             bufferBuilder.Add(securityDefinitionForSymbolRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
             bufferBuilder.Add(securityDefinitionForSymbolRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteExchangeListResponseAsync(DTCMessageType messageType, ExchangeListResponse exchangeListResponse,
-            CancellationToken cancellationToken)
+        private void WriteExchangeListResponse(DTCMessageType messageType, ExchangeListResponse exchangeListResponse)
         {
             const int sizeExcludingHeader = 4 + EXCHANGE_LENGTH + 1 + EXCHANGE_DESCRIPTION_LENGTH;
             const int size = sizeExcludingHeader + 4;
@@ -381,11 +371,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(exchangeListResponse.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
             bufferBuilder.Add((byte)exchangeListResponse.IsFinalMessage);
             bufferBuilder.Add(exchangeListResponse.Description.ToFixedBytes(EXCHANGE_DESCRIPTION_LENGTH));
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteExchangeListRequestAsync(DTCMessageType messageType, ExchangeListRequest exchangeListRequest,
-            CancellationToken cancellationToken)
+        private void WriteExchangeListRequest(DTCMessageType messageType, ExchangeListRequest exchangeListRequest)
         {
             const int sizeExcludingHeader = 4;
             const int size = sizeExcludingHeader + 4;
@@ -393,11 +382,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(exchangeListRequest.RequestID);
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteMarketDataFeedStatusAsync(DTCMessageType messageType, MarketDataFeedStatus marketDataFeedStatus,
-            CancellationToken cancellationToken)
+        private void WriteMarketDataFeedStatus(DTCMessageType messageType, MarketDataFeedStatus marketDataFeedStatus)
         {
             const int sizeExcludingHeader = 4;
             const int size = sizeExcludingHeader + 4;
@@ -405,10 +393,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add((int)marketDataFeedStatus.Status);
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteMarketDataRejectAsync(DTCMessageType messageType, MarketDataReject marketDataReject, CancellationToken cancellationToken)
+        private void WriteMarketDataReject(DTCMessageType messageType, MarketDataReject marketDataReject)
         {
             const int sizeExcludingHeader = 2 + TEXT_DESCRIPTION_LENGTH;
             const int size = sizeExcludingHeader + 4;
@@ -417,10 +405,10 @@ namespace DTCCommon.Codecs
 
             bufferBuilder.Add((ushort)marketDataReject.SymbolID);
             bufferBuilder.Add(marketDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteMarketDataRequestAsync(DTCMessageType messageType, MarketDataRequest marketDataRequest, CancellationToken cancellationToken)
+        private void WriteMarketDataRequest(DTCMessageType messageType, MarketDataRequest marketDataRequest)
         {
             const int sizeExcludingHeader = 4 + 2 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
             const int size = sizeExcludingHeader + 4;
@@ -431,10 +419,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((ushort)marketDataRequest.SymbolID);
             bufferBuilder.Add(marketDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
             bufferBuilder.Add(marketDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteLogoffAsync<T>(DTCMessageType messageType, Logoff logoff, CancellationToken cancellationToken)
+        private void WriteLogoff<T>(DTCMessageType messageType, Logoff logoff)
         {
             try
             {
@@ -445,7 +433,7 @@ namespace DTCCommon.Codecs
 
                 bufferBuilder.Add(logoff.Reason.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
                 bufferBuilder.Add((byte)logoff.DoNotReconnect);
-                await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+                bufferBuilder.Write(_stream);
             }
             catch (IOException ex)
             {
@@ -454,7 +442,7 @@ namespace DTCCommon.Codecs
             }
         }
 
-        private async Task WriteHeartbeatAsync<T>(DTCMessageType messageType, Heartbeat heartbeat, CancellationToken cancellationToken)
+        private void WriteHeartbeat<T>(DTCMessageType messageType, Heartbeat heartbeat)
         {
             const int size = 16;
             using var bufferBuilder = new BufferBuilder(size, this);
@@ -462,10 +450,10 @@ namespace DTCCommon.Codecs
 
             bufferBuilder.Add(heartbeat.NumDroppedMessages);
             bufferBuilder.Add(heartbeat.CurrentDateTime);
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteLogonResponseAsync<T>(DTCMessageType messageType, LogonResponse logonResponse, CancellationToken cancellationToken)
+        private void WriteLogonResponse<T>(DTCMessageType messageType, LogonResponse logonResponse)
         {
             const int sizeExcludingHeader = 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + 4 * 1 + SYMBOL_EXCHANGE_DELIMITER_LENGTH + 8 * 1 + 4;
             const int size = sizeExcludingHeader + 4;
@@ -492,10 +480,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((byte)logonResponse.UseIntegerPriceOrderMessages);
             bufferBuilder.Add((byte)logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount);
             bufferBuilder.Add(logonResponse.MarketDataSupported);
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
-        private async Task WriteLogonRequestAsync<T>(DTCMessageType messageType, LogonRequest logonRequest, CancellationToken cancellationToken)
+        private void WriteLogonRequest<T>(DTCMessageType messageType, LogonRequest logonRequest)
         {
             const int sizeExcludingHeader = 4
                                             + USERNAME_PASSWORD_LENGTH
@@ -523,7 +511,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(logonRequest.TradeAccount.ToFixedBytes(TRADE_ACCOUNT_LENGTH));
             bufferBuilder.Add(logonRequest.HardwareIdentifier.ToFixedBytes(GENERAL_IDENTIFIER_LENGTH));
             bufferBuilder.Add(logonRequest.ClientName.ToFixedBytes(32));
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
         }
 
         public override T Load<T>(DTCMessageType messageType, byte[] bytes)

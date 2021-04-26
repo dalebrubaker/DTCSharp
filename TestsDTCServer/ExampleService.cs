@@ -154,13 +154,13 @@ namespace TestsDTCServer
                         ProtocolVersion = logonRequest.ProtocolVersion,
                         MarketDataSupported = 1u
                     };
-                    await clientHandler.SendResponseAsync(DTCMessageType.LogonResponse, logonResponse, cancellationToken).ConfigureAwait(false);
+                    clientHandler.SendResponse(DTCMessageType.LogonResponse, logonResponse);
                     break;
 
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
                     HistoricalPriceDataResponseHeader.UseZLibCompressionBool = historicalPriceDataRequest.IsZipped;
-                    await clientHandler.SendResponseAsync(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader, cancellationToken).ConfigureAwait(false);
+                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader);
                     var numSent = 0;
                     for (int i = 0; i < HistoricalPriceDataRecordResponses.Count; i++)
                     {
@@ -168,12 +168,12 @@ namespace TestsDTCServer
                         if (historicalPriceDataRecordResponse.StartDateTime >= historicalPriceDataRequest.StartDateTime)
                         {
                             numSent++;
-                            await clientHandler.SendResponseAsync(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponse, cancellationToken).ConfigureAwait(false);
+                            clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponse);
                         }
                     }
                     var historicalPriceDataRecordResponseFinal = new HistoricalPriceDataRecordResponse();
                     historicalPriceDataRecordResponseFinal.IsFinalRecordBool = true;
-                    await clientHandler.SendResponseAsync(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponseFinal, cancellationToken).ConfigureAwait(false);
+                    clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponseFinal);
                     numSent++;
                     if (historicalPriceDataRequest.IsZipped)
                     {
@@ -314,13 +314,13 @@ namespace TestsDTCServer
                 if (marketDataRequest.SymbolID == marketDataUpdateTradeCompact.SymbolID)
                 {
                     numSentMarketData++;
-                    await clientHandler.SendResponseAsync(DTCMessageType.MarketDataUpdateTradeCompact, marketDataUpdateTradeCompact, cancellationToken).ConfigureAwait(false);
+                    clientHandler.SendResponse(DTCMessageType.MarketDataUpdateTradeCompact, marketDataUpdateTradeCompact);
                 }
                 var marketDataUpdateBidAskCompact = MarketDataUpdateBidAskCompacts[i];
                 if (marketDataRequest.SymbolID == marketDataUpdateBidAskCompact.SymbolID)
                 {
                     numSentBidAsks++;
-                    await clientHandler.SendResponseAsync(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact, cancellationToken).ConfigureAwait(false);
+                    clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                 }
             }
             s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
@@ -342,7 +342,7 @@ namespace TestsDTCServer
                 MarketDepthUpdateDateTime = DateTime.UtcNow.UtcToDtcDateTimeWithMilliseconds(),
                 OpenInterest = 789
             };
-            await clientHandler.SendResponseAsync(DTCMessageType.MarketDataSnapshot, marketDataSnapshot, cancellationToken).ConfigureAwait(false);
+            clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, marketDataSnapshot);
         }
 
         #endregion events

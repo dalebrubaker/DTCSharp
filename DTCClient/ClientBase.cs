@@ -78,7 +78,7 @@ namespace DTCClient
 
         public string ClientName { get; protected set; }
 
-        private async void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
+        private void TimerHeartbeatElapsed(object sender, ElapsedEventArgs e)
         {
             if (!_useHeartbeat)
             {
@@ -93,7 +93,7 @@ namespace DTCClient
 
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat();
-            await SendRequestAsync(DTCMessageType.Heartbeat, heartbeat, _ctsProducer.Token).ConfigureAwait(false);
+            SendRequest(DTCMessageType.Heartbeat, heartbeat);
         }
 
         #region events
@@ -191,7 +191,7 @@ namespace DTCClient
 
             // Give the server a bit to be able to respond
             //await Task.Delay(100).ConfigureAwait(true);
-            await SendRequestAsync(DTCMessageType.EncodingRequest, encodingRequest, _ctsProducer.Token).ConfigureAwait(false);
+            SendRequest(DTCMessageType.EncodingRequest, encodingRequest);
 
             // Wait until the response is received or until timeout
             var startTime = DateTime.Now;
@@ -267,7 +267,7 @@ namespace DTCClient
                 TradeAccount = tradeAccount,
                 TradeMode = tradeMode
             };
-            await SendRequestAsync(DTCMessageType.LogonRequest, logonRequest, _ctsProducer.Token).ConfigureAwait(false);
+            SendRequest(DTCMessageType.LogonRequest, logonRequest);
 
             // Wait until the response is received or until timeout
             var startTime = DateTime.Now;
@@ -289,9 +289,8 @@ namespace DTCClient
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        /// <param name="cancellationToken"></param>
         /// <typeparam name="T"></typeparam>
-        protected internal async Task SendRequestAsync<T>(DTCMessageType messageType, T message, CancellationToken cancellationToken) where T : IMessage
+        protected internal void SendRequest<T>(DTCMessageType messageType, T message) where T : IMessage
         {
 #if DEBUG
             //DebugHelpers.AddRequestSent(messageType, _currentCodec);
@@ -305,7 +304,7 @@ namespace DTCClient
 #endif
             try
             {
-                await _currentCodec.WriteAsync(messageType, message, cancellationToken).ConfigureAwait(false);
+                _currentCodec.Write(messageType, message);
             }
             catch (Exception ex)
             {
@@ -326,7 +325,7 @@ namespace DTCClient
                 while (!_ctsProducer.IsCancellationRequested)
                 {
                     //Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} to read a message with {_currentCodec.Encoding}");
-                    var message = await ReadMessageDTCAsync(_ctsProducer.Token);
+                    var message = ReadMessageDTC();
                     //Logger.Debug($"Did in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} read a message with {_currentCodec.Encoding}");
                     prevMessageDTC = message;
                     if (_ctsProducer.IsCancellationRequested)
@@ -393,14 +392,14 @@ namespace DTCClient
             //_isProducerRunning = false;
         }
 
-        private async Task<MessageDTC> ReadMessageDTCAsync(CancellationToken cancellationToken)
+        private MessageDTC ReadMessageDTC()
         {
             while (!_ctsProducer.Token.IsCancellationRequested)
             {
                 try
                 {
                     //s_logger.Debug($"Waiting in {nameof(Client)}.{nameof(ResponseReader)} to read a message");
-                    var message = await _currentCodec.GetMessageDTCAsync(cancellationToken);
+                    var message = _currentCodec.GetMessageDTC();
                     return message;
                 }
                 catch (IOException ex)
@@ -524,11 +523,11 @@ namespace DTCClient
             {
                 //s_logger.Debug("Disposing Client");
                 _isDisposed = true;
-                _currentCodec.WriteAsync(DTCMessageType.Logoff, new Logoff
+                _currentCodec.Write(DTCMessageType.Logoff, new Logoff
                 {
                     DoNotReconnect = 1u,
                     Reason = "Client Disposed"
-                }, default(CancellationToken));
+                });
                 _currentCodec.Dispose();
                 _ctsProducer.Cancel(true);
                 _ctsConsumer.Cancel(true);

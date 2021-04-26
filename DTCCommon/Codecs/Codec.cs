@@ -41,8 +41,7 @@ namespace DTCCommon.Codecs
         /// </summary>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        /// <param name="cancellationToken"></param>
-        public abstract Task WriteAsync<T>(DTCMessageType messageType, T message, CancellationToken cancellationToken) where T : IMessage;
+        public abstract void Write<T>(DTCMessageType messageType, T message) where T : IMessage;
 
         /// <summary>
         /// Load the message represented by bytes into a new IMessage. Each codec translates the byte stream to a protobuf message.
@@ -60,9 +59,9 @@ namespace DTCCommon.Codecs
             return result;
         }
 
-        public async Task<MessageDTC> GetMessageDTCAsync(CancellationToken cancellationToken)
+        public MessageDTC GetMessageDTC()
         {
-            var (messageType, bytes) = await ReadMessageAsync(cancellationToken);
+            var (messageType, bytes) = ReadMessage();
             if (messageType == DTCMessageType.MessageTypeUnset)
             {
                 return new MessageDTC(messageType, null);
@@ -284,7 +283,7 @@ namespace DTCCommon.Codecs
             }
         }
 
-        public async Task<(DTCMessageType messageType, byte[] bytes)> ReadMessageAsync(CancellationToken cancellationToken)
+        public (DTCMessageType messageType, byte[] bytes) ReadMessage()
         {
             if (_isDisposed)
             {
@@ -292,7 +291,7 @@ namespace DTCCommon.Codecs
             }
             try
             {
-                var numBytes = await _stream.ReadAsync(_bufferHeader, 0, 2, cancellationToken).ConfigureAwait(false);
+                var numBytes = _stream.Read(_bufferHeader, 0, 2);
                 if (numBytes < 2)
                 {
                     // There is not a complete record available yet
@@ -300,18 +299,17 @@ namespace DTCCommon.Codecs
                 }
                 Debug.Assert(numBytes == 2);
                 var size = BitConverter.ToInt16(_bufferHeader, 0);
-                Logger.Debug($"{this}.{nameof(ReadMessageAsync)} read size={size} from _stream");
+                Logger.Debug($"{this}.{nameof(ReadMessage)} read size={size} from _stream");
                 if (size < 4)
                 {
-                    await Task.Delay(100);
                     var buffer = new byte[10000];
-                    var moreBytes = await _stream.ReadAsync(buffer, 0, 10000, cancellationToken).ConfigureAwait(false);
+                    var moreBytes = _stream.Read(buffer, 0, 10000);
                     // There is not a complete record available yet
                     return (DTCMessageType.MessageTypeUnset, new byte[0]);
                     // Debug.Assert(size > 4, "If only 4, then message length is 0 bytes");
                 }
                 //Debug.Assert(size > 4, "If only 4, then message length is 0 bytes");
-                numBytes = await _stream.ReadAsync(_bufferHeader, 2, 2, cancellationToken).ConfigureAwait(false);
+                numBytes = _stream.Read(_bufferHeader, 2, 2);
                 if (numBytes < 2)
                 {
                     // There is not a complete record available yet
@@ -319,16 +317,16 @@ namespace DTCCommon.Codecs
                 }
                 Debug.Assert(numBytes == 2);
                 var messageType = (DTCMessageType)BitConverter.ToInt16(_bufferHeader, 2);
-                //Logger.Debug($"{this}.{nameof(ReadMessageAsync)} read messageType={messageType} from _stream");
+                //Logger.Debug($"{this}.{nameof(ReadMessage)} read messageType={messageType} from _stream");
                 var messageSize = size - 4; // size includes the header
                 var messageBytes = new byte[messageSize];
-                numBytes = await _stream.ReadAsync(messageBytes, 0, messageSize, cancellationToken).ConfigureAwait(false);
+                numBytes = _stream.Read(messageBytes, 0, messageSize);
                 if (numBytes < messageSize)
                 {
                     // There is not a complete record available yet
                     return (DTCMessageType.MessageTypeUnset, new byte[0]);
                 }
-                //Logger.Debug($"{this}.{nameof(ReadMessageAsync)} read {numBytes} messageSize from _stream");
+                //Logger.Debug($"{this}.{nameof(ReadMessage)} read {numBytes} messageSize from _stream");
                 Debug.Assert(numBytes == messageSize);
                 return (messageType, messageBytes);
             }
@@ -349,7 +347,7 @@ namespace DTCCommon.Codecs
             }
         }
 
-        protected async Task WriteEncodingRequestAsync(DTCMessageType messageType, EncodingRequest encodingRequest, CancellationToken cancellationToken)
+        protected void WriteEncodingRequest(DTCMessageType messageType, EncodingRequest encodingRequest)
         {
             // EncodingRequest goes as binary for all protocol versions
             var size = 16;
@@ -359,7 +357,8 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((int)encodingRequest.Encoding); // enum size is 4
             var protocolType = encodingRequest.ProtocolType.ToFixedBytes(4);
             bufferBuilder.Add(protocolType); // 3 chars DTC plus null terminator 
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
+
         }
 
         protected static void LoadEncodingResponse<T>(byte[] bytes, int index, ref T result) where T : IMessage, new()
@@ -383,7 +382,7 @@ namespace DTCCommon.Codecs
             encodingRequest.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
         }
 
-        protected async Task WriteEncodingResponseAsync(DTCMessageType messageType, EncodingResponse encodingResponse, CancellationToken cancellationToken)
+        protected void WriteEncodingResponse(DTCMessageType messageType, EncodingResponse encodingResponse)
         {
             var size = (short)16;
             using var bufferBuilder = new BufferBuilder(size, this);
@@ -393,7 +392,8 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((int)encodingResponse.Encoding); // enum size is 4
             var protocolType = encodingResponse.ProtocolType.ToFixedBytes(4);
             bufferBuilder.Add(protocolType); // 3 chars DTC plus null terminator 
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
+
         }
 
         /// <summary>

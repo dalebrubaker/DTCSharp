@@ -379,7 +379,7 @@ namespace TestsDTC
 
                     // Now subscribe to the data
                     sw.Restart();
-                    var symbolId = await client1.SubscribeMarketDataAsync(1, "ESZ6", "").ConfigureAwait(false);
+                    var symbolId = client1.SubscribeMarketData(1, "ESZ6", "");
                     Assert.Equal(1u, symbolId);
                     while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
                     {
@@ -392,7 +392,7 @@ namespace TestsDTC
                     Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numTrades);
                     Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numBidAsks);
 
-                    await client1.UnsubscribeMarketDataAsync(symbolId).ConfigureAwait(false);
+                    client1.UnsubscribeMarketData(symbolId);
                 }
             }
         }

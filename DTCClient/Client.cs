@@ -150,7 +150,7 @@ namespace DTCClient
                 RequestDividendAdjustedStockData = requestDividendAdjustedStockData ? 1U : 0,
                 Integer1 = flag1 ? 1U : 0,
             };
-            await SendRequestAsync(DTCMessageType.HistoricalPriceDataRequest, request, cancellationToken).ConfigureAwait(false);
+            SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
 
             // Wait until timeout or reject or response is received
             var startTime = DateTime.Now; // for checking timeout
@@ -187,7 +187,7 @@ namespace DTCClient
                 RequestID = NextRequestId,
                 Symbol = symbol
             };
-            await SendRequestAsync(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest, _ctsProducer.Token).ConfigureAwait(false);
+            SendRequest(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
 
             // Wait until the response is received or until timeout
             while (result == null && (DateTime.Now - startTime).TotalMilliseconds < timeout)
@@ -205,7 +205,7 @@ namespace DTCClient
         /// <param name="symbolId">The 1-based unique SymbolId that you have assigned symbol.exchange</param>
         /// <param name="symbol"></param>
         /// <param name="exchange">optional</param>
-        public async Task<uint> SubscribeMarketDataAsync(uint symbolId, string symbol, string exchange)
+        public uint SubscribeMarketData(uint symbolId, string symbol, string exchange)
         {
             if (LogonResponse == null || LogonResponse.MarketDataSupported == 0)
             {
@@ -218,7 +218,7 @@ namespace DTCClient
                 Symbol = symbol,
                 Exchange = exchange
             };
-            await SendRequestAsync(DTCMessageType.MarketDataRequest, request, _ctsProducer.Token).ConfigureAwait(false);
+            SendRequest(DTCMessageType.MarketDataRequest, request);
             return symbolId;
         }
 
@@ -226,14 +226,14 @@ namespace DTCClient
         /// Unsubscribe from market data  symbolId 
         /// </summary>
         /// <param name="symbolId">The 1-based unique SymbolId that you have assigned symbol.exchange</param>
-        public async Task UnsubscribeMarketDataAsync(uint symbolId)
+        public void UnsubscribeMarketData(uint symbolId)
         {
             var request = new MarketDataRequest
             {
                 RequestAction = RequestActionEnum.Unsubscribe,
                 SymbolID = symbolId,
             };
-            await SendRequestAsync(DTCMessageType.MarketDataRequest, request, _ctsProducer.Token).ConfigureAwait(false);
+            SendRequest(DTCMessageType.MarketDataRequest, request);
         }
 
         /// <summary>
@@ -369,7 +369,7 @@ namespace DTCClient
                 Symbol = symbol,
                 Exchange = exchange
             };
-            await SendRequestAsync(DTCMessageType.MarketDataRequest, request, _ctsProducer.Token).ConfigureAwait(false);
+            SendRequest(DTCMessageType.MarketDataRequest, request);
 
             // Wait until timeout or cancellation
             var startTime = DateTime.Now; // for checking timeout

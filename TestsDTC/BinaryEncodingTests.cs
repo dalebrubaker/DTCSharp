@@ -22,7 +22,7 @@ namespace TestsDTC
             var ms = new MemoryStream();
             var bw = new BinaryWriter(ms);
             using var codec = new CodecBinary(ms);
-            codec.WriteAsync(messageType, message, CancellationToken.None);
+            codec.Write(messageType, message);
             var bytes = ms.ToArray();
             Utility.ReadHeader(bytes, out var sizeExcludingHeader, out var messageTypeHeader);
             Assert.Equal(messageType, messageTypeHeader);

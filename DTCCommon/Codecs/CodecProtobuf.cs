@@ -17,7 +17,7 @@ namespace DTCCommon.Codecs
 
         public override EncodingEnum Encoding => EncodingEnum.ProtocolBuffers;
 
-        public override async Task WriteAsync<T>(DTCMessageType messageType, T message, CancellationToken cancellationToken)
+        public override void Write<T>(DTCMessageType messageType, T message)
         {
             if (_disabledHeartbeats && messageType == DTCMessageType.Heartbeat)
             {
@@ -27,7 +27,8 @@ namespace DTCCommon.Codecs
             using var bufferBuilder = new BufferBuilder(4 + bytes.Length, this);
             bufferBuilder.AddHeader(messageType);
             bufferBuilder.Add(bytes);
-            await bufferBuilder.WriteAsync(_stream, cancellationToken).ConfigureAwait(false);
+            bufferBuilder.Write(_stream);
+
         }
 
         public override T Load<T>(DTCMessageType messageType, byte[] bytes)
