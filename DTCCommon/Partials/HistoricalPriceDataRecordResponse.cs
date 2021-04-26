@@ -23,7 +23,7 @@ namespace DTCPB
         public string ToDiagnosticString()
         {
             return
-                $"{StartDateTimeUtc}(UTC) O:{OpenPrice} H:{HighPrice} L:{LowPrice} C:{LastPrice} V:{Volume} BV:{BidVolume} AV:{AskVolume} #T{NumTrades} Final{IsFinalRecordBool}";
+                $"{StartDateTimeUtc}(UTC) O:{OpenPrice} H:{HighPrice} L:{LowPrice} C:{LastPrice} V:{Volume} BV:{BidVolume} AV:{AskVolume} #T{NumTrades} FinalRecord={IsFinalRecordBool}";
         }
     }
 }

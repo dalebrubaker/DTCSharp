@@ -136,7 +136,7 @@ namespace TestsDTCServer
             temp?.Invoke(this, message);
         }
 
-        public async Task HandleRequestAsync<T>(ClientHandler clientHandler, DTCMessageType messageType, T message, CancellationToken cancellationToken) where T : IMessage
+        public void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage
         {
             switch (messageType)
             {
@@ -187,14 +187,14 @@ namespace TestsDTCServer
                         case RequestActionEnum.RequestActionUnset:
                             break;
                         case RequestActionEnum.Subscribe:
-                            await SendSnapshotAsync<T>(clientHandler, cancellationToken).ConfigureAwait(false);
-                            await SendMarketDataAsync<T>(clientHandler, marketDataRequest, cancellationToken).ConfigureAwait(false);
+                            SendSnapshot<T>(clientHandler);
+                            SendMarketData<T>(clientHandler, marketDataRequest);
                             break;
                         case RequestActionEnum.Unsubscribe:
                             // stop sending data
                             break;
                         case RequestActionEnum.Snapshot:
-                            await SendSnapshotAsync<T>(clientHandler, cancellationToken).ConfigureAwait(false);
+                            SendSnapshot<T>(clientHandler);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -296,7 +296,7 @@ namespace TestsDTCServer
                 case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
                 case DTCMessageType.HistoricalMarketDepthDataReject:
                 case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                    throw new NotSupportedException($"Unexpected request {messageType} in {GetType().Name}.{nameof(HandleRequestAsync)}");
+                    throw new NotSupportedException($"Unexpected request {messageType} in {GetType().Name}.{nameof(HandleRequest)}");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(messageType), messageType, null);
             }
@@ -304,7 +304,7 @@ namespace TestsDTCServer
             OnMessage(msg);
         }
 
-        private async Task SendMarketDataAsync<T>(ClientHandler clientHandler, MarketDataRequest marketDataRequest, CancellationToken cancellationToken) where T : IMessage
+        private void SendMarketData<T>(ClientHandler clientHandler, MarketDataRequest marketDataRequest) where T : IMessage
         {
             var numSentMarketData = 0;
             var numSentBidAsks = 0;
@@ -326,7 +326,7 @@ namespace TestsDTCServer
             s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
         }
 
-        private static async Task SendSnapshotAsync<T>(ClientHandler clientHandler, CancellationToken cancellationToken) where T : IMessage
+        private static void SendSnapshot<T>(ClientHandler clientHandler) where T : IMessage
         {
             // First we send a snapshot, then bids and asks
             var marketDataSnapshot = new MarketDataSnapshot

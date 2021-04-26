@@ -32,31 +32,23 @@ namespace TestsDTC
         {
             var exampleService = new ExampleService(10, 20);
             var port = ClientServerTests.NextServerPort;
-            using (var server =
-                new Server(
-                    (clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None),
-                    IPAddress.Loopback, port, 1000))
+            using var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequest(clientHandler, messageType, message),
+                    IPAddress.Loopback, port, 1000);
+            try
             {
-                try
-                {
-                    var task = Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
-                }
-                catch (Exception exception)
-                {
-                    var typeName = exception.GetType().Name;
-                    throw;
-                }
-                await Task.Delay(200).ConfigureAwait(false);
-                using (var server2 =
-                    new Server(
-                        (clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None),
-                        IPAddress.Loopback, port, 1000))
-                {
-                    await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync()).ConfigureAwait(false);
-                    await Task.Delay(100).ConfigureAwait(false);
-                    Assert.Equal(0, server.NumberOfClientHandlers);
-                }
+                var task = Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
             }
+            catch (Exception exception)
+            {
+                var typeName = exception.GetType().Name;
+                throw;
+            }
+            await Task.Delay(200).ConfigureAwait(false);
+            using var server2 = new Server((clientHandler, messageType, message) => exampleService.HandleRequest(clientHandler, messageType, message),
+                    IPAddress.Loopback, port, 1000);
+            await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync()).ConfigureAwait(false);
+            await Task.Delay(100).ConfigureAwait(false);
+            Assert.Equal(0, server.NumberOfClientHandlers);
         }
     }
 }

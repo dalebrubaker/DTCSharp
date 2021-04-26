@@ -27,28 +27,15 @@ namespace DTCCommon.Codecs
             using var bufferBuilder = new BufferBuilder(4 + bytes.Length, this);
             bufferBuilder.AddHeader(messageType);
             bufferBuilder.Add(bytes);
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
 
         }
 
         public override T Load<T>(DTCMessageType messageType, byte[] bytes)
         {
-            var index = 0;
             try
             {
                 var result = new T();
-                if (messageType == DTCMessageType.EncodingRequest)
-                {
-                    // EncodingRequest comes back as binary for all protocol versions
-                    LoadEncodingRequest(bytes, index, ref result);
-                    return result;
-                }
-                if (messageType == DTCMessageType.EncodingResponse)
-                {
-                    // EncodingResponse comes back as binary for all protocol versions
-                    LoadEncodingResponse(bytes, index, ref result);
-                    return result;
-                }
                 result.MergeFrom(bytes);
                 return result;
             }

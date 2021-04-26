@@ -61,7 +61,7 @@ namespace TestsDTC
             {
                 exampleService = new ExampleService(100, 200);
             }
-            var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None), IPAddress.Loopback, port, timeoutNoActivity);
+            var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequest(clientHandler, messageType, message), IPAddress.Loopback, port, timeoutNoActivity);
             try
             {
                 //TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(true));

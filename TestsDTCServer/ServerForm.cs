@@ -55,7 +55,7 @@ namespace TestsDTCServer
             btnStartPrimary.Enabled = false;
             btnStopPrimary.Enabled = true;
             _serverPrimary =
-                new Server(async (clientHandler, messageType, message) => await _exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None),
+                new Server((clientHandler, messageType, message) => _exampleService.HandleRequest(clientHandler, messageType, message),
                     _ipAddress, PortListener, 30000);
             try
             {
@@ -79,7 +79,7 @@ namespace TestsDTCServer
             btnStartHistorical.Enabled = false;
             btnStopHistorical.Enabled = true;
             _serverHistorical =
-                new Server(async (clientHandler, messageType, message) => await _exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None), _ipAddress,
+                new Server((clientHandler, messageType, message) => _exampleService.HandleRequest(clientHandler, messageType, message), _ipAddress,
                     PortHistorical, 30000);
             try
             {

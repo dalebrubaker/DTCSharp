@@ -111,7 +111,6 @@ namespace DTCServer
             var binaryReader = new BinaryReader(_networkStreamServer); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
             while (!_ctsRequestReader.Token.IsCancellationRequested)
             {
-                var prevMessageType = DTCMessageType.MessageTypeUnset;
                 try
                 {
                     //if (!stream.DataAvailable)
@@ -121,7 +120,6 @@ namespace DTCServer
                     //}
                     s_logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(RequestReaderLoop)} to read a message with {_currentCodec.Encoding}");
                     var (messageType, messageBytes) = _currentCodec.ReadMessage();
-                    prevMessageType = messageType;
                     if (messageType == DTCMessageType.LogonRequest)
                     {
                     }

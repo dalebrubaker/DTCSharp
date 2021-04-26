@@ -447,7 +447,7 @@ namespace TestsDTCClient
             }
         }
 
-        private async void btnExchanges_Click(object sender, EventArgs e)
+        private void btnExchanges_Click(object sender, EventArgs e)
         {
             // TODO: Change this later to a Client async method that returns the list of ExchangeListResponse objects
             var exchangeListRequest = new ExchangeListRequest

@@ -37,7 +37,7 @@ namespace TestsDTC
             {
                 exampleService = new ExampleService(10, 20);
             }
-            var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None), IPAddress.Loopback, port, timeoutNoActivity);
+            var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequest(clientHandler, messageType, message), IPAddress.Loopback, port, timeoutNoActivity);
             Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }

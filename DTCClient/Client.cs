@@ -560,6 +560,8 @@ namespace DTCClient
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
                     var historicalPriceDataRecordResponse = messageDTC.Message as HistoricalPriceDataRecordResponse;
                     ThrowEvent(historicalPriceDataRecordResponse, HistoricalPriceDataRecordResponseEvent);
+                    if (historicalPriceDataRecordResponse.IsFinalRecordBool)
+                    {}
                     if (historicalPriceDataRecordResponse.IsFinalRecordBool && _currentCodec.IsZippedStream)
                     {
                         // Switch back from reading zlib to regular networkStream

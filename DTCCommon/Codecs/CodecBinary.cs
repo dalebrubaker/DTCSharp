@@ -1,9 +1,8 @@
 ﻿using System;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using DTCCommon.Extensions;
 using DTCPB;
+using Google.Protobuf;
 using uint8_t = System.Byte;
 using int32_t = System.Int32;
 
@@ -210,6 +209,52 @@ namespace DTCCommon.Codecs
             }
         }
 
+        private void WriteEncodingRequest(DTCMessageType messageType, EncodingRequest encodingRequest)
+        {
+            var size = 16;
+            using var bufferBuilder = new BufferBuilder(size, this);
+            bufferBuilder.AddHeader(messageType);
+            bufferBuilder.Add(encodingRequest.ProtocolVersion);
+            bufferBuilder.Add((int)encodingRequest.Encoding); // enum size is 4
+            var protocolType = encodingRequest.ProtocolType.ToFixedBytes(4);
+            bufferBuilder.Add(protocolType); // 3 chars DTC plus null terminator 
+            bufferBuilder.Write(CurrentStream);
+        }
+
+        protected static void LoadEncodingResponse<T>(byte[] bytes, int index, ref T result) where T : IMessage, new()
+        {
+            // EncodingResponse comes back as binary for all protocol versions
+            var encodingResponse = result as EncodingResponse;
+            encodingResponse.ProtocolVersion = BitConverter.ToInt32(bytes, index);
+            index += 4;
+            encodingResponse.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
+            index += 4;
+            encodingResponse.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
+        }
+
+        protected static void LoadEncodingRequest<T>(byte[] bytes, int index, ref T result) where T : IMessage<T>, new()
+        {
+            var encodingRequest = result as EncodingRequest;
+            encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, index);
+            index += 4;
+            encodingRequest.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
+            index += 4;
+            encodingRequest.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
+        }
+
+        protected void WriteEncodingResponse(DTCMessageType messageType, EncodingResponse encodingResponse)
+        {
+            var size = (short)16;
+            using var bufferBuilder = new BufferBuilder(size, this);
+            bufferBuilder.Add(size);
+            bufferBuilder.Add((short)messageType);
+            bufferBuilder.Add(encodingResponse.ProtocolVersion);
+            bufferBuilder.Add((int)encodingResponse.Encoding); // enum size is 4
+            var protocolType = encodingResponse.ProtocolType.ToFixedBytes(4);
+            bufferBuilder.Add(protocolType); // 3 chars DTC plus null terminator 
+            bufferBuilder.Write(CurrentStream);
+        }
+
         private void WriteHistoricalPriceDataRecordResponse(DTCMessageType messageType, HistoricalPriceDataRecordResponse historicalPriceDataRecordResponse)
         {
             const int sizeExcludingHeader = 4 + 9 * 8 + 1;
@@ -229,7 +274,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(historicalPriceDataRecordResponse.BidVolume);
             bufferBuilder.Add(historicalPriceDataRecordResponse.AskVolume);
             bufferBuilder.Add((byte)historicalPriceDataRecordResponse.IsFinalRecord);
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteHistoricalPriceDataReject(DTCMessageType messageType, HistoricalPriceDataReject historicalPriceDataReject)
@@ -243,7 +288,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(historicalPriceDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
             bufferBuilder.Add((short)historicalPriceDataReject.RejectReasonCode);
             bufferBuilder.Add((ushort)historicalPriceDataReject.RetryTimeInSeconds);
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteHistoricalPriceDataResponseHeader(DTCMessageType messageType, HistoricalPriceDataResponseHeader historicalPriceDataResponseHeader)
@@ -259,7 +304,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((byte)historicalPriceDataResponseHeader.NoRecordsToReturn);
             bufferBuilder.Add((short)0); // align for packing
             bufferBuilder.Add(historicalPriceDataResponseHeader.IntToFloatPriceDivisor);
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteHistoricalPriceDataRequest(DTCMessageType messageType, HistoricalPriceDataRequest historicalPriceDataRequest)
@@ -280,7 +325,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((byte)historicalPriceDataRequest.UseZLibCompression);
             bufferBuilder.Add((byte)historicalPriceDataRequest.RequestDividendAdjustedStockData);
             bufferBuilder.Add((byte)historicalPriceDataRequest.Integer1);
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteSecurityDefinitionReject(DTCMessageType messageType, SecurityDefinitionReject securityDefinitionReject)
@@ -292,7 +337,7 @@ namespace DTCCommon.Codecs
 
             bufferBuilder.Add(securityDefinitionReject.RequestID);
             bufferBuilder.Add(securityDefinitionReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteSecurityDefinitionResponse(DTCMessageType messageType, SecurityDefinitionResponse securityDefinitionResponse)
@@ -343,11 +388,10 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(securityDefinitionResponse.HasMarketDepthData);
             bufferBuilder.Add(securityDefinitionResponse.DisplayPriceMultiplier);
             bufferBuilder.Add(securityDefinitionResponse.ExchangeSymbol.ToFixedBytes(SYMBOL_LENGTH));
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
-        private void WriteSecurityDefinitionForSymbolRequest(DTCMessageType messageType,
-            SecurityDefinitionForSymbolRequest securityDefinitionForSymbolRequest)
+        private void WriteSecurityDefinitionForSymbolRequest(DTCMessageType messageType, SecurityDefinitionForSymbolRequest securityDefinitionForSymbolRequest)
         {
             const int sizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
             const int size = sizeExcludingHeader + 4;
@@ -357,7 +401,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(securityDefinitionForSymbolRequest.RequestID);
             bufferBuilder.Add(securityDefinitionForSymbolRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
             bufferBuilder.Add(securityDefinitionForSymbolRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteExchangeListResponse(DTCMessageType messageType, ExchangeListResponse exchangeListResponse)
@@ -371,7 +415,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(exchangeListResponse.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
             bufferBuilder.Add((byte)exchangeListResponse.IsFinalMessage);
             bufferBuilder.Add(exchangeListResponse.Description.ToFixedBytes(EXCHANGE_DESCRIPTION_LENGTH));
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteExchangeListRequest(DTCMessageType messageType, ExchangeListRequest exchangeListRequest)
@@ -382,7 +426,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add(exchangeListRequest.RequestID);
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteMarketDataFeedStatus(DTCMessageType messageType, MarketDataFeedStatus marketDataFeedStatus)
@@ -393,7 +437,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.AddHeader(messageType);
 
             bufferBuilder.Add((int)marketDataFeedStatus.Status);
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteMarketDataReject(DTCMessageType messageType, MarketDataReject marketDataReject)
@@ -405,7 +449,7 @@ namespace DTCCommon.Codecs
 
             bufferBuilder.Add((ushort)marketDataReject.SymbolID);
             bufferBuilder.Add(marketDataReject.RejectText.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteMarketDataRequest(DTCMessageType messageType, MarketDataRequest marketDataRequest)
@@ -419,7 +463,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((ushort)marketDataRequest.SymbolID);
             bufferBuilder.Add(marketDataRequest.Symbol.ToFixedBytes(SYMBOL_LENGTH));
             bufferBuilder.Add(marketDataRequest.Exchange.ToFixedBytes(EXCHANGE_LENGTH));
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteLogoff<T>(DTCMessageType messageType, Logoff logoff)
@@ -433,7 +477,7 @@ namespace DTCCommon.Codecs
 
                 bufferBuilder.Add(logoff.Reason.ToFixedBytes(TEXT_DESCRIPTION_LENGTH));
                 bufferBuilder.Add((byte)logoff.DoNotReconnect);
-                bufferBuilder.Write(_stream);
+                bufferBuilder.Write(CurrentStream);
             }
             catch (IOException ex)
             {
@@ -450,7 +494,7 @@ namespace DTCCommon.Codecs
 
             bufferBuilder.Add(heartbeat.NumDroppedMessages);
             bufferBuilder.Add(heartbeat.CurrentDateTime);
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteLogonResponse<T>(DTCMessageType messageType, LogonResponse logonResponse)
@@ -480,7 +524,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((byte)logonResponse.UseIntegerPriceOrderMessages);
             bufferBuilder.Add((byte)logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount);
             bufferBuilder.Add(logonResponse.MarketDataSupported);
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         private void WriteLogonRequest<T>(DTCMessageType messageType, LogonRequest logonRequest)
@@ -511,7 +555,7 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(logonRequest.TradeAccount.ToFixedBytes(TRADE_ACCOUNT_LENGTH));
             bufferBuilder.Add(logonRequest.HardwareIdentifier.ToFixedBytes(GENERAL_IDENTIFIER_LENGTH));
             bufferBuilder.Add(logonRequest.ClientName.ToFixedBytes(32));
-            bufferBuilder.Write(_stream);
+            bufferBuilder.Write(CurrentStream);
         }
 
         public override T Load<T>(DTCMessageType messageType, byte[] bytes)

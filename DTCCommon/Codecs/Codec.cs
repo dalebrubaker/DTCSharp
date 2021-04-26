@@ -2,10 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Threading;
 using System.Threading.Tasks;
 using DTCCommon.Exceptions;
-using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
 using NLog;
@@ -16,9 +14,9 @@ namespace DTCCommon.Codecs
     {
         protected static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
-        private string _ownerName;
+        private readonly string _ownerName;
 
-        protected Stream _stream; // normally a NetworkStream but can be a MemoryStream for a unit test
+        private readonly Stream _stream; // normally a NetworkStream but can be a MemoryStream for a unit test
         public bool IsZippedStream { get; private set; }
         private DeflateStream _deflateStream;
         private readonly byte[] _bufferHeader;
@@ -26,10 +24,16 @@ namespace DTCCommon.Codecs
         protected bool _disabledHeartbeats;
         private bool _isDisposed;
 
+        protected Stream CurrentStream => IsZippedStream ? _deflateStream : _stream;
+
         protected Codec(Stream stream)
         {
             var frame = new StackFrame(2);
-            _ownerName = frame.GetMethod().DeclaringType.Name;
+            var declaringType = frame.GetMethod().DeclaringType;
+            if (declaringType != null)
+            {
+                _ownerName = declaringType.Name;
+            }
             _stream = stream;
             _bufferHeader = new byte[4];
         }
@@ -291,7 +295,7 @@ namespace DTCCommon.Codecs
             }
             try
             {
-                var numBytes = _stream.Read(_bufferHeader, 0, 2);
+                var numBytes = CurrentStream.Read(_bufferHeader, 0, 2);
                 if (numBytes < 2)
                 {
                     // There is not a complete record available yet
@@ -299,17 +303,17 @@ namespace DTCCommon.Codecs
                 }
                 Debug.Assert(numBytes == 2);
                 var size = BitConverter.ToInt16(_bufferHeader, 0);
-                Logger.Debug($"{this}.{nameof(ReadMessage)} read size={size} from _stream");
+                //Logger.Debug($"{this}.{nameof(ReadMessage)} read size={size} from _stream");
                 if (size < 4)
                 {
                     var buffer = new byte[10000];
-                    var moreBytes = _stream.Read(buffer, 0, 10000);
+                    var moreBytes = CurrentStream.Read(buffer, 0, 10000);
                     // There is not a complete record available yet
                     return (DTCMessageType.MessageTypeUnset, new byte[0]);
                     // Debug.Assert(size > 4, "If only 4, then message length is 0 bytes");
                 }
                 //Debug.Assert(size > 4, "If only 4, then message length is 0 bytes");
-                numBytes = _stream.Read(_bufferHeader, 2, 2);
+                numBytes = CurrentStream.Read(_bufferHeader, 2, 2);
                 if (numBytes < 2)
                 {
                     // There is not a complete record available yet
@@ -320,7 +324,7 @@ namespace DTCCommon.Codecs
                 //Logger.Debug($"{this}.{nameof(ReadMessage)} read messageType={messageType} from _stream");
                 var messageSize = size - 4; // size includes the header
                 var messageBytes = new byte[messageSize];
-                numBytes = _stream.Read(messageBytes, 0, messageSize);
+                numBytes = CurrentStream.Read(messageBytes, 0, messageSize);
                 if (numBytes < messageSize)
                 {
                     // There is not a complete record available yet
@@ -347,55 +351,6 @@ namespace DTCCommon.Codecs
             }
         }
 
-        protected void WriteEncodingRequest(DTCMessageType messageType, EncodingRequest encodingRequest)
-        {
-            // EncodingRequest goes as binary for all protocol versions
-            var size = 16;
-            using var bufferBuilder = new BufferBuilder(size, this);
-            bufferBuilder.AddHeader(messageType);
-            bufferBuilder.Add(encodingRequest.ProtocolVersion);
-            bufferBuilder.Add((int)encodingRequest.Encoding); // enum size is 4
-            var protocolType = encodingRequest.ProtocolType.ToFixedBytes(4);
-            bufferBuilder.Add(protocolType); // 3 chars DTC plus null terminator 
-            bufferBuilder.Write(_stream);
-
-        }
-
-        protected static void LoadEncodingResponse<T>(byte[] bytes, int index, ref T result) where T : IMessage, new()
-        {
-            // EncodingResponse comes back as binary for all protocol versions
-            var encodingResponse = result as EncodingResponse;
-            encodingResponse.ProtocolVersion = BitConverter.ToInt32(bytes, index);
-            index += 4;
-            encodingResponse.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
-            index += 4;
-            encodingResponse.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
-        }
-
-        protected static void LoadEncodingRequest<T>(byte[] bytes, int index, ref T result) where T : IMessage<T>, new()
-        {
-            var encodingRequest = result as EncodingRequest;
-            encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, index);
-            index += 4;
-            encodingRequest.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
-            index += 4;
-            encodingRequest.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
-        }
-
-        protected void WriteEncodingResponse(DTCMessageType messageType, EncodingResponse encodingResponse)
-        {
-            var size = (short)16;
-            using var bufferBuilder = new BufferBuilder(size, this);
-            bufferBuilder.Add(size);
-            bufferBuilder.Add((short)messageType);
-            bufferBuilder.Add(encodingResponse.ProtocolVersion);
-            bufferBuilder.Add((int)encodingResponse.Encoding); // enum size is 4
-            var protocolType = encodingResponse.ProtocolType.ToFixedBytes(4);
-            bufferBuilder.Add(protocolType); // 3 chars DTC plus null terminator 
-            bufferBuilder.Write(_stream);
-
-        }
-
         /// <summary>
         /// Called by Client when the server tells it to read zipped
         /// </summary>
@@ -408,7 +363,7 @@ namespace DTCCommon.Codecs
             }
             // Skip past the 2-byte header. See https://tools.ietf.org/html/rfc1950
             var buffer = new byte[2];
-            _stream.Read(buffer, 0, 2);
+            CurrentStream.Read(buffer, 0, 2);
             var zlibCmf = buffer[0];
             if (zlibCmf != 120)
             {
@@ -427,9 +382,6 @@ namespace DTCCommon.Codecs
 
                 // Leave the underlying stream open
                 _deflateStream = new DeflateStream(_stream, CompressionMode.Decompress, true);
-
-                // Change future reads/writes to use deflateStream
-                _stream = _deflateStream;
 
                 // Must not set this earlier!
                 IsZippedStream = true;
@@ -479,7 +431,6 @@ namespace DTCCommon.Codecs
         public void EndZippedWriting()
         {
             // Switch _stream from _deflateStream back to the _tcpClient.NetworkStream
-            _stream = _deflateStream.BaseStream;
             // Do NOT dispose of the underlying NetworkStream, which is owned by the _tcpClient
             _deflateStream.Close(); // also does Dispose
             _deflateStream = null;
@@ -492,7 +443,7 @@ namespace DTCCommon.Codecs
             {
                 return;
             }
-            
+
             // Do NOT dispose of the underlying NetworkStream, which is owned by the _tcpClient
             //_stream?.Dispose();
             _isDisposed = true;
@@ -501,7 +452,8 @@ namespace DTCCommon.Codecs
 
         public override string ToString()
         {
-            return $"{Encoding} owned by {_ownerName} ";
+            var result = $"{Encoding} owned by {_ownerName} zipped={IsZippedStream} ";
+            return result;
         }
     }
 }

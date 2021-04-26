@@ -15,8 +15,7 @@ namespace DTCServer
         /// <param name="clientHandler">The handler for a particular client connected to this server</param>
         /// <param name="messageType">the message type</param>
         /// <param name="message">the message (a Google.Protobuf message)</param>
-        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task HandleRequestAsync<T>(ClientHandler clientHandler, DTCMessageType messageType, T message, CancellationToken cancellationToken) where T : IMessage;
+        void HandleRequest<T>(ClientHandler clientHandler, DTCMessageType messageType, T message) where T : IMessage;
     }
 }

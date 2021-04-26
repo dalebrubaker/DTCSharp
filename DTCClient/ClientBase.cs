@@ -318,16 +318,13 @@ namespace DTCClient
         /// </summary>
         private async Task ServerMessageReaderAsync()
         {
-            //_isProducerRunning = true;
-            MessageDTC prevMessageDTC = null;
             try
             {
                 while (!_ctsProducer.IsCancellationRequested)
                 {
-                    //Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} to read a message with {_currentCodec.Encoding}");
+                    Logger.Debug($"Waiting in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} to read a message using {_currentCodec}");
                     var message = ReadMessageDTC();
-                    //Logger.Debug($"Did in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} read a message with {_currentCodec.Encoding}");
-                    prevMessageDTC = message;
+                    Logger.Debug($"Did in {nameof(Client)}.{nameof(ServerMessageReaderAsync)} read message={message} using {_currentCodec}");
                     if (_ctsProducer.IsCancellationRequested)
                     {
                         // Changed _currentCodec, so unblocked this way
@@ -365,21 +362,29 @@ namespace DTCClient
                     }
                     else if (_currentCodec.IsZippedStream && message.MessageType == DTCMessageType.HistoricalPriceDataRecordResponse)
                     {
-                        while (_currentCodec.IsZippedStream)
+                        var historicalPriceDataRecordResponse = message.Message as HistoricalPriceDataRecordResponse;
+                        if (historicalPriceDataRecordResponse.IsFinalRecordBool)
                         {
-                            // Wait for this message to be processed (where the stream is switched back to not-zipped) before going back to reading not-zipped messages
-                            await Task.Delay(1).ConfigureAwait(false);
+                            while (_currentCodec.IsZippedStream)
+                            {
+                                // Wait for this message to be processed (where the stream is switched back to not-zipped) before going back to reading not-zipped messages
+                                await Task.Delay(1).ConfigureAwait(false);
+                            }
+                            Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
                         }
-                        Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
                     }
                     else if (_currentCodec.IsZippedStream && message.MessageType == DTCMessageType.HistoricalPriceDataTickRecordResponse)
                     {
-                        while (_currentCodec.IsZippedStream)
+                        var historicalPriceDataTickRecordResponse = message.Message as HistoricalPriceDataTickRecordResponse;
+                        if (historicalPriceDataTickRecordResponse.IsFinalRecordBool)
                         {
-                            // Wait for this message to be processed (where the stream is switched back to not-zipped) before going back to reading not-zipped messages
-                            await Task.Delay(1).ConfigureAwait(false);
+                            while (_currentCodec.IsZippedStream)
+                            {
+                                // Wait for this message to be processed (where the stream is switched back to not-zipped) before going back to reading not-zipped messages
+                                await Task.Delay(1).ConfigureAwait(false);
+                            }
+                            Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
                         }
-                        Debug.Assert(_serverMessageQueue.Count == 0, "Processor emptied the queue");
                     }
                 }
                 _serverMessageQueue.CompleteAdding();
@@ -389,7 +394,6 @@ namespace DTCClient
                 Logger.Error(ex, ex.Message);
                 throw;
             }
-            //_isProducerRunning = false;
         }
 
         private MessageDTC ReadMessageDTC()
