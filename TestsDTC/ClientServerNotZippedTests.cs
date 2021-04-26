@@ -35,7 +35,7 @@ namespace TestsDTC
         {
             if (exampleService == null)
             {
-                exampleService = new ExampleService();
+                exampleService = new ExampleService(10, 20);
             }
             var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None), IPAddress.Loopback, port, timeoutNoActivity);
             Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
@@ -69,7 +69,7 @@ namespace TestsDTC
             var sw = Stopwatch.StartNew();
 
             // Set up the exampleService responses
-            var exampleService = new ExampleService();
+            var exampleService = new ExampleService(10, 20);
             var port = ClientServerTests.NextServerPort;
 
             using (var server = StartExampleServer(TimeoutNoActivity, port, exampleService))

@@ -59,7 +59,7 @@ namespace TestsDTC
         {
             if (exampleService == null)
             {
-                exampleService = new ExampleService();
+                exampleService = new ExampleService(100, 200);
             }
             var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequestAsync(clientHandler, messageType, message, CancellationToken.None), IPAddress.Loopback, port, timeoutNoActivity);
             try
@@ -328,7 +328,7 @@ namespace TestsDTC
             const int TimeoutForConnect = 10000;
 
             // Set up the exampleService responses
-            var exampleService = new ExampleService();
+            var exampleService = new ExampleService(10, 20);
             var port = NextServerPort;
 
             using (var server = StartExampleServer(TimeoutNoActivity, port, exampleService))

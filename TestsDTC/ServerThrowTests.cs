@@ -30,7 +30,7 @@ namespace TestsDTC
         [Fact]
         public async Task StartDuplicateServerThrowsSocketExceptionTest()
         {
-            var exampleService = new ExampleService();
+            var exampleService = new ExampleService(10, 20);
             var port = ClientServerTests.NextServerPort;
             using (var server =
                 new Server(

@@ -17,14 +17,14 @@ namespace TestsDTCServer
     {
         private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
 
-        public ExampleService()
+        public ExampleService(int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend)
         {
-            NumTradesAndBidAsksToSend = 20000;
+            NumTradesAndBidAsksToSend = numTradesAndBidAsksToSend;
             MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>(NumTradesAndBidAsksToSend);
             MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>(NumTradesAndBidAsksToSend);
             MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>(NumTradesAndBidAsksToSend);
 
-            NumHistoricalPriceDataRecordsToSend = 10000;
+            NumHistoricalPriceDataRecordsToSend = numHistoricalPriceDataRecordsToSend;
             HistoricalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>(NumHistoricalPriceDataRecordsToSend);
 
             // Define default test data
@@ -96,9 +96,9 @@ namespace TestsDTCServer
 
         public List<HistoricalPriceDataRecordResponse> HistoricalPriceDataRecordResponses { get; set; }
 
-        public int NumTradesAndBidAsksToSend { get; set; }
+        public int NumTradesAndBidAsksToSend { get; }
 
-        public int NumHistoricalPriceDataRecordsToSend { get; set; }
+        public int NumHistoricalPriceDataRecordsToSend { get; }
 
         #region PropertiesForTesting
 

@@ -21,7 +21,7 @@ namespace TestsDTCServer
         public ServerForm()
         {
             InitializeComponent();
-            _exampleService = new ExampleService();
+            _exampleService = new ExampleService(1000, 2000);
             _exampleService.MessageEvent += ExampleServiceMessageEvent;
         }
 
