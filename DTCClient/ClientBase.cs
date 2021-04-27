@@ -141,8 +141,7 @@ namespace DTCClient
             _tcpClient = new TcpClient
             {
                 NoDelay = true,
-                ReceiveBufferSize = int.MaxValue,
-                LingerState = new LingerOption(true, 5)
+                ReceiveBufferSize = int.MaxValue
             };
             var tmp = _tcpClient.SendBufferSize;
             if (TimeoutNoActivity != 0)

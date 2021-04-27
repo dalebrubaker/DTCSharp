@@ -126,7 +126,6 @@ namespace DTCServer
                     {
                         tcpClient.ReceiveTimeout = _timeoutNoActivity;
                     }
-                    tcpClient.LingerState = new LingerOption(true, 5);
                     var clientHandler = new ClientHandler(_callback, tcpClient);
                     var task = Task.Factory.StartNew(clientHandler.RequestReaderLoop, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
                     tasks.Add(task);
