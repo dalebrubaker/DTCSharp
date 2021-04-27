@@ -48,11 +48,9 @@ namespace TestsDTC
         [Fact]
         public async Task StartServerTest()
         {
-            using (var server = StartExampleServer(1000, NextServerPort))
-            {
-                await Task.Delay(100).ConfigureAwait(true); // give it time to start
-                Assert.Equal(0, server.NumberOfClientHandlers);
-            }
+            using var server = StartExampleServer(1000, NextServerPort);
+            await Task.Delay(100).ConfigureAwait(true); // give it time to start
+            Assert.Equal(0, server.NumberOfClientHandlers);
         }
 
         private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null)
@@ -144,8 +142,8 @@ namespace TestsDTC
         {
             var numConnects = 0;
             var numDisconnects = 0;
-            const int TimeoutNoActivity = 1000;
-            const int TimeoutForConnect = 10000;
+            const int TimeoutNoActivity = 1000; // int.MaxValue; // 1000;
+            const int TimeoutForConnect = 1000; //int.MaxValue; // 10000;
             var port = NextServerPort;
             using (var server = StartExampleServer(TimeoutNoActivity, port))
             {
@@ -322,77 +320,73 @@ namespace TestsDTC
         [Fact]
         public async Task MarketDataCompactTest()
         {
-            const int TimeoutNoActivity = 10000;
-            const int TimeoutForConnect = 10000;
+            const int TimeoutNoActivity = 1000;
+            const int TimeoutForConnect = 1000;
 
             // Set up the exampleService responses
             var exampleService = new ExampleService(10, 20);
             var port = NextServerPort;
 
-            using (var server = StartExampleServer(TimeoutNoActivity, port, exampleService))
+            using var server = StartExampleServer(TimeoutNoActivity, port, exampleService);
+            using var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false);
+            var sw = Stopwatch.StartNew();
+            while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
             {
-                using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
-                {
-                    var sw = Stopwatch.StartNew();
-                    while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
-                    {
-                        // Wait for the client to connect
-                        await Task.Delay(1).ConfigureAwait(false);
-                    }
-                    Assert.Equal(1, server.NumberOfClientHandlers);
-
-                    var loginResponse = await client1.LogonAsync(useHeartbeat: false, timeout: TimeoutNoActivity).ConfigureAwait(true);
-                    Assert.NotNull(loginResponse);
-
-                    var numSnapshots = 0;
-                    var numBidAsks = 0;
-                    var numTrades = 0;
-
-                    // Set up the handler to capture the MarketDataSnapshot event
-                    void MarketDataSnapshotEvent(object s, MarketDataSnapshot snapshot)
-                    {
-                        _output.WriteLine($"Client1 received a MarketDataSnapshot after {sw.ElapsedMilliseconds} msecs");
-                        numSnapshots++;
-                    }
-
-                    client1.MarketDataSnapshotEvent += MarketDataSnapshotEvent;
-
-                    // Set up the handler to capture the MarketDataUpdateTradeCompact events
-                    void MarketDataUpdateTradeCompactEvent(object s, MarketDataUpdateTradeCompact trade)
-                    {
-                        numTrades++;
-                        //s_logger.Debug("numTrades={numTrades}", numTrades);
-                    }
-
-                    client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
-
-                    // Set up the handler to capture the MarketDataUpdateBidAskCompact events
-                    void MarketDataUpdateBidAskCompactEvent(object s, MarketDataUpdateBidAskCompact bidAsk)
-                    {
-                        numBidAsks++;
-                        //s_logger.Debug("numBidAsks={numBidAsks}", numBidAsks);
-                    }
-
-                    client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;
-
-                    // Now subscribe to the data
-                    sw.Restart();
-                    var symbolId = client1.SubscribeMarketData(1, "ESZ6", "");
-                    Assert.Equal(1u, symbolId);
-                    while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
-                    {
-                        await Task.Delay(100).ConfigureAwait(false);
-                    }
-                    var elapsed = sw.ElapsedMilliseconds;
-                    _output.WriteLine($"Client1 received all trades and bid/asks in {elapsed} msecs");
-
-                    Assert.Equal(1, numSnapshots);
-                    Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numTrades);
-                    Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numBidAsks);
-
-                    client1.UnsubscribeMarketData(symbolId);
-                }
+                // Wait for the client to connect
+                await Task.Delay(1).ConfigureAwait(false);
             }
+            Assert.Equal(1, server.NumberOfClientHandlers);
+
+            var loginResponse = await client1.LogonAsync(useHeartbeat: false, timeout: TimeoutNoActivity).ConfigureAwait(true);
+            Assert.NotNull(loginResponse);
+
+            var numSnapshots = 0;
+            var numBidAsks = 0;
+            var numTrades = 0;
+
+            // Set up the handler to capture the MarketDataSnapshot event
+            void MarketDataSnapshotEvent(object s, MarketDataSnapshot snapshot)
+            {
+                _output.WriteLine($"Client1 received a MarketDataSnapshot after {sw.ElapsedMilliseconds} msecs");
+                numSnapshots++;
+            }
+
+            client1.MarketDataSnapshotEvent += MarketDataSnapshotEvent;
+
+            // Set up the handler to capture the MarketDataUpdateTradeCompact events
+            void MarketDataUpdateTradeCompactEvent(object s, MarketDataUpdateTradeCompact trade)
+            {
+                numTrades++;
+                //s_logger.Debug("numTrades={numTrades}", numTrades);
+            }
+
+            client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
+
+            // Set up the handler to capture the MarketDataUpdateBidAskCompact events
+            void MarketDataUpdateBidAskCompactEvent(object s, MarketDataUpdateBidAskCompact bidAsk)
+            {
+                numBidAsks++;
+                //s_logger.Debug("numBidAsks={numBidAsks}", numBidAsks);
+            }
+
+            client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;
+
+            // Now subscribe to the data
+            sw.Restart();
+            var symbolId = client1.SubscribeMarketData(1, "ESZ6", "");
+            Assert.Equal(1u, symbolId);
+            while (numTrades < exampleService.NumTradesAndBidAsksToSend || numBidAsks < exampleService.NumTradesAndBidAsksToSend)
+            {
+                await Task.Delay(100).ConfigureAwait(false);
+            }
+            var elapsed = sw.ElapsedMilliseconds;
+            _output.WriteLine($"Client1 received all trades and bid/asks in {elapsed} msecs");
+
+            Assert.Equal(1, numSnapshots);
+            Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numTrades);
+            Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numBidAsks);
+
+            client1.UnsubscribeMarketData(symbolId);
         }
     }
 }

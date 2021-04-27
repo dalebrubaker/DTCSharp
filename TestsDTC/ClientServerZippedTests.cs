@@ -55,8 +55,8 @@ namespace TestsDTC
         [Fact]
         public async Task HistoricalPriceDataRecordResponseTickZippedTest()
         {
-            const int TimeoutNoActivity = 1000; // int.MaxValue; // 10000;
-            const int TimeoutForConnect = 1000; // int.MaxValue; // 10000;
+            const int TimeoutNoActivity = 1000; // int.MaxValue; // 1000;
+            const int TimeoutForConnect = 1000; // int.MaxValue; // 1000;
             const bool UseZLibCompression = true;
             var isFinalRecordReceived = false;
 

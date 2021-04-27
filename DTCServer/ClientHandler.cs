@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using DTCCommon;
 using DTCCommon.Codecs;
+using DTCCommon.Exceptions;
 using DTCPB;
 using Google.Protobuf;
 using NLog;
@@ -21,6 +23,13 @@ namespace DTCServer
         private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
 
         private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
+        private readonly SemaphoreSlim _semaphoreStreamReader;
+
+        /// <summary>
+        /// Holds messages received from the server
+        /// </summary>
+        private readonly BlockingCollection<MessageDTC> _clientMessageQueue;
+
         private TcpClient _tcpClient;
         private bool _useHeartbeat;
         private bool _isDisposed;
@@ -30,6 +39,9 @@ namespace DTCServer
         private DateTime _lastHeartbeatReceivedTime;
         private readonly CancellationTokenSource _ctsRequestReader;
         private bool _isConnected;
+        private Task _taskClientMessageProcessor;
+        private Task _taskClientMessageReader;
+        private readonly CancellationTokenSource _cts;
 
         /// <summary>
         /// Create instance of ClientHandler
@@ -44,6 +56,15 @@ namespace DTCServer
             _ctsRequestReader = new CancellationTokenSource();
             _networkStreamServer = _tcpClient.GetStream();
             _currentCodec = new CodecBinary(_networkStreamServer);
+            _semaphoreStreamReader = new SemaphoreSlim(0, 1);
+
+            // The initial protocol must be Binary, and can switch only when receiving and EncodingResponse
+            SetCurrentCodec(EncodingEnum.BinaryEncoding);
+            s_logger.Debug("Initial setting of _currentCodec is Binary");
+            _cts = new CancellationTokenSource();
+            _clientMessageQueue = new BlockingCollection<MessageDTC>();
+            _taskClientMessageProcessor = Task.Factory.StartNew(ClientMessageProcessor, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            _taskClientMessageReader = Task.Factory.StartNew(ClientMessageReader, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
         }
 
         public string RemoteEndPoint { get; }
@@ -102,72 +123,222 @@ namespace DTCServer
         }
 
         /// <summary>
-        /// This method runs "forever", reading requests and throwing them as events until the network stream is closed.
-        /// All reads are done async on this thread.
+        /// Producer, loads messages from the client into the _clientMessageQueue
         /// </summary>
-        internal void RequestReaderLoop()
+        private void ClientMessageReader()
         {
-            var binaryReader = new BinaryReader(_networkStreamServer); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
-            while (!_ctsRequestReader.Token.IsCancellationRequested)
+            try
+            {
+                while (!_cts.IsCancellationRequested)
+                {
+                    //s_logger.Debug($"Waiting to read a message in {nameof(ClientHandler)}.{nameof(ClientMessageReader)} using {_currentCodec}");
+                    var message = ReadMessageDTC();
+                    //s_logger.Debug($"Did read message={message} in {nameof(ClientHandler)}.{nameof(ClientMessageReader)} using {_currentCodec}");
+                    if (_cts.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    if (message == null)
+                    {
+                        // Probably an exception
+                        throw new DTCSharpException("Why?");
+                    }
+                    //Logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(ClientMessageReader)} to add to messageQueue: {message}");
+                    _clientMessageQueue.Add(message, _cts.Token);
+                    //Logger.Debug($"{nameof(ClientHandler)}.{nameof(ClientMessageReader)} added to messageQueue: {message}");
+
+                    BlockReadingStream(message);
+                }
+                _clientMessageQueue.CompleteAdding();
+            }
+            catch (Exception ex)
+            {
+                s_logger.Error(ex, ex.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// If we have received a record that will cause us to switch encodings or switch to or from a zipped stream, block until ProcessMessage() releases.
+        /// </summary>
+        /// <param name="message"></param>
+        private void BlockReadingStream(MessageDTC message)
+        {
+            if (message.MessageType == DTCMessageType.EncodingRequest)
+            {
+                var encodingRequest = message.Message as EncodingRequest;
+                if (encodingRequest.Encoding == _currentCodec.Encoding)
+                {
+                    // No change
+                    return;
+                }
+                switch (encodingRequest.Encoding)
+                {
+                    case EncodingEnum.BinaryEncoding:
+                        break;
+                    case EncodingEnum.BinaryWithVariableLengthStrings:
+                    case EncodingEnum.JsonEncoding:
+                    case EncodingEnum.JsonCompactEncoding:
+                        // Not supported, so the request will be refuse
+                        return;
+                    case EncodingEnum.ProtocolBuffers:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                // client has requested a new encoding, so future reads must use the new encoding
+                // Block reading until ProcessMessage() has changed the encoding
+                //s_logger.Debug($"Blocking reader in {nameof(ClientHandler)}, _currentCodec={_currentCodec}");
+                _semaphoreStreamReader.Wait();
+                //s_logger.Debug($"Done blocking reader, _currentCodec={_currentCodec}");
+            }
+            else if (message.MessageType == DTCMessageType.HistoricalPriceDataRequest)
+            {
+                var historicalPriceDataRequest = message.Message as HistoricalPriceDataRequest;
+                if (historicalPriceDataRequest.UseZLibCompressionBool && !_currentCodec.IsZippedStream)
+                {
+                    // Block until ProcessMessage() causes the zipped messages to be written then switched back to not-zipped
+                    //s_logger.Debug($"Blocking reader in {nameof(ClientHandler)} during zipped writing, _currentCodec={_currentCodec}");
+                    _semaphoreStreamReader.Wait();
+                    //s_logger.Debug($"Done blocking reader in {nameof(ClientHandler)} during zipped writing, _currentCodec={_currentCodec}");
+                }
+            }
+        }
+
+        private MessageDTC ReadMessageDTC()
+        {
+            while (!_cts.IsCancellationRequested)
             {
                 try
                 {
-                    //if (!stream.DataAvailable)
-                    //{
-                    //    await Task.Delay(1).ConfigureAwait(false);
-                    //    continue;
-                    //}
-                    s_logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(RequestReaderLoop)} to read a message with {_currentCodec.Encoding}");
-                    var (messageType, messageBytes) = _currentCodec.ReadMessage();
-                    if (messageType == DTCMessageType.LogonRequest)
-                    {
-                    }
-                    if (messageType == DTCMessageType.MessageTypeUnset)
-                    {
-                        // The service has ended
-                        Dispose();
-                        break;
-                    }
-                    ProcessClientRequest(messageType, messageBytes);
-                    if (_currentCodec == null)
-                    {
-                        // The service ended a zipped historical data transmission. We can't continue
-                        Dispose();
-                        break;
-                    }
+                    //s_logger.Debug($"Waiting in {nameof(Client)}.{nameof(ResponseReader)} to read a message");
+                    var message = _currentCodec.GetMessageDTC();
+                    return message;
                 }
-#pragma warning disable 168
                 catch (IOException ex)
-#pragma warning restore 168
                 {
                     // Ignore this if it results from disconnected client or other socket error
                     if (_ctsRequestReader.Token.IsCancellationRequested)
                     {
                         OnDisconnected(new Error("Disconnecting because cancellation is requested."));
                         Dispose();
-                        return;
+                        return null;
                     }
+                    s_logger.Error(ex, ex.Message);
+                    throw;
                 }
                 catch (Exception ex)
                 {
-                    if (_isDisposed)
-                    {
-                        break;
-                    }
                     var typeName = ex.GetType().Name;
+                    OnDisconnected(new Error($"Read error {typeName}.", ex));
+                    s_logger.Error(ex, ex.Message);
                     throw;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Consumer, processes the messages from the _clientMessageQueue
+        /// </summary>
+        private void ClientMessageProcessor()
+        {
+            while (!_clientMessageQueue.IsCompleted)
+            {
+                MessageDTC message = null;
+                try
+                {
+                    message = _clientMessageQueue.Take(_cts.Token);
+                    //Logger.Debug($"{nameof(ClientHandler)}.{nameof(ReaderMessageProcessor)} took from messageQueue: {message}");
+                }
+                catch (InvalidOperationException)
+                {
+                    // The Microsoft example says we can ignore this exception https://docs.microsoft.com/en-us/dotnet/standard/collections/thread-safe/blockingcollection-overview
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    s_logger.Error(ex, ex.Message);
+                    throw;
+                }
+                if (message != null)
+                {
+                    ProcessMessage(message);
                 }
             }
         }
 
+//         /// <summary>
+//         /// This method runs "forever", reading requests and throwing them as events until the network stream is closed.
+//         /// All reads are done async on this thread.
+//         /// </summary>
+//         internal void RequestReaderLoop()
+//         {
+//             var binaryReader = new BinaryReader(_networkStreamServer); // Note that binaryReader may be redefined below in HistoricalPriceDataResponseHeader
+//             while (!_ctsRequestReader.Token.IsCancellationRequested)
+//             {
+//                 try
+//                 {
+//                     //if (!stream.DataAvailable)
+//                     //{
+//                     //    await Task.Delay(1).ConfigureAwait(false);
+//                     //    continue;
+//                     //}
+//                     s_logger.Debug($"Waiting in {nameof(ClientHandler)}.{nameof(RequestReaderLoop)} to read a message with {_currentCodec.Encoding}");
+//                     var (messageType, messageBytes) = _currentCodec.ReadMessage();
+//                     if (messageType == DTCMessageType.LogonRequest)
+//                     {
+//                     }
+//                     if (messageType == DTCMessageType.MessageTypeUnset)
+//                     {
+//                         // The service has ended
+//                         Dispose();
+//                         break;
+//                     }
+//                     ProcessClientRequest(messageType, messageBytes);
+//                     if (_currentCodec == null)
+//                     {
+//                         // The service ended a zipped historical data transmission. We can't continue
+//                         Dispose();
+//                         break;
+//                     }
+//                 }
+// #pragma warning disable 168
+//                 catch (IOException ex)
+// #pragma warning restore 168
+//                 {
+//                     // Ignore this if it results from disconnected client or other socket error
+//                     if (_ctsRequestReader.Token.IsCancellationRequested)
+//                     {
+//                         OnDisconnected(new Error("Disconnecting because cancellation is requested."));
+//                         Dispose();
+//                         return;
+//                     }
+//                 }
+//                 catch (Exception ex)
+//                 {
+//                     if (_isDisposed)
+//                     {
+//                         break;
+//                     }
+//                     var typeName = ex.GetType().Name;
+//                     throw;
+//                 }
+//             }
+//         }
+
         /// <summary>
         /// Process the request received from a client
         /// </summary>
-        /// <param name="messageType"></param>
-        /// <param name="messageBytes"></param>
-        private void ProcessClientRequest(DTCMessageType messageType, byte[] messageBytes)
+        /// <param name="messageDTC"></param>
+        private void ProcessMessage(MessageDTC messageDTC)
         {
-            var protobuf = _currentCodec.GetProtobuf(messageType, messageBytes);
+            var protobuf = messageDTC.Message;
+            var messageType = messageDTC.MessageType;
             OnEveryEventFromClient(protobuf);
 
             switch (messageType)
@@ -207,6 +378,7 @@ namespace DTCServer
                     break;
                 case DTCMessageType.EncodingRequest:
                     var encodingRequest = protobuf as EncodingRequest;
+                    var oldEncoding = _currentCodec?.Encoding;
                     var newEncoding = EncodingEnum.BinaryEncoding;
                     switch (encodingRequest.Encoding)
                     {
@@ -237,6 +409,21 @@ namespace DTCServer
 
                     _callback(this, messageType, encodingRequest); // send this to the callback for informational purposes
                     OnConnected("Handler connected");
+                    if (newEncoding != oldEncoding)
+                    {
+                        s_logger.Debug($"Releasing reader in {nameof(ClientHandler)} after encoding change, _currentCodec={_currentCodec}");
+                        _semaphoreStreamReader.Release();
+                    }
+                    break;
+                case DTCMessageType.HistoricalPriceDataRequest:
+                    _callback(this, messageType, protobuf);
+
+                    var historicalPriceDataRequest = protobuf as HistoricalPriceDataRequest;
+                    if (historicalPriceDataRequest.UseZLibCompressionBool)
+                    {
+                        // The _callback is expected to switch the stream to zipped, write the data then end the zipped state.
+                        // The reader does nothing during that time.
+                    }
                     break;
                 case DTCMessageType.MarketDataRequest:
                 case DTCMessageType.MarketDepthRequest:
@@ -258,7 +445,6 @@ namespace DTCServer
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
                 case DTCMessageType.SymbolSearchRequest:
                 case DTCMessageType.AccountBalanceRequest:
-                case DTCMessageType.HistoricalPriceDataRequest:
                     _callback(this, messageType, protobuf);
                     break;
                 case DTCMessageType.MarketDataUpdateTradeWithUnbundledIndicator:
@@ -340,12 +526,12 @@ namespace DTCServer
                 case DTCMessageType.HistoricalPriceDataRecordResponseInt:
                 case DTCMessageType.HistoricalPriceDataTickRecordResponseInt:
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(ProcessClientRequest)}.");
+                    throw new ArgumentOutOfRangeException($"Unexpected MessageType {messageType} received by {this} {nameof(ProcessMessage)}.");
             }
         }
 
         public event EventHandler<IMessage> EveryMessageFromClient;
-        
+
         private void OnEveryEventFromClient(IMessage protobuf)
         {
             var tmp = EveryMessageFromClient;
@@ -407,7 +593,7 @@ namespace DTCServer
                     _useHeartbeat = false;
                 }
             }
-            
+
             // TODO handle writing zip and stopping zip after last record, as per Client
         }
 
@@ -418,6 +604,10 @@ namespace DTCServer
         public void EndZippedWriting()
         {
             _currentCodec.EndZippedWriting();
+
+            // Release _semaphoreStreamReader, which has been blocking during the writing of the zipped data
+            s_logger.Debug($"Releasing reader in {nameof(ClientHandler)} after ending zipped writing, _currentCodec={_currentCodec}");
+            _semaphoreStreamReader.Release();
         }
 
         public void Dispose()
@@ -427,12 +617,14 @@ namespace DTCServer
                 s_logger.Debug("Disposing ClientHandler");
                 _isDisposed = true;
                 DisposeTimerHeartbeat();
+                _cts.Cancel(true);
                 OnDisconnected(new Error("Disposed"));
                 _ctsRequestReader.Cancel();
                 _currentCodec?.Dispose();
                 _currentCodec = null;
                 _tcpClient?.Close();
                 _tcpClient = null;
+                _semaphoreStreamReader.Dispose();
             }
             GC.SuppressFinalize(this);
         }

@@ -159,7 +159,7 @@ namespace TestServer
 
                 case DTCMessageType.HistoricalPriceDataRequest:
                     var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
-                    HistoricalPriceDataResponseHeader.UseZLibCompressionBool = historicalPriceDataRequest.IsZipped;
+                    HistoricalPriceDataResponseHeader.UseZLibCompressionBool = historicalPriceDataRequest.UseZLibCompressionBool;
                     clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader);
                     var numSent = 0;
                     for (int i = 0; i < HistoricalPriceDataRecordResponses.Count; i++)
@@ -175,7 +175,7 @@ namespace TestServer
                     historicalPriceDataRecordResponseFinal.IsFinalRecordBool = true;
                     clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponseFinal);
                     numSent++;
-                    if (historicalPriceDataRequest.IsZipped)
+                    if (historicalPriceDataRequest.UseZLibCompressionBool)
                     {
                         clientHandler.EndZippedWriting();
                     }

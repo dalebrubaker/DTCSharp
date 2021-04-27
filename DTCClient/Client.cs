@@ -37,8 +37,8 @@ namespace DTCClient
         private int _nextRequestId;
         private bool _useHeartbeat;
         private bool _isConnected;
-        private Task _taskConsumer;
-        private Task _taskProducer;
+        private Task _taskServerMessageProcessor;
+        private Task _taskServerMessageReader;
 
         /// <summary>
         /// Constructor for a client
@@ -175,7 +175,7 @@ namespace DTCClient
             var timeSinceHeartbeat = (DateTime.Now - _lastHeartbeatReceivedTime);
             if (timeSinceHeartbeat > maxWaitForHeartbeatTime)
             {
-                Disconnect(new Error("Too long since Server sent us a heartbeat."));
+                OnDisconnect(new Error("Too long since Server sent us a heartbeat."));
             }
 
             // Send a heartbeat to the server
@@ -223,8 +223,8 @@ namespace DTCClient
             SetCurrentCodec(EncodingEnum.BinaryEncoding);
             s_logger.Debug("Initial setting of _currentCodec is Binary");
             _cts = new CancellationTokenSource();
-            _taskConsumer = Task.Factory.StartNew(ServerMessageProcessor, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
-            _taskProducer = Task.Factory.StartNew(ServerMessageReader, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            _taskServerMessageProcessor = Task.Factory.StartNew(ServerMessageProcessor, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            _taskServerMessageReader = Task.Factory.StartNew(ServerMessageReader, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
 
             // Set up the handler to capture the event
             EncodingResponse result = null;
@@ -349,7 +349,7 @@ namespace DTCClient
             catch (Exception ex)
             {
                 var error = new Error("Unable to send request", ex);
-                Disconnect(error);
+                OnDisconnect(error);
             }
         }
 
@@ -367,9 +367,7 @@ namespace DTCClient
                     //s_logger.Debug($"Did read message={message} in {nameof(Client)}.{nameof(ServerMessageReader)} using {_currentCodec}");
                     if (_cts.IsCancellationRequested)
                     {
-                        // Changed _currentCodec, so unblocked this way
-                        _cts = new CancellationTokenSource();
-                        continue;
+                        return;
                     }
                     if (message == null)
                     {
@@ -386,13 +384,17 @@ namespace DTCClient
             }
             catch (Exception ex)
             {
+                if (_cts.IsCancellationRequested)
+                {
+                    return;
+                }
                 s_logger.Error(ex, ex.Message);
                 throw;
             }
         }
 
         /// <summary>
-        /// If we have received a record that will cause us to switch to or from a zipped stream, block until ProcessMessage() releases.
+        /// If we have received a record that will cause us to switch encodings or switch to or from a zipped stream, block until ProcessMessage() releases.
         /// </summary>
         /// <param name="message"></param>
         private void BlockReadingStream(MessageDTC message)
@@ -406,10 +408,11 @@ namespace DTCClient
                     return;
                 }
 
+                // server has accepted a new encoding
                 // Block reading until ProcessMessage() has changed the encoding
-                s_logger.Debug($"Blocking reader, _currentCodec={_currentCodec}");
-                _semaphoreStreamReader.Wait(TimeSpan.FromSeconds(30));
-                s_logger.Debug($"Done blocking reader, _currentCodec={_currentCodec}");
+                //s_logger.Debug($"Blocking reader, _currentCodec={_currentCodec}");
+                _semaphoreStreamReader.Wait();
+                //s_logger.Debug($"Done blocking reader, _currentCodec={_currentCodec}");
             }
             else if (message.MessageType == DTCMessageType.HistoricalPriceDataResponseHeader)
             {
@@ -417,7 +420,7 @@ namespace DTCClient
                 if (historicalPriceDataResponseHeader.UseZLibCompressionBool && !_currentCodec.IsZippedStream)
                 {
                     // Block until ProcessMessage() changes to zipped stream
-                    _semaphoreStreamReader.Wait(TimeSpan.FromSeconds(30));
+                    _semaphoreStreamReader.Wait();
                 }
             }
             else if (_currentCodec.IsZippedStream && message.MessageType == DTCMessageType.HistoricalPriceDataRecordResponse)
@@ -425,10 +428,10 @@ namespace DTCClient
                 var historicalPriceDataRecordResponse = message.Message as HistoricalPriceDataRecordResponse;
                 if (historicalPriceDataRecordResponse.IsFinalRecordBool)
                 {
-                    while (_currentCodec.IsZippedStream)
+                    if (_currentCodec.IsZippedStream)
                     {
                         // Block until ProcessMessage() changes to not-zipped stream
-                        _semaphoreStreamReader.Wait(TimeSpan.FromSeconds(30));
+                        _semaphoreStreamReader.Wait();
                     }
                 }
             }
@@ -437,10 +440,10 @@ namespace DTCClient
                 var historicalPriceDataTickRecordResponse = message.Message as HistoricalPriceDataTickRecordResponse;
                 if (historicalPriceDataTickRecordResponse.IsFinalRecordBool)
                 {
-                    while (_currentCodec.IsZippedStream)
+                    if (_currentCodec.IsZippedStream)
                     {
                         // Block until ProcessMessage() changes to not-zipped stream
-                        _semaphoreStreamReader.Wait(TimeSpan.FromSeconds(30));
+                        _semaphoreStreamReader.Wait();
                     }
                 }
             }
@@ -461,7 +464,7 @@ namespace DTCClient
                     // Ignore this if it results from disconnect (cancellation)
                     if (_cts.IsCancellationRequested)
                     {
-                        Disconnect(new Error("Read error.", ex));
+                        OnDisconnect(new Error("Read error.", ex));
                         return null;
                     }
                     s_logger.Error(ex, ex.Message);
@@ -470,7 +473,7 @@ namespace DTCClient
                 catch (Exception ex)
                 {
                     var typeName = ex.GetType().Name;
-                    Disconnect(new Error($"Read error {typeName}.", ex));
+                    OnDisconnect(new Error($"Read error {typeName}.", ex));
                     s_logger.Error(ex, ex.Message);
                     throw;
                 }
@@ -841,7 +844,6 @@ namespace DTCClient
         /// <param name="messageDTC"></param>
         private void ProcessMessage(MessageDTC messageDTC)
         {
-            //s_logger.Debug($"{nameof(ProcessResponseBytes)} is processing {messageType}");
             OnEveryEventFromServer(messageDTC.Message);
             switch (messageDTC.MessageType)
             {
@@ -883,6 +885,7 @@ namespace DTCClient
                         _useHeartbeat = false;
 
                         // Release the reader now that the stream has changed to zipped
+                        //_logger.Debug($"Releasing reader in {nameof(Client)} after encoding change, _currentCodec={_currentCodec}");
                         _semaphoreStreamReader.Release();
                     }
                     ThrowEvent(historicalPriceDataResponseHeader, HistoricalPriceDataResponseHeaderEvent);
@@ -1098,17 +1101,17 @@ namespace DTCClient
                 });
                 _currentCodec.Dispose();
                 _cts.Cancel(true);
-                Disconnect(new Error("Disposing"));
+                OnDisconnect(new Error("Disposing"));
                 _semaphoreStreamReader.Dispose();
             }
             GC.SuppressFinalize(this);
         }
 
         /// <summary>
-        /// Throw the Disconnect event and close down the connection (if any) to the server
+        /// Throw the OnDisconnect event and close down the connection (if any) to the server
         /// </summary>
         /// <param name="error"></param>
-        private void Disconnect(Error error)
+        private void OnDisconnect(Error error)
         {
             OnDisconnected(error);
             //Dispose();

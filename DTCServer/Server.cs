@@ -115,7 +115,6 @@ namespace DTCServer
             }
 #pragma warning disable 168
             IsConnected = true;
-            var tasks = new List<Task>();
             while (!_cts.Token.IsCancellationRequested)
             {
                 try
@@ -127,8 +126,6 @@ namespace DTCServer
                         tcpClient.ReceiveTimeout = _timeoutNoActivity;
                     }
                     var clientHandler = new ClientHandler(_callback, tcpClient);
-                    var task = Task.Factory.StartNew(clientHandler.RequestReaderLoop, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
-                    tasks.Add(task);
                     lock (_lock)
                     {
                         _clientHandlers.Add(clientHandler);
@@ -152,7 +149,6 @@ namespace DTCServer
                 }
 #pragma warning disable 168
             }
-            await Task.WhenAll(tasks).ConfigureAwait(false);
             CloseAllClientHandlers();
         }
 

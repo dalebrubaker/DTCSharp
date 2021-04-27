@@ -18,7 +18,7 @@ namespace DTCPB
             set => endDateTime_ = value.UtcToDtcDateTime();
         }
 
-        public bool IsZipped
+        public bool UseZLibCompressionBool
         {
             get => useZLibCompression_ != 0;
             set => useZLibCompression_ = value ? 1u : 0u;
@@ -26,7 +26,7 @@ namespace DTCPB
 
         public string ToDiagnosticString()
         {
-            return $"{symbol_} {StartDateTimeUtc} - {EndDateTimeUtc} MaxDaysToReturn:{MaxDaysToReturn} (UTC) Zip:{IsZipped} {RecordInterval}";
+            return $"{symbol_} {StartDateTimeUtc} - {EndDateTimeUtc} MaxDaysToReturn:{MaxDaysToReturn} (UTC) Zip:{UseZLibCompressionBool} {RecordInterval}";
         }
     }
 }

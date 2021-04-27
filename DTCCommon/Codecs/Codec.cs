@@ -144,6 +144,10 @@ namespace DTCCommon.Codecs
             }
             catch (Exception ex)
             {
+                if (_isDisposed)
+                {
+                    return (DTCMessageType.MessageTypeUnset, new byte[0]);
+                }
                 Logger.Error(ex, ex.Message);
                 throw;
             }
