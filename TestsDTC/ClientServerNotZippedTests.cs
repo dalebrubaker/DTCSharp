@@ -33,13 +33,9 @@ namespace TestsDTC
             //_output.WriteLine("Disposing");
         }
 
-        private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null)
+        private ExampleService StartExampleServer(int timeoutNoActivity, int port)
         {
-            if (exampleService == null)
-            {
-                exampleService = new ExampleService(10, 20);
-            }
-            var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequest(clientHandler, messageType, message), IPAddress.Loopback, port, timeoutNoActivity);
+            var server = new ExampleService(IPAddress.Loopback, port, timeoutNoActivity, 10, 20);
             Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
             return server;
         }
@@ -71,10 +67,8 @@ namespace TestsDTC
             var sw = Stopwatch.StartNew();
 
             // Set up the exampleService responses
-            var exampleService = new ExampleService(10, 20);
             var port = ClientServerTests.NextServerPort;
-
-            using var server = StartExampleServer(TimeoutNoActivity, port, exampleService);
+            using var exampleService = StartExampleServer(TimeoutNoActivity, port);
             using var clientHistorical = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port, EncodingEnum.ProtocolBuffers)
                 .ConfigureAwait(false);
             while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
@@ -82,12 +76,12 @@ namespace TestsDTC
                 // Wait for the client to connect
                 await Task.Delay(1).ConfigureAwait(false);
             }
-            Assert.Equal(1, server.NumberOfClientHandlers);
-            while (server.NumberOfClientHandlersConnected == 0 && sw.ElapsedMilliseconds < 1000)
+            Assert.Equal(1, exampleService.NumberOfClientHandlers);
+            while (exampleService.NumberOfClientHandlersConnected == 0 && sw.ElapsedMilliseconds < 1000)
             {
                 await Task.Delay(1).ConfigureAwait(false);
             }
-            Assert.Equal(1, server.NumberOfClientHandlersConnected);
+            Assert.Equal(1, exampleService.NumberOfClientHandlersConnected);
 
             // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
             var loginResponse = await clientHistorical.LogonAsync(0, false, TimeoutForConnect).ConfigureAwait(true);

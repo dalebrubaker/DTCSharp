@@ -30,13 +30,11 @@ namespace TestsDTC
         [Fact]
         public async Task StartDuplicateServerThrowsSocketExceptionTest()
         {
-            var exampleService = new ExampleService(10, 20);
             var port = ClientServerTests.NextServerPort;
-            using var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequest(clientHandler, messageType, message),
-                    IPAddress.Loopback, port, 1000);
+            using var server1 = new ExampleService(IPAddress.Loopback, port, 1000, 10, 20);
             try
             {
-                var task = Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
+                var task = Task.Run(async () => await server1.RunAsync().ConfigureAwait(false));
             }
             catch (Exception exception)
             {
@@ -44,11 +42,10 @@ namespace TestsDTC
                 throw;
             }
             await Task.Delay(200).ConfigureAwait(false);
-            using var server2 = new Server((clientHandler, messageType, message) => exampleService.HandleRequest(clientHandler, messageType, message),
-                    IPAddress.Loopback, port, 1000);
+            using var server2 = new ExampleService(IPAddress.Loopback, port, 1000, 10, 20);
             await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync()).ConfigureAwait(false);
             await Task.Delay(100).ConfigureAwait(false);
-            Assert.Equal(0, server.NumberOfClientHandlers);
+            Assert.Equal(0, server1.NumberOfClientHandlers);
         }
     }
 }

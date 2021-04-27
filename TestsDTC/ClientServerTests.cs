@@ -53,13 +53,9 @@ namespace TestsDTC
             Assert.Equal(0, server.NumberOfClientHandlers);
         }
 
-        private Server StartExampleServer(int timeoutNoActivity, int port, ExampleService exampleService = null)
+        private ExampleService StartExampleServer(int timeoutNoActivity, int port)
         {
-            if (exampleService == null)
-            {
-                exampleService = new ExampleService(100, 200);
-            }
-            var server = new Server((clientHandler, messageType, message) => exampleService.HandleRequest(clientHandler, messageType, message), IPAddress.Loopback, port, timeoutNoActivity);
+            var server = new ExampleService(IPAddress.Loopback, port, timeoutNoActivity, 100, 200);
             try
             {
                 //TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(true));
@@ -324,10 +320,8 @@ namespace TestsDTC
             const int TimeoutForConnect = 1000;
 
             // Set up the exampleService responses
-            var exampleService = new ExampleService(10, 20);
             var port = NextServerPort;
-
-            using var server = StartExampleServer(TimeoutNoActivity, port, exampleService);
+            using var exampleService = StartExampleServer(TimeoutNoActivity, port);
             using var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false);
             var sw = Stopwatch.StartNew();
             while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
@@ -335,7 +329,7 @@ namespace TestsDTC
                 // Wait for the client to connect
                 await Task.Delay(1).ConfigureAwait(false);
             }
-            Assert.Equal(1, server.NumberOfClientHandlers);
+            Assert.Equal(1, exampleService.NumberOfClientHandlers);
 
             var loginResponse = await client1.LogonAsync(useHeartbeat: false, timeout: TimeoutNoActivity).ConfigureAwait(true);
             Assert.NotNull(loginResponse);

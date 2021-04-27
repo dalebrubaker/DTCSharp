@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -13,13 +12,12 @@ using NLog;
 
 namespace DTCServer
 {
-    public class Server : IDisposable
+    public abstract class Server : IDisposable
     {
         private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
 
         private readonly int _port;
         private readonly int _timeoutNoActivity;
-        private readonly Action<ClientHandler, DTCMessageType, IMessage> _callback;
         private readonly IPAddress _ipAddress;
         private TcpListener _tcpListener;
         private bool _isDisposed;
@@ -31,13 +29,11 @@ namespace DTCServer
         /// <summary>
         /// Start a TCP Listener on port at ipAddress
         /// </summary>
-        /// <param name="callback">the callback for all client requests</param>
         /// <param name="port"></param>
         /// <param name="timeoutNoActivity">milliseconds timeout to assume disconnected if no activity</param>
         /// <param name="ipAddress"></param>
-        public Server(Action<ClientHandler, DTCMessageType, IMessage> callback, IPAddress ipAddress, int port, int timeoutNoActivity)
+        protected Server(IPAddress ipAddress, int port, int timeoutNoActivity)
         {
-            _callback = callback;
             _ipAddress = ipAddress;
             _port = port;
             _timeoutNoActivity = timeoutNoActivity;
@@ -72,6 +68,15 @@ namespace DTCServer
         }
 
         public bool IsConnected { get; private set; }
+
+        /// <summary>
+        /// This method is called for every request received by a client connected to this server.
+        /// </summary>
+        /// <param name="clientHandler">The handler for a particular client connected to this server</param>
+        /// <param name="messageType">the message type</param>
+        /// <param name="message">the message (a Google.Protobuf message)</param>
+        /// <returns></returns>
+        protected abstract void HandleRequest(ClientHandler clientHandler, DTCMessageType messageType, IMessage message);
 
         #region events
 
@@ -125,7 +130,7 @@ namespace DTCServer
                     {
                         tcpClient.ReceiveTimeout = _timeoutNoActivity;
                     }
-                    var clientHandler = new ClientHandler(_callback, tcpClient);
+                    var clientHandler = new ClientHandler(HandleRequest, tcpClient);
                     lock (_lock)
                     {
                         _clientHandlers.Add(clientHandler);

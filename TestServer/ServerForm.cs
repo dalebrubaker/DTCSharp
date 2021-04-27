@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DTCCommon.Extensions;
@@ -16,13 +15,12 @@ namespace TestServer
         private Server _serverPrimary;
         private Server _serverHistorical;
         private IPAddress _ipAddress;
-        private readonly ExampleService _exampleService;
 
         public ServerForm()
         {
             InitializeComponent();
-            _exampleService = new ExampleService(1000, 2000);
-            _exampleService.MessageEvent += ExampleServiceMessageEvent;
+            var exampleService = new ExampleService(_ipAddress, PortListener, 1000, 100, 20);
+            exampleService.MessageEvent += ExampleServiceMessageEvent;
         }
 
         private void ExampleServiceMessageEvent(object sender, string message)
@@ -54,9 +52,7 @@ namespace TestServer
         {
             btnStartPrimary.Enabled = false;
             btnStopPrimary.Enabled = true;
-            _serverPrimary =
-                new Server((clientHandler, messageType, message) => _exampleService.HandleRequest(clientHandler, messageType, message),
-                    _ipAddress, PortListener, 30000);
+            _serverPrimary = new ExampleService(_ipAddress, PortListener, 30000, 100, 200);
             try
             {
                 await _serverPrimary.RunAsync().ConfigureAwait(false);
@@ -78,9 +74,7 @@ namespace TestServer
         {
             btnStartHistorical.Enabled = false;
             btnStopHistorical.Enabled = true;
-            _serverHistorical =
-                new Server((clientHandler, messageType, message) => _exampleService.HandleRequest(clientHandler, messageType, message), _ipAddress,
-                    PortHistorical, 30000);
+            _serverHistorical = new ExampleService(_ipAddress, PortHistorical, 30000, 1000, 2000);
             try
             {
                 await _serverHistorical.RunAsync().ConfigureAwait(false);

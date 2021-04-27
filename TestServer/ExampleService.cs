@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Net;
 using DTCCommon.Extensions;
 using DTCPB;
 using DTCServer;
@@ -13,11 +12,12 @@ namespace TestServer
     /// <summary>
     /// The service implementation that provides responses to client requests.
     /// </summary>
-    public sealed class ExampleService : IServiceDTC
+    public sealed class ExampleService : Server
     {
         private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
 
-        public ExampleService(int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend)
+        public ExampleService(IPAddress ipAddress, int port, int timeoutNoActivity, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) :
+            base(ipAddress, port, timeoutNoActivity)
         {
             NumTradesAndBidAsksToSend = numTradesAndBidAsksToSend;
             MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>(NumTradesAndBidAsksToSend);
@@ -136,7 +136,7 @@ namespace TestServer
             temp?.Invoke(this, message);
         }
 
-        public void HandleRequest(ClientHandler clientHandler, DTCMessageType messageType, IMessage message)
+        protected override void HandleRequest(ClientHandler clientHandler, DTCMessageType messageType, IMessage message)
         {
             switch (messageType)
             {
