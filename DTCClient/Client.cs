@@ -365,6 +365,11 @@ namespace DTCClient
                     //s_logger.Debug($"Waiting to read a message in {nameof(Client)}.{nameof(ServerMessageReader)} using {_currentCodec}");
                     var message = ReadMessageDTC();
                     //s_logger.Debug($"Did read message={message} in {nameof(Client)}.{nameof(ServerMessageReader)} using {_currentCodec}");
+                    if (message.MessageType == DTCMessageType.MessageTypeUnset)
+                    {
+                        // Some read error. Don't allow this into the queue
+                        continue;
+                    }
                     if (_cts.IsCancellationRequested)
                     {
                         return;
@@ -844,6 +849,10 @@ namespace DTCClient
         /// <param name="messageDTC"></param>
         private void ProcessMessage(MessageDTC messageDTC)
         {
+            if (messageDTC.MessageType == DTCMessageType.MessageTypeUnset)
+            {
+                throw new DTCSharpException("Why? Should be filtered out by the reader.");
+            }
             OnEveryMessageFromServer(messageDTC.Message);
             switch (messageDTC.MessageType)
             {

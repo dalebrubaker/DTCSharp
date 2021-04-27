@@ -594,7 +594,7 @@ namespace TestClient
                 var startTime = firstRecord.StartDateTime.DtcDateTimeToUtc();
 
                 logControlHistorical.LogMessage($"HistoricalPriceDataTickRecordResponse RequestId:{response.RequestID} received "
-                                                + $"{_historicalPriceDataRecordResponses.Count} records "
+                                                + $"{_historicalPriceDataRecordResponses.Count:N0} records "
                                                 + $"from {startTime.ToLocalTime()} through {lastTime.ToLocalTime():yyyyMMdd.HHmmss.fff} (local).");
             }
         }

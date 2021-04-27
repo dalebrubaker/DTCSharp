@@ -133,6 +133,11 @@ namespace DTCServer
                 {
                     //s_logger.Debug($"Waiting to read a message in {nameof(ClientHandler)}.{nameof(ClientMessageReader)} using {_currentCodec}");
                     var message = ReadMessageDTC();
+                    if (message.MessageType == DTCMessageType.MessageTypeUnset)
+                    {
+                        // Some read error. Don't allow this into the queue
+                        continue;
+                    }
                     //s_logger.Debug($"Did read message={message} in {nameof(ClientHandler)}.{nameof(ClientMessageReader)} using {_currentCodec}");
                     if (_cts.IsCancellationRequested)
                     {
@@ -337,6 +342,10 @@ namespace DTCServer
         /// <param name="messageDTC"></param>
         private void ProcessMessage(MessageDTC messageDTC)
         {
+            if (messageDTC.MessageType == DTCMessageType.MessageTypeUnset)
+            {
+                throw new DTCSharpException("Why? Should be filtered out by the reader.");
+            }
             var protobuf = messageDTC.Message;
             var messageType = messageDTC.MessageType;
             OnEveryMessageFromClient(protobuf);

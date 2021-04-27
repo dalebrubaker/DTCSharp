@@ -145,7 +145,7 @@ namespace TestsDTC
                 await Task.Delay(100).ConfigureAwait(false);
             }
             var elapsed = sw.ElapsedMilliseconds;
-            _output.WriteLine($"Client1 received all {numTrades} historical trades in {elapsed} msecs");
+            _output.WriteLine($"Client1 received all {numTrades:N0} historical trades in {elapsed} msecs");
 
             Assert.Equal(1, numHistoricalPriceDataResponseHeader);
             Assert.Equal(exampleService.NumHistoricalPriceDataRecordsToSend, numTrades);
