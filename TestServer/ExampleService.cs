@@ -12,7 +12,7 @@ namespace TestServer
     /// <summary>
     /// The service implementation that provides responses to client requests.
     /// </summary>
-    public sealed class ExampleService : Server
+    public sealed class ExampleService : ServerBase
     {
         private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
 

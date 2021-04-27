@@ -12,8 +12,8 @@ namespace TestServer
 {
     public partial class ServerForm : Form
     {
-        private Server _serverPrimary;
-        private Server _serverHistorical;
+        private ServerBase _serverPrimary;
+        private ServerBase _serverHistorical;
         private IPAddress _ipAddress;
 
         public ServerForm()

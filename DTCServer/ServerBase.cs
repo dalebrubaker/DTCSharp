@@ -12,7 +12,11 @@ using NLog;
 
 namespace DTCServer
 {
-    public abstract class Server : IDisposable
+    /// <summary>
+    /// Use this as the base class for a Server where you implement support for the various ClientHandler callbacks via
+    ///     the HandleRequest() method. See ExampleService.
+    /// </summary>
+    public abstract class ServerBase : IDisposable
     {
         private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
 
@@ -32,7 +36,7 @@ namespace DTCServer
         /// <param name="port"></param>
         /// <param name="timeoutNoActivity">milliseconds timeout to assume disconnected if no activity</param>
         /// <param name="ipAddress"></param>
-        protected Server(IPAddress ipAddress, int port, int timeoutNoActivity)
+        protected ServerBase(IPAddress ipAddress, int port, int timeoutNoActivity)
         {
             _ipAddress = ipAddress;
             _port = port;
