@@ -8,25 +8,28 @@ Don't do encoding request, SC handles it automatically?
 Documentation
 =============
 
--   DTCSharp requires .Net 4.5. It uses Async methods to communicate between client and server.
+-   DTCSharp targets .Net 4.6.1.
 
 Client
 =============
 -   Responses from the server to the client are exposed as events, and the SendRequest() method is also exposed, to allow full low-level access.
+    You can get EVERY server response by subscribing to the EveryMessageFromServer event.
 -   But most request/response activities can be more easily accomplished using async methods that issue the request and return the response(s).
 
 Server
 =============
--   Requests from the client to the server are exposed as callbacks from each ClientHandler (which handles each client connected to the server), and the SendResponse() method is also exposed, to allow full low-level access.
--   A Service (e.g. see ExampleService) is passed through the server to each ClientHandler.
+-   Requests from the client to the server are exposed as callbacks from each ClientHandler (which handles a client connected to the server), and the SendResponse() method is also exposed, to allow full low-level access.
+-   A Service (e.g. see ExampleService) derives from ServerBase to support the callbacks.
 -   Events on ExampleService show a way for other server components to hook into client requests.
+-   You can get EVERY server response by subscribing to the EveryMessageFromClient event.
 -   But most request/response activities can be more easily accomplished using async methods that handle the request and return the response(s).
 
-Warnings
-=============
+Historical Data
+================
 -   If you request historical data using HistoricalDataIntervalEnum.IntervalTick you will only receive ticks if the Sierra Chart server Data/Trade Services Settings
         have Intraday Data Storage Time Unit set to 1 Tick
-- 	Request callback and event handlers must not block the thread for long; further requests can't be received until you return from this method.
+    Zipped transmission can be 5 to 10 times faster, even when both ends are on the same machine. The ProtocolBuffers encoding is especially fast. 
+    Using the same client or server for mixed use, like zipped historical and all other transmissions, is supported but discouraged. During zipped transmission there are no messages received from the server, including heartbeats.
 
 Future
 =============

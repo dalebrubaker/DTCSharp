@@ -137,7 +137,7 @@ namespace DTCClient
 
         public event EventHandler<IMessage> EveryMessageFromServer;
 
-        private void OnEveryEventFromServer(IMessage protobuf)
+        private void OnEveryMessageFromServer(IMessage protobuf)
         {
             var tmp = EveryMessageFromServer;
             tmp?.Invoke(this, protobuf);
@@ -844,7 +844,7 @@ namespace DTCClient
         /// <param name="messageDTC"></param>
         private void ProcessMessage(MessageDTC messageDTC)
         {
-            OnEveryEventFromServer(messageDTC.Message);
+            OnEveryMessageFromServer(messageDTC.Message);
             switch (messageDTC.MessageType)
             {
                 case DTCMessageType.LogonResponse:

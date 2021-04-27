@@ -339,7 +339,7 @@ namespace DTCServer
         {
             var protobuf = messageDTC.Message;
             var messageType = messageDTC.MessageType;
-            OnEveryEventFromClient(protobuf);
+            OnEveryMessageFromClient(protobuf);
 
             switch (messageType)
             {
@@ -532,7 +532,7 @@ namespace DTCServer
 
         public event EventHandler<IMessage> EveryMessageFromClient;
 
-        private void OnEveryEventFromClient(IMessage protobuf)
+        private void OnEveryMessageFromClient(IMessage protobuf)
         {
             var tmp = EveryMessageFromClient;
             tmp?.Invoke(this, protobuf);
