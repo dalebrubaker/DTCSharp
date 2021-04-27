@@ -452,6 +452,7 @@ namespace DTCServer
             {
                 return;
             }
+            var oldCodec = _currentCodec;
             switch (encoding)
             {
                 case EncodingEnum.BinaryEncoding:
@@ -464,10 +465,13 @@ namespace DTCServer
                     throw new NotImplementedException($"Not implemented in {nameof(ClientHandler)}: {nameof(encoding)}");
                 case EncodingEnum.ProtocolBuffers:
                     _currentCodec = new CodecProtobuf(_networkStreamServer);
-                    s_logger.Debug($"_currCodec changed to Protobuf in {nameof(ClientHandler)}");
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(encoding), encoding, null);
+            }
+            if (oldCodec != null)
+            {
+                s_logger.Debug($"Changed codec from {oldCodec} to {_currentCodec}");
             }
         }
     }

@@ -82,6 +82,7 @@ namespace TestsDTC
         {
             var client = new Client(IPAddress.Loopback.ToString(), port, timeoutNoActivity);
             var encodingResponse = await client.ConnectAsync(encoding, "TestClient" + port, timeoutForConnect).ConfigureAwait(false);
+            Assert.NotNull(encodingResponse);
             Assert.Equal(encoding, encodingResponse.Encoding);
             return client;
         }
