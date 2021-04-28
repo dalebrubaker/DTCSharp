@@ -6,6 +6,7 @@ using DTCCommon.Codecs;
 using DTCPB;
 using FluentAssertions;
 using Google.Protobuf;
+using Google.Protobuf.Reflection;
 using Xunit;
 
 namespace TestsDTC
@@ -37,7 +38,7 @@ namespace TestsDTC
                 protobufDuplicate.Should().Be(protobufTest, "Conversion should be exact");
             }
         }
-        
+
         [Fact]
         public void ProtoToBinaryRoundTrip()
         {
@@ -78,71 +79,72 @@ namespace TestsDTC
                 return null;
             }
             var result = EmptyProtobufs.GetEmptyProtobuf(messageType);
-            var properties = result.GetType().GetProperties();
+            var descriptor = result.Descriptor;
             int count = 1;
-            var skipPropertyNames = new[] {"Parser", "Descriptor", "RuntimePropertyInfo"};
-            foreach (var property in properties)
+            var properties = result.GetType().GetProperties();
+            var fields = descriptor.Fields.InFieldNumberOrder();
+            foreach (var field in fields)
             {
-                var propertyName = property.Name;
-                if (skipPropertyNames.Contains(propertyName))
+                var property = properties.FirstOrDefault(x => x.Name.Replace("_", "''") == field.JsonName);
+                if (property == null)
                 {
-                    continue;
+                    property = properties.FirstOrDefault(x => x.Name == field.JsonName + "_");
+                    if (property == null)
+                    {
+                        throw new NotSupportedException("Why?");
+                    }
                 }
                 var value = property.GetValue(result);
-                var typeName = property.PropertyType.Name;
-                var baseType = property.PropertyType.BaseType;
-                if (baseType == typeof(Enum))
+                switch (field.FieldType)
                 {
-                    // Set it to the 2nd enum value
-                    value = ((int)value + 1);
-                    property.SetValue(result, value);
-                    continue;
-                }
-                switch (typeName)
-                {
-                    case "Boolean":
-                        var boolValue = (bool)value;
-                        property.SetValue(result, !boolValue);
-                        break;
-                    case "Int32":
-                        value = ((int)value + count);
-                        property.SetValue(result, value);
-                        break;
-                    case "Int64":
-                        value = ((long)value + count);
-                        property.SetValue(result, value);
-                        break;
-                    case "DateTime":
-                        var dateTime = (DateTime)value;
-                        dateTime = dateTime.AddDays(count).AddHours(count).AddMilliseconds(1);
-                        property.SetValue(result, dateTime);
-                        break;
-                    case "Double":
+                    case FieldType.Double:
                         value = ((double)value + count);
-                        property.SetValue(result, value);
                         break;
-                    case "Single":
+                    case FieldType.Float:
                         value = ((float)value + count);
-                        property.SetValue(result, value);
                         break;
-                    case "String":
-                        value = ((string)value + count);
-                        property.SetValue(result, value);
+                    case FieldType.Int64:
+                        value = ((long)value + count);
                         break;
-                    case "UInt32":
-                        value = (uint)value + (uint)count;
-                        property.SetValue(result, value);
-                        break;
-                    case "UInt64":
+                    case FieldType.UInt64:
                         value = (ulong)value + (ulong)count;
-                        property.SetValue(result, value);
                         break;
+                    case FieldType.Int32:
+                        value = ((int)value + count);
+                        break;
+                    case FieldType.Bool:
+                        value = !(bool)value;
+                        break;
+                    case FieldType.String:
+                        value = ((string)value + count);
+                        break;
+                    case FieldType.UInt32:
+                        value = (uint)value + (uint)count;
+                        break;
+                    case FieldType.SFixed32:
+                        value = ((int)value + count);
+                        break;
+                    case FieldType.SFixed64:
+                        value = ((long)value + count);
+                        break;
+                    case FieldType.Enum:
+                        // Set it to the 2nd enum value
+                        value = ((int)value + 1);
+                        break;
+                    case FieldType.Fixed64:
+                    case FieldType.Fixed32:
+                    case FieldType.Group:
+                    case FieldType.Message:
+                    case FieldType.Bytes:
+                    case FieldType.SInt32:
+                    case FieldType.SInt64:
+                        throw new NotSupportedException("Must be a new proto file.");
                     default:
-                        throw new NotImplementedException();
+                        throw new ArgumentOutOfRangeException();
                 }
+                property.SetValue(result, value);
                 count++;
             }
-
             return result;
         }
     }
