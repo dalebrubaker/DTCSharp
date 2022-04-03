@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace DTCCommon.Exceptions
+// ReSharper disable once CheckNamespace
+namespace DTCCommon
 {
     [Serializable]
     public class DTCSharpException : Exception

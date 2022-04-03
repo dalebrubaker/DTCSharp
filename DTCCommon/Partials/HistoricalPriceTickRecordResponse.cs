@@ -1,5 +1,5 @@
 ﻿using System;
-using DTCCommon.Extensions;
+using DTCCommon;
 using Google.Protobuf;
 
 // ReSharper disable once CheckNamespace
@@ -22,8 +22,7 @@ namespace DTCPB
 
         public string ToDiagnosticString()
         {
-            return
-                $"{StartDateTimeUtc}(UTC) O:{Price} V:{Volume} AtBidOrAsk:{AtBidOrAsk} Final{IsFinalRecordBool}";
+            return $"{StartDateTimeUtc}(UTC) O:{Price} V:{Volume} AtBidOrAskEnum:{AtBidOrAsk} Final{IsFinalRecordBool}";
         }
     }
 }

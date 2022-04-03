@@ -1,5 +1,5 @@
 ﻿using System;
-using DTCCommon.Extensions;
+using DTCCommon;
 using Xunit;
 
 namespace TestsDTC

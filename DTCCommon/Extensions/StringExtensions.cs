@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Text;
+using NLog;
 
-namespace DTCCommon.Extensions
+// ReSharper disable once CheckNamespace
+namespace DTCCommon
 {
     public static class StringExtensions
     {
+        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        
         /// <summary>
         /// Convert a message string to bytes of a fixed width
         /// </summary>
@@ -29,20 +33,31 @@ namespace DTCCommon.Extensions
         /// <returns></returns>
         public static string StringFromNullTerminatedBytes(this byte[] bytes, int startIndex)
         {
-            var endIndex = Array.IndexOf(bytes, (byte)0, startIndex);
-            if (endIndex < 0)
+            try
             {
-                endIndex = bytes.Length;
+                if (startIndex >= bytes.Length)
+                {
+                    throw new DTCSharpException("Why?");
+                }
+                var endIndex = Array.IndexOf(bytes, (byte)0, startIndex);
+                if (endIndex < 0)
+                {
+                    endIndex = bytes.Length;
+                }
+                var length = endIndex - startIndex;
+                var result = Encoding.UTF8.GetString(bytes, startIndex, length);
+                return result;
             }
-            var length = endIndex - startIndex;
-            var result = Encoding.UTF8.GetString(bytes, startIndex, length);
-            return result;
+            catch (Exception ex)
+            {
+                s_logger.Error(ex, ex.Message);
+                throw;
+            }
         }
 
-        public static int ToInt32(this string str)
+        public static int ToInt(this string str)
         {
-            int result;
-            if (int.TryParse(str, out result))
+            if (int.TryParse(str, out var result))
             {
                 return result;
             }

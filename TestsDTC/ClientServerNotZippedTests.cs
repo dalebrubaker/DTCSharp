@@ -2,12 +2,9 @@
 using System.Diagnostics;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using DTCClient;
-using DTCCommon.Exceptions;
-using DTCCommon.Extensions;
+using DTCCommon;
 using DTCPB;
-using DTCServer;
 using FluentAssertions;
 using Google.Protobuf;
 using NLog;
@@ -33,23 +30,10 @@ namespace TestsDTC
             //_output.WriteLine("Disposing");
         }
 
-        private ExampleService StartExampleServer(int timeoutNoActivity, int port)
+        private ExampleService StartExampleServer(int port)
         {
-            var server = new ExampleService(IPAddress.Loopback, port, timeoutNoActivity, 10, 20);
-            Task.Run(async () => await server.RunAsync().ConfigureAwait(false));
+            var server = new ExampleService(IPAddress.Loopback, port, 10, 20);
             return server;
-        }
-
-        private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port,
-            EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
-        {
-            var client = new Client(IPAddress.Loopback.ToString(), port, timeoutNoActivity);
-            var encodingResponse = await client.ConnectAsync(encoding, "TestClient" + port, timeoutForConnect).ConfigureAwait(false);
-            if (encodingResponse == null)
-            {
-                throw new DTCSharpException("Encoding response is null");
-            }
-            return client;
         }
 
         /// <summary>
@@ -58,34 +42,20 @@ namespace TestsDTC
         /// </summary>
         /// <returns></returns>
         [Fact]
-        public async Task HistoricalPriceDataRecordResponseTickNotZippedTest()
+        public void HistoricalPriceDataRecordResponseTickNotZippedTest()
         {
-            const int TimeoutNoActivity = int.MaxValue; // 1000;
-            const int TimeoutForConnect = int.MaxValue; // 1000;
             const bool UseZLibCompression = false;
-            var isFinalRecordReceived = false;
+            var signal = new ManualResetEvent(false);
             var sw = Stopwatch.StartNew();
 
             // Set up the exampleService responses
             var port = ClientServerTests.NextServerPort;
-            using var exampleService = StartExampleServer(TimeoutNoActivity, port);
-            using var clientHistorical = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port, EncodingEnum.ProtocolBuffers)
-                .ConfigureAwait(false);
-            while (!clientHistorical.IsConnected) // && sw.ElapsedMilliseconds < 1000)
-            {
-                // Wait for the client to connect
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            Assert.Equal(1, exampleService.NumberOfClientHandlers);
-            while (exampleService.NumberOfClientHandlersConnected == 0 && sw.ElapsedMilliseconds < 1000)
-            {
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            Assert.Equal(1, exampleService.NumberOfClientHandlersConnected);
-
-            // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
-            var loginResponse = await clientHistorical.LogonAsync(0, false, TimeoutForConnect).ConfigureAwait(true);
+            using var exampleService = StartExampleServer(port);
+            using var clientHistorical = new ClientDTC("localhost", port);
+            var (loginResponse, error) = clientHistorical.Logon("TestClient", 1);
             Assert.NotNull(loginResponse);
+            Assert.Equal(1, exampleService.NumberOfClientHandlers);
+            Assert.Equal(1, exampleService.NumberOfClientHandlersConnected);
 
             var numHistoricalPriceDataResponseHeader = 0;
             var numTrades = 0;
@@ -109,18 +79,19 @@ namespace TestsDTC
                 }
                 if (trade.IsFinalRecord != 0)
                 {
-                    isFinalRecordReceived = true;
+                    signal.Set();
                 }
             }
 
             clientHistorical.HistoricalPriceDataRecordResponseEvent += ClientHistoricalOnHistoricalPriceDataResponseEvent;
 
             var countEvents = 0;
+
             void ClientHistoricalOnEveryMessageFromServer(object sender, IMessage protobuf)
             {
                 countEvents++;
             }
-            
+
             clientHistorical.EveryMessageFromServer += ClientHistoricalOnEveryMessageFromServer;
 
             // Now request the data
@@ -140,10 +111,7 @@ namespace TestsDTC
             var endDateTime = request.EndDateTimeUtc;
             sw.Restart();
             clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
-            while (!isFinalRecordReceived)
-            {
-                await Task.Delay(100).ConfigureAwait(false);
-            }
+            signal.WaitOne(1000);
             var elapsed = sw.ElapsedMilliseconds;
             _output.WriteLine($"Client1 received all {numTrades:N0} historical trades in {elapsed} msecs");
 
@@ -152,6 +120,5 @@ namespace TestsDTC
 
             countEvents.Should().BeGreaterThan(0);
         }
-
     }
 }

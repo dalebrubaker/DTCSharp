@@ -1,5 +1,5 @@
 ﻿using System;
-using DTCCommon.Extensions;
+using DTCCommon;
 using Google.Protobuf;
 
 // ReSharper disable once CheckNamespace
@@ -8,10 +8,31 @@ namespace DTCPB
 {
     public partial class HistoricalPriceDataRecordResponse : ICustomDiagnosticMessage
     {
+        private DateTime _startDateTimeUtc;
+        private DateTime _startDateTimeLocal;
+
         public DateTime StartDateTimeUtc
         {
-            get => startDateTime_.DtcDateTimeToUtc();
-            set => startDateTime_ = value.UtcToDtcDateTime();
+            get
+            {
+                if (_startDateTimeUtc == System.DateTime.MinValue)
+                {
+                    _startDateTimeUtc = startDateTime_.FromUnixSecondsToDateTime();
+                }
+                return _startDateTimeUtc;
+            }
+        }
+        
+        public DateTime StartDateTimeLocal
+        {
+            get
+            {
+                if (_startDateTimeLocal == DateTime.MinValue)
+                {
+                    _startDateTimeLocal = StartDateTimeUtc.ToLocalTime();
+                }
+                return _startDateTimeLocal;
+            }
         }
 
         public bool IsFinalRecordBool
@@ -20,10 +41,12 @@ namespace DTCPB
             set => isFinalRecord_ = value ? 1u : 0u;
         }
 
+        public bool IsOneTick => NumTrades == 1 && OpenPrice == 0;
+
         public string ToDiagnosticString()
         {
-            return
-                $"{StartDateTimeUtc}(UTC) O:{OpenPrice} H:{HighPrice} L:{LowPrice} C:{LastPrice} V:{Volume} BV:{BidVolume} AV:{AskVolume} #T{NumTrades} FinalRecord={IsFinalRecordBool}";
+            return $"{StartDateTimeLocal:yyyyMMdd.HHmmss}(Local) O:{OpenPrice} H:{HighPrice} L:{LowPrice} C:{LastPrice} V:{Volume} BV:{BidVolume} AV:{AskVolume} #T:{NumTrades} "
+                   + $"FinalRecord={IsFinalRecordBool}";
         }
     }
 }

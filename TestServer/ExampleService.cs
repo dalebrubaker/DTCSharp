@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-using DTCCommon.Extensions;
+using System.Threading.Tasks;
+using DTCCommon;
 using DTCPB;
 using DTCServer;
-using Google.Protobuf;
 using NLog;
 
 namespace TestServer
@@ -12,12 +12,12 @@ namespace TestServer
     /// <summary>
     /// The service implementation that provides responses to client requests.
     /// </summary>
-    public sealed class ExampleService : ServerBase
+    public sealed class ExampleService : ListenerDTC
     {
         private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
 
-        public ExampleService(IPAddress ipAddress, int port, int timeoutNoActivity, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) :
-            base(ipAddress, port, timeoutNoActivity)
+        public ExampleService(IPAddress ipAddress, int port, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) :
+            base(ipAddress, port)
         {
             NumTradesAndBidAsksToSend = numTradesAndBidAsksToSend;
             MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>(NumTradesAndBidAsksToSend);
@@ -136,29 +136,41 @@ namespace TestServer
             temp?.Invoke(this, message);
         }
 
-        protected override void HandleRequest(ClientHandler clientHandler, DTCMessageType messageType, IMessage message)
+        protected override Task HandleRequestAsync(ClientHandlerDTC clientHandler, MessageProto messageProto)
         {
+            if (messageProto.IsExtended)
+            {
+                return HandleRequestExtendedAsync(clientHandler, messageProto);
+            }
+            var messageType = messageProto.MessageType;
+            var message = messageProto.Message;
             switch (messageType)
             {
                 case DTCMessageType.Heartbeat:
                 case DTCMessageType.Logoff:
                 case DTCMessageType.EncodingRequest:
-                    // This is informational only. Request already has been handled by the clientHandler
-                    break;
+                    {
+                        // This is informational only. Request already has been handled by the clientHandler
+                        break;
+                    }
 
                 case DTCMessageType.LogonRequest:
-                    var logonRequest = message as LogonRequest;
+                    var logonRequest = (LogonRequest)message;
                     var logonResponse = new LogonResponse
                     {
                         HistoricalPriceDataSupported = 1u,
                         ProtocolVersion = logonRequest.ProtocolVersion,
-                        MarketDataSupported = 1u
+                        MarketDataSupported = 1u,
+                        Result = LogonStatusEnum.LogonSuccess,
+
+                        // Uncomment the following line to be like SierraChart. Not necessary forDTCSharp
+                        //OneHistoricalPriceDataRequestPerConnection = 1u
                     };
                     clientHandler.SendResponse(DTCMessageType.LogonResponse, logonResponse);
                     break;
 
                 case DTCMessageType.HistoricalPriceDataRequest:
-                    var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
+                    var historicalPriceDataRequest = (HistoricalPriceDataRequest)message;
                     HistoricalPriceDataResponseHeader.UseZLibCompressionBool = historicalPriceDataRequest.UseZLibCompressionBool;
                     clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataResponseHeader, HistoricalPriceDataResponseHeader);
                     var numSent = 0;
@@ -171,17 +183,23 @@ namespace TestServer
                             clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponse);
                         }
                     }
+
+                    // This demonstrates the DTC rule that an empty record may be sent with IsFinalRecordBool.HistoricalPriceDataRecordResponses.Count - 1
+                    //  Probably better design IMHO to set IsFinalRecordBool when i == HistoricalPriceDataRecordResponses.Count - 1
                     var historicalPriceDataRecordResponseFinal = new HistoricalPriceDataRecordResponse();
                     historicalPriceDataRecordResponseFinal.IsFinalRecordBool = true;
                     clientHandler.SendResponse(DTCMessageType.HistoricalPriceDataRecordResponse, historicalPriceDataRecordResponseFinal);
-                    numSent++;
+                    ;
                     if (historicalPriceDataRequest.UseZLibCompressionBool)
                     {
-                        clientHandler.EndZippedWriting();
+                        clientHandler.EndZippedHistorical();
                     }
+
+                    // To be like SierraChart you can uncomment the following line to make this a historical client with one-time use 
+                    // clientHandler.Dispose();
                     break;
                 case DTCMessageType.MarketDataRequest:
-                    var marketDataRequest = message as MarketDataRequest;
+                    var marketDataRequest = (MarketDataRequest)message;
                     switch (marketDataRequest.RequestAction)
                     {
                         case RequestActionEnum.RequestActionUnset:
@@ -199,6 +217,18 @@ namespace TestServer
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
+                    break;
+                case DTCMessageType.SecurityDefinitionForSymbolRequest:
+                    var securityDefinitionForSymbolRequest = (SecurityDefinitionForSymbolRequest)message;
+                    var securityDefinitionResponse = new SecurityDefinitionResponse
+                    {
+                        RequestID = securityDefinitionForSymbolRequest.RequestID,
+                        Symbol = securityDefinitionForSymbolRequest.Symbol,
+                        MinPriceIncrement = 0.25f,
+                        Description = "Description must not be empty."
+                    };
+                    //s_logger.Debug("Sending SecurityDefinitionResponse");
+                    clientHandler.SendResponse(DTCMessageType.SecurityDefinitionResponse, securityDefinitionResponse);
                     break;
                 case DTCMessageType.MarketDataReject:
                 case DTCMessageType.MarketDataSnapshot:
@@ -257,7 +287,6 @@ namespace TestServer
                 case DTCMessageType.SymbolsForExchangeRequest:
                 case DTCMessageType.UnderlyingSymbolsForExchangeRequest:
                 case DTCMessageType.SymbolsForUnderlyingRequest:
-                case DTCMessageType.SecurityDefinitionForSymbolRequest:
                 case DTCMessageType.SymbolSearchRequest:
                 case DTCMessageType.SecurityDefinitionReject:
                 case DTCMessageType.AccountBalanceRequest:
@@ -296,15 +325,28 @@ namespace TestServer
                 case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
                 case DTCMessageType.HistoricalMarketDepthDataReject:
                 case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                    throw new NotSupportedException($"Unexpected request {messageType} in {GetType().Name}.{nameof(HandleRequest)}");
+                    throw new NotSupportedException($"Unexpected request {messageType} in {GetType().Name}.{nameof(HandleRequestAsync)}");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(messageType), messageType, null);
             }
             var msg = $"{messageType}:{message}";
             OnMessage(msg);
+            return Task.CompletedTask;
         }
 
-        private void SendMarketData(ClientHandler clientHandler, MarketDataRequest marketDataRequest)
+        private Task HandleRequestExtendedAsync(ClientHandlerDTC clientHandler, MessageProto messageProto)
+        {
+            throw new NotImplementedException();
+            // switch (messageProto.MessageTypeExtended)
+            // {
+            //     case DTCSharpMessageType.Unset:
+            //     default:
+            //         throw new ArgumentOutOfRangeException();
+            // }
+            // return Task.CompletedTask;
+        }
+
+        private void SendMarketData(ClientHandlerDTC clientHandler, MarketDataRequest marketDataRequest)
         {
             var numSentMarketData = 0;
             var numSentBidAsks = 0;
@@ -326,7 +368,7 @@ namespace TestServer
             s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
         }
 
-        private static void SendSnapshot(ClientHandler clientHandler)
+        private static void SendSnapshot(ClientHandlerDTC clientHandler)
         {
             // First we send a snapshot, then bids and asks
             var marketDataSnapshot = new MarketDataSnapshot

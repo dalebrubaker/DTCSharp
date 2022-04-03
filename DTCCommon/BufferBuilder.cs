@@ -1,7 +1,6 @@
 ﻿// unset
 using System;
 using System.IO;
-using DTCCommon.Exceptions;
 
 namespace DTCCommon
 {

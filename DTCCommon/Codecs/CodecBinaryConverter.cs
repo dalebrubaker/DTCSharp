@@ -1,13 +1,15 @@
 ﻿using System;
 using System.IO;
-using DTCCommon.Extensions;
 using DTCPB;
 using Google.Protobuf;
+using NLog;
 
 namespace DTCCommon.Codecs
 {
-    public class CodecBinaryConverter : ICodecConverter
+    public static class CodecBinaryConverter
     {
+        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+
         // Text string lengths. Copied from DTCProtocol.h
         private const int USERNAME_PASSWORD_LENGTH = 32;
         private const int SYMBOL_EXCHANGE_DELIMITER_LENGTH = 4;
@@ -24,23 +26,26 @@ namespace DTCCommon.Codecs
         private const int CLIENT_SERVER_NAME_LENGTH = 48;
         private const int GENERAL_IDENTIFIER_LENGTH = 64;
         private const int CURRENCY_CODE_LENGTH = 8;
+        private const int CLIENT_NAME_LENGTH = 32;
 
-        public T ConvertToProtobuf<T>(DTCMessageType messageType, byte[] bytes) where T : IMessage<T>, new()
+        /// <summary>
+        /// Load the given empty message with the values from messageEncoded.MessageBytes
+        /// </summary>
+        /// <param name="messageEncoded"></param>
+        /// <param name="message"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        private static void ConvertToProtobuf(MessageEncoded messageEncoded, IMessage message)
         {
-            var result = new T();
-            ConvertToProtobuf(messageType, bytes, result);
-            return result;
-        }
-
-        public void ConvertToProtobuf(DTCMessageType messageType, byte[] bytes, IMessage result)
-        {
+            var messageType = messageEncoded.MessageType;
+            var bytes = messageEncoded.MessageBytes;
             var index = 0;
-            switch (messageType)
+            switch (messageEncoded.MessageType)
             {
                 case DTCMessageType.MessageTypeUnset:
-                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinary)}: {messageType}");
+                    throw new NotImplementedException($"Not implemented in {nameof(CodecBinaryConverter)}: {messageType}");
                 case DTCMessageType.LogonRequest:
-                    var logonRequest = result as LogonRequest;
+                    var logonRequest = (LogonRequest)message;
                     logonRequest.ProtocolVersion = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     logonRequest.Username = bytes.StringFromNullTerminatedBytes(index);
@@ -55,16 +60,18 @@ namespace DTCCommon.Codecs
                     index += 4;
                     logonRequest.HeartbeatIntervalInSeconds = BitConverter.ToInt32(bytes, index);
                     index += 4;
-                    logonRequest.TradeMode = (TradeModeEnum)BitConverter.ToInt32(bytes, index);
+                    logonRequest.Unused1 = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     logonRequest.TradeAccount = bytes.StringFromNullTerminatedBytes(index);
                     index += TRADE_ACCOUNT_LENGTH;
                     logonRequest.HardwareIdentifier = bytes.StringFromNullTerminatedBytes(index);
                     index += GENERAL_IDENTIFIER_LENGTH;
                     logonRequest.ClientName = bytes.StringFromNullTerminatedBytes(index);
+                    index += CLIENT_NAME_LENGTH;
+                    logonRequest.MarketDataTransmissionInterval = BitConverter.ToInt32(bytes, index);
                     return;
                 case DTCMessageType.LogonResponse:
-                    var logonResponse = result as LogonResponse;
+                    var logonResponse = (LogonResponse)message;
                     logonResponse.ProtocolVersion = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     logonResponse.Result = (LogonStatusEnum)BitConverter.ToInt32(bytes, index);
@@ -89,25 +96,25 @@ namespace DTCCommon.Codecs
                     logonResponse.MarketDepthIsSupported = bytes[index++];
                     logonResponse.OneHistoricalPriceDataRequestPerConnection = bytes[index++];
                     logonResponse.BracketOrdersSupported = bytes[index++];
-                    logonResponse.UseIntegerPriceOrderMessages = bytes[index++];
+                    logonResponse.Unused1 = bytes[index++];
                     logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount = bytes[index++];
                     logonResponse.MarketDataSupported = BitConverter.ToUInt32(bytes, index);
                     return;
                 case DTCMessageType.Heartbeat:
-                    var heartbeat = result as Heartbeat;
+                    var heartbeat = (Heartbeat)message;
                     heartbeat.NumDroppedMessages = BitConverter.ToUInt32(bytes, index);
                     index += 4;
                     heartbeat.CurrentDateTime = BitConverter.ToInt64(bytes, index);
                     return;
                 case DTCMessageType.Logoff:
-                    var logoff = result as Logoff;
+                    var logoff = (Logoff)message;
                     logoff.Reason = bytes.StringFromNullTerminatedBytes(index);
                     index += TEXT_DESCRIPTION_LENGTH;
                     logoff.DoNotReconnect = bytes[index++];
                     return;
                 case DTCMessageType.EncodingRequest:
                     // EncodingResponse comes back as binary for all protocol versions
-                    var encodingRequest = result as EncodingRequest;
+                    var encodingRequest = (EncodingRequest)message;
                     encodingRequest.ProtocolVersion = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     encodingRequest.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
@@ -116,7 +123,7 @@ namespace DTCCommon.Codecs
                     return;
                 case DTCMessageType.EncodingResponse:
                     // EncodingResponse comes back as binary for all protocol versions
-                    var encodingResponse = result as EncodingResponse;
+                    var encodingResponse = (EncodingResponse)message;
                     encodingResponse.ProtocolVersion = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     encodingResponse.Encoding = (EncodingEnum)BitConverter.ToInt32(bytes, index);
@@ -124,7 +131,7 @@ namespace DTCCommon.Codecs
                     encodingResponse.ProtocolType = bytes.StringFromNullTerminatedBytes(index);
                     return;
                 case DTCMessageType.MarketDataRequest:
-                    var marketDataRequest = result as MarketDataRequest;
+                    var marketDataRequest = (MarketDataRequest)message;
                     marketDataRequest.RequestAction = (RequestActionEnum)BitConverter.ToInt32(bytes, index);
                     index += 4;
                     marketDataRequest.SymbolID = BitConverter.ToUInt16(bytes, index);
@@ -136,14 +143,14 @@ namespace DTCCommon.Codecs
                     marketDataRequest.IntervalForSnapshotUpdatesInMilliseconds = BitConverter.ToUInt32(bytes, index);
                     return;
                 case DTCMessageType.MarketDataReject:
-                    var marketDataReject = result as MarketDataReject;
+                    var marketDataReject = (MarketDataReject)message;
                     marketDataReject.SymbolID = BitConverter.ToUInt16(bytes, index);
                     index += 2;
                     marketDataReject.RejectText = bytes.StringFromNullTerminatedBytes(index);
                     index += TEXT_DESCRIPTION_LENGTH;
                     return;
                 case DTCMessageType.MarketDataFeedStatus:
-                    var marketDataFeedStatus = result as MarketDataFeedStatus;
+                    var marketDataFeedStatus = (MarketDataFeedStatus)message;
                     marketDataFeedStatus.Status = (MarketDataFeedStatusEnum)BitConverter.ToInt32(bytes, index);
                     index += 4;
                     return;
@@ -162,17 +169,16 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.HistoricalOrderFillResponse:
                 case DTCMessageType.CurrentPositionsRequest:
                 case DTCMessageType.CurrentPositionsReject:
-                case DTCMessageType.PositionUpdate:
                 case DTCMessageType.TradeAccountsRequest:
                 case DTCMessageType.TradeAccountResponse:
                     throw new NotImplementedException();
                 case DTCMessageType.ExchangeListRequest:
-                    var exchangeListRequest = result as ExchangeListRequest;
+                    var exchangeListRequest = (ExchangeListRequest)message;
                     exchangeListRequest.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     return;
                 case DTCMessageType.ExchangeListResponse:
-                    var exchangeListResponse = result as ExchangeListResponse;
+                    var exchangeListResponse = (ExchangeListResponse)message;
                     exchangeListResponse.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     exchangeListResponse.Exchange = bytes.StringFromNullTerminatedBytes(index);
@@ -186,7 +192,7 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.SymbolsForUnderlyingRequest:
                     throw new NotImplementedException();
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    var securityDefinitionForSymbolRequest = result as SecurityDefinitionForSymbolRequest;
+                    var securityDefinitionForSymbolRequest = (SecurityDefinitionForSymbolRequest)message;
                     securityDefinitionForSymbolRequest.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     securityDefinitionForSymbolRequest.Symbol = bytes.StringFromNullTerminatedBytes(index);
@@ -195,7 +201,7 @@ namespace DTCCommon.Codecs
                     index += EXCHANGE_LENGTH;
                     return;
                 case DTCMessageType.SecurityDefinitionResponse:
-                    var securityDefinitionResponse = result as SecurityDefinitionResponse;
+                    var securityDefinitionResponse = (SecurityDefinitionResponse)message;
                     securityDefinitionResponse.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     securityDefinitionResponse.Symbol = bytes.StringFromNullTerminatedBytes(index);
@@ -259,11 +265,16 @@ namespace DTCCommon.Codecs
                     securityDefinitionResponse.RolloverDate = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     securityDefinitionResponse.IsDelayed = BitConverter.ToUInt32(bytes, index);
+                    index += 4;
+                    securityDefinitionResponse.SecurityIdentifier = BitConverter.ToInt64(bytes, index);
+                    index += 8;
+                    securityDefinitionResponse.ProductIdentifier = bytes.StringFromNullTerminatedBytes(index);
+                    index += GENERAL_IDENTIFIER_LENGTH;
                     return;
                 case DTCMessageType.SymbolSearchRequest:
                     throw new NotImplementedException();
                 case DTCMessageType.SecurityDefinitionReject:
-                    var securityDefinitionReject = result as SecurityDefinitionReject;
+                    var securityDefinitionReject = (SecurityDefinitionReject)message;
                     securityDefinitionReject.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     securityDefinitionReject.RejectText = bytes.StringFromNullTerminatedBytes(index);
@@ -274,20 +285,23 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.AccountBalanceReject:
                     throw new NotImplementedException();
                 case DTCMessageType.AccountBalanceUpdate:
-                    throw new NotImplementedException();
+                case DTCMessageType.PositionUpdate:
+                    // Probably being thrown from SC on an open trade while connecting binary for Encoding change
+                    s_logger.Warn($"Ignoring binary message {messageEncoded}");
+                    break;
                 case DTCMessageType.UserMessage:
-                    var userMessage = result as UserMessage;
+                    var userMessage = (UserMessage)message;
                     index = 0;
                     userMessage.UserMessage_ = bytes.StringFromNullTerminatedBytes(index);
                     index += TEXT_MESSAGE_LENGTH;
                     return;
                 case DTCMessageType.GeneralLogMessage:
-                    var generalLogMessage = result as GeneralLogMessage;
+                    var generalLogMessage = (GeneralLogMessage)message;
                     generalLogMessage.MessageText = bytes.StringFromNullTerminatedBytes(index);
                     index += 128;
                     return;
                 case DTCMessageType.HistoricalPriceDataRequest:
-                    var historicalPriceDataRequest = result as HistoricalPriceDataRequest;
+                    var historicalPriceDataRequest = (HistoricalPriceDataRequest)message;
                     historicalPriceDataRequest.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     historicalPriceDataRequest.Symbol = bytes.StringFromNullTerminatedBytes(index);
@@ -308,7 +322,7 @@ namespace DTCCommon.Codecs
                     historicalPriceDataRequest.Integer1 = bytes[index++];
                     return;
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    var historicalPriceDataResponseHeader = result as HistoricalPriceDataResponseHeader;
+                    var historicalPriceDataResponseHeader = (HistoricalPriceDataResponseHeader)message;
                     historicalPriceDataResponseHeader.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     historicalPriceDataResponseHeader.RecordInterval = (HistoricalDataIntervalEnum)BitConverter.ToInt32(bytes, index);
@@ -321,7 +335,7 @@ namespace DTCCommon.Codecs
                     //Logger.Debug($"{nameof(CodecBinary)} loaded {messageType} {result}");
                     return;
                 case DTCMessageType.HistoricalPriceDataReject:
-                    var historicalPriceDataReject = result as HistoricalPriceDataReject;
+                    var historicalPriceDataReject = (HistoricalPriceDataReject)message;
                     historicalPriceDataReject.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     historicalPriceDataReject.RejectText = bytes.StringFromNullTerminatedBytes(index);
@@ -332,11 +346,11 @@ namespace DTCCommon.Codecs
                     index += 2;
                     return;
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    var historicalPriceDataRecordResponse = result as HistoricalPriceDataRecordResponse;
+                    var historicalPriceDataRecordResponse = (HistoricalPriceDataRecordResponse)message;
                     historicalPriceDataRecordResponse.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     historicalPriceDataRecordResponse.StartDateTime = BitConverter.ToInt64(bytes, index);
-                    var debug = $"{historicalPriceDataRecordResponse.StartDateTime.DtcDateTimeToUtc().ToLocalTime():yyyyMMdd.HHmmss.fff} (local).";
+                    var _ = $"{historicalPriceDataRecordResponse.StartDateTime.DtcDateTimeToUtc().ToLocalTime():yyyyMMdd.HHmmss.fff} (local).";
                     index += 8;
                     historicalPriceDataRecordResponse.OpenPrice = BitConverter.ToDouble(bytes, index);
                     index += 8;
@@ -362,13 +376,13 @@ namespace DTCCommon.Codecs
                     return;
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     // Probably no longer used after version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
-                    var historicalPriceDataTickRecordResponse = result as HistoricalPriceDataTickRecordResponse;
+                    var historicalPriceDataTickRecordResponse = (HistoricalPriceDataTickRecordResponse)message;
                     historicalPriceDataTickRecordResponse.RequestID = BitConverter.ToInt32(bytes, index);
                     index += 4;
                     historicalPriceDataTickRecordResponse.DateTime = BitConverter.ToInt64(bytes, index);
                     index += 8;
                     historicalPriceDataTickRecordResponse.AtBidOrAsk = (AtBidOrAskEnum)BitConverter.ToInt32(bytes, index);
-                    // TODO is this 2-byte enum padded to 4?
+                    // I think this 2-byte enum padded to 4?
                     index += 4;
                     historicalPriceDataTickRecordResponse.Price = BitConverter.ToDouble(bytes, index);
                     index += 8;
@@ -439,78 +453,97 @@ namespace DTCCommon.Codecs
             }
         }
 
-        public IMessage ConvertToProtobuf(DTCMessageType messageType, byte[] messageBytes)
+        public static MessageProto DecodeBinary(MessageEncoded messageEncoded)
         {
-            var result = EmptyProtobufs.GetEmptyProtobuf(messageType);
-            this.ConvertToProtobuf(messageType, messageBytes, result);
+            if (messageEncoded.IsExtended)
+            {
+                throw new NotSupportedException("No extended message types currently are supported in Binary Encoding.");
+            }
+            var message = EmptyProtobufs.GetEmptyProtobuf(messageEncoded.MessageType);
+            ConvertToProtobuf(messageEncoded, message);
+            var result = new MessageProto(messageEncoded.MessageType, message);
+            return result;
+        }
+        
+
+        public static MessageEncoded EncodeBinary(MessageProto messageProto)
+        {
+            if (messageProto.IsExtended)
+            {
+                throw new NotSupportedException("No extended message types currently are supported in Binary Encoding.");
+            }
+            var bytes = ConvertToBinary(messageProto);
+            var result = new MessageEncoded(messageProto.MessageType, bytes);
             return result;
         }
 
-        public byte[] ConvertToBuffer(DTCMessageType messageType, IMessage message)
+        private static byte[] ConvertToBinary(MessageProto messageProto)
         {
             //Logger.Debug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
+            var messageType = messageProto.MessageType;
+            var message = messageProto.Message;
             switch (messageType)
             {
                 case DTCMessageType.MessageTypeUnset:
-                    throw new ArgumentException(messageType.ToString());
+                    return Array.Empty<byte>();
                 case DTCMessageType.LogonRequest:
-                    var logonRequest = message as LogonRequest;
+                    var logonRequest = (LogonRequest)message;
                     return ConvertToBufferLogonRequest(messageType, logonRequest);
                 case DTCMessageType.LogonResponse:
-                    var logonResponse = message as LogonResponse;
+                    var logonResponse = (LogonResponse)message;
                     return ConvertToBufferLogonResponse(messageType, logonResponse);
                 case DTCMessageType.Heartbeat:
-                    var heartbeat = message as Heartbeat;
+                    var heartbeat = (Heartbeat)message;
                     return ConvertToBufferHeartbeat(messageType, heartbeat);
                 case DTCMessageType.Logoff:
-                    var logoff = message as Logoff;
+                    var logoff = (Logoff)message;
                     return ConvertToBufferLogoff(messageType, logoff);
                 case DTCMessageType.EncodingRequest:
-                    var encodingRequest = message as EncodingRequest;
+                    var encodingRequest = (EncodingRequest)message;
                     return ConvertToBufferEncodingRequest(messageType, encodingRequest);
                 case DTCMessageType.EncodingResponse:
-                    var encodingResponse = message as EncodingResponse;
+                    var encodingResponse = (EncodingResponse)message;
                     return ConvertToBufferEncodingResponse(messageType, encodingResponse);
                 case DTCMessageType.MarketDataRequest:
-                    var marketDataRequest = message as MarketDataRequest;
+                    var marketDataRequest = (MarketDataRequest)message;
                     return ConvertToBufferMarketDataRequest(messageType, marketDataRequest);
                 case DTCMessageType.MarketDataReject:
-                    var marketDataReject = message as MarketDataReject;
+                    var marketDataReject = (MarketDataReject)message;
                     return ConvertToBufferMarketDataReject(messageType, marketDataReject);
                 case DTCMessageType.MarketDataFeedStatus:
-                    var marketDataFeedStatus = message as MarketDataFeedStatus;
+                    var marketDataFeedStatus = (MarketDataFeedStatus)message;
                     return ConvertToBufferMarketDataFeedStatus(messageType, marketDataFeedStatus);
                 case DTCMessageType.ExchangeListRequest:
-                    var exchangeListRequest = message as ExchangeListRequest;
+                    var exchangeListRequest = (ExchangeListRequest)message;
                     return ConvertToBufferExchangeListRequest(messageType, exchangeListRequest);
                 case DTCMessageType.ExchangeListResponse:
-                    var exchangeListResponse = message as ExchangeListResponse;
+                    var exchangeListResponse = (ExchangeListResponse)message;
                     return ConvertToBufferExchangeListResponse(messageType, exchangeListResponse);
                 case DTCMessageType.SecurityDefinitionForSymbolRequest:
-                    var securityDefinitionForSymbolRequest = message as SecurityDefinitionForSymbolRequest;
+                    var securityDefinitionForSymbolRequest = (SecurityDefinitionForSymbolRequest)message;
                     return ConvertToBufferSecurityDefinitionForSymbolRequest(messageType, securityDefinitionForSymbolRequest);
                 case DTCMessageType.SecurityDefinitionResponse:
-                    var securityDefinitionResponse = message as SecurityDefinitionResponse;
+                    var securityDefinitionResponse = (SecurityDefinitionResponse)message;
                     return ConvertToBufferSecurityDefinitionResponse(messageType, securityDefinitionResponse);
                 case DTCMessageType.SecurityDefinitionReject:
-                    var securityDefinitionReject = message as SecurityDefinitionReject;
+                    var securityDefinitionReject = (SecurityDefinitionReject)message;
                     return ConvertToBufferSecurityDefinitionReject(messageType, securityDefinitionReject);
                 case DTCMessageType.HistoricalPriceDataRequest:
-                    var historicalPriceDataRequest = message as HistoricalPriceDataRequest;
+                    var historicalPriceDataRequest = (HistoricalPriceDataRequest)message;
                     return ConvertToBufferHistoricalPriceDataRequest(messageType, historicalPriceDataRequest);
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
                     // Logger.Debug($"{nameof(CodecBinary)} is writing {messageType} {message}");
-                    var historicalPriceDataResponseHeader = message as HistoricalPriceDataResponseHeader;
+                    var historicalPriceDataResponseHeader = (HistoricalPriceDataResponseHeader)message;
                     return ConvertToBufferHistoricalPriceDataResponseHeader(messageType, historicalPriceDataResponseHeader);
                 case DTCMessageType.HistoricalPriceDataReject:
-                    var historicalPriceDataReject = message as HistoricalPriceDataReject;
+                    var historicalPriceDataReject = (HistoricalPriceDataReject)message;
                     return ConvertToBufferHistoricalPriceDataReject(messageType, historicalPriceDataReject);
                 case DTCMessageType.HistoricalPriceDataRecordResponse:
-                    var historicalPriceDataRecordResponse = message as HistoricalPriceDataRecordResponse;
+                    var historicalPriceDataRecordResponse = (HistoricalPriceDataRecordResponse)message;
                     return ConvertToBufferHistoricalPriceDataRecordResponse(messageType, historicalPriceDataRecordResponse);
                 case DTCMessageType.HistoricalPriceDataTickRecordResponse:
                     // Probably no longer used after version SierraChart version 1150 per https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html
-                    throw new NotSupportedException($"Not implemented in {nameof(CodecBinary)}: {messageType}");
+                    throw new NotSupportedException($"Not implemented in {nameof(CodecBinaryConverter)}: {messageType}");
                 case DTCMessageType.MarketDataSnapshot:
                 case DTCMessageType.MarketDataSnapshotInt:
                 case DTCMessageType.MarketDataUpdateTrade:
@@ -593,13 +626,20 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.HistoricalMarketDepthDataResponseHeader:
                 case DTCMessageType.HistoricalMarketDepthDataReject:
                 case DTCMessageType.HistoricalMarketDepthDataRecordResponse:
-                    throw new NotImplementedException();
+                case DTCMessageType.MarketOrdersRequest:
+                case DTCMessageType.MarketOrdersReject:
+                case DTCMessageType.MarketOrdersAdd:
+                case DTCMessageType.MarketOrdersModify:
+                case DTCMessageType.MarketOrdersRemove:
+                case DTCMessageType.MarketOrdersSnapshotMessageBoundary:
+                case DTCMessageType.AddCorrectingOrderFill:
+                case DTCMessageType.CorrectingOrderFillResponse:
                 default:
-                    throw new ArgumentOutOfRangeException(messageType.ToString(), messageType, null);
+                    throw new NotSupportedException($"Not implemented in {nameof(CodecBinaryConverter)}: {messageType}");
             }
         }
 
-        private byte[] ConvertToBufferEncodingRequest(DTCMessageType messageType, EncodingRequest encodingRequest)
+        private static byte[] ConvertToBufferEncodingRequest(DTCMessageType messageType, EncodingRequest encodingRequest)
         {
             using var bufferBuilder = new BufferBuilder(12);
             bufferBuilder.Add(encodingRequest.ProtocolVersion);
@@ -609,7 +649,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        protected byte[] ConvertToBufferEncodingResponse(DTCMessageType messageType, EncodingResponse encodingResponse)
+        private static byte[] ConvertToBufferEncodingResponse(DTCMessageType messageType, EncodingResponse encodingResponse)
         {
             using var bufferBuilder = new BufferBuilder(12);
             bufferBuilder.Add(encodingResponse.ProtocolVersion);
@@ -619,7 +659,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferHistoricalPriceDataRecordResponse(DTCMessageType messageType,
+        private static byte[] ConvertToBufferHistoricalPriceDataRecordResponse(DTCMessageType messageType,
             HistoricalPriceDataRecordResponse historicalPriceDataRecordResponse)
         {
             const int SizeExcludingHeader = 4 + 9 * 8 + 1;
@@ -639,7 +679,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferHistoricalPriceDataReject(DTCMessageType messageType, HistoricalPriceDataReject historicalPriceDataReject)
+        private static byte[] ConvertToBufferHistoricalPriceDataReject(DTCMessageType messageType, HistoricalPriceDataReject historicalPriceDataReject)
         {
             const int SizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH + 2 + 2;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -650,8 +690,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferHistoricalPriceDataResponseHeader(DTCMessageType messageType,
-            HistoricalPriceDataResponseHeader historicalPriceDataResponseHeader)
+        private static byte[] ConvertToBufferHistoricalPriceDataResponseHeader(DTCMessageType messageType, HistoricalPriceDataResponseHeader historicalPriceDataResponseHeader)
         {
             const int SizeExcludingHeader = 4 + 4 + 2 + 2 + 4;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -664,7 +703,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferHistoricalPriceDataRequest(DTCMessageType messageType, HistoricalPriceDataRequest historicalPriceDataRequest)
+        private static byte[] ConvertToBufferHistoricalPriceDataRequest(DTCMessageType messageType, HistoricalPriceDataRequest historicalPriceDataRequest)
         {
             const int SizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4 + 4 + 8 + 8 + 4 + 3 * 1;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -682,7 +721,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferSecurityDefinitionReject(DTCMessageType messageType, SecurityDefinitionReject securityDefinitionReject)
+        private static byte[] ConvertToBufferSecurityDefinitionReject(DTCMessageType messageType, SecurityDefinitionReject securityDefinitionReject)
         {
             const int SizeExcludingHeader = 4 + TEXT_DESCRIPTION_LENGTH;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -691,7 +730,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferSecurityDefinitionResponse(DTCMessageType messageType, SecurityDefinitionResponse securityDefinitionResponse)
+        private static byte[] ConvertToBufferSecurityDefinitionResponse(DTCMessageType messageType, SecurityDefinitionResponse securityDefinitionResponse)
         {
             const int SizeExcludingHeader = 4
                                             + SYMBOL_LENGTH
@@ -715,7 +754,9 @@ namespace DTCCommon.Codecs
                                             + 4
                                             + 4
                                             + 4
-                                            + 4; // down through IsDelayed
+                                            + 4 // IsDelayed
+                                            +8
+                                            +GENERAL_IDENTIFIER_LENGTH; // ProductIdentifier uses this length
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
             bufferBuilder.Add(securityDefinitionResponse.RequestID);
             bufferBuilder.Add(securityDefinitionResponse.Symbol.ToFixedBytes(SYMBOL_LENGTH));
@@ -749,11 +790,12 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(securityDefinitionResponse.OpenInterest);
             bufferBuilder.Add(securityDefinitionResponse.RolloverDate); // DateTime4byte per  https://dtcprotocol.org/index.php?page=doc/DTCMessages_SymbolDiscoverySecurityDefinitionsMessages.php#Messages-SECURITY_DEFINITION_RESPONSE
             bufferBuilder.Add(securityDefinitionResponse.IsDelayed);
+            bufferBuilder.Add(securityDefinitionResponse.SecurityIdentifier);
+            bufferBuilder.Add(securityDefinitionResponse.ProductIdentifier.ToFixedBytes(GENERAL_IDENTIFIER_LENGTH));
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferSecurityDefinitionForSymbolRequest(DTCMessageType messageType,
-            SecurityDefinitionForSymbolRequest securityDefinitionForSymbolRequest)
+        private static byte[] ConvertToBufferSecurityDefinitionForSymbolRequest(DTCMessageType messageType, SecurityDefinitionForSymbolRequest securityDefinitionForSymbolRequest)
         {
             const int SizeExcludingHeader = 4 + SYMBOL_LENGTH + EXCHANGE_LENGTH;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -763,7 +805,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferExchangeListResponse(DTCMessageType messageType, ExchangeListResponse exchangeListResponse)
+        private static byte[] ConvertToBufferExchangeListResponse(DTCMessageType messageType, ExchangeListResponse exchangeListResponse)
         {
             const int SizeExcludingHeader = 4 + EXCHANGE_LENGTH + 1 + EXCHANGE_DESCRIPTION_LENGTH;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -774,7 +816,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferExchangeListRequest(DTCMessageType messageType, ExchangeListRequest exchangeListRequest)
+        private static byte[] ConvertToBufferExchangeListRequest(DTCMessageType messageType, ExchangeListRequest exchangeListRequest)
         {
             const int SizeExcludingHeader = 4;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -782,7 +824,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferMarketDataFeedStatus(DTCMessageType messageType, MarketDataFeedStatus marketDataFeedStatus)
+        private static byte[] ConvertToBufferMarketDataFeedStatus(DTCMessageType messageType, MarketDataFeedStatus marketDataFeedStatus)
         {
             const int SizeExcludingHeader = 4;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -790,7 +832,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferMarketDataReject(DTCMessageType messageType, MarketDataReject marketDataReject)
+        private static byte[] ConvertToBufferMarketDataReject(DTCMessageType messageType, MarketDataReject marketDataReject)
         {
             const int SizeExcludingHeader = 2 + TEXT_DESCRIPTION_LENGTH;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -799,7 +841,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferMarketDataRequest(DTCMessageType messageType, MarketDataRequest marketDataRequest)
+        private static byte[] ConvertToBufferMarketDataRequest(DTCMessageType messageType, MarketDataRequest marketDataRequest)
         {
             const int SizeExcludingHeader = 4 + 2 + SYMBOL_LENGTH + EXCHANGE_LENGTH + 4;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -811,7 +853,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferLogoff(DTCMessageType messageType, Logoff logoff)
+        private static byte[] ConvertToBufferLogoff(DTCMessageType messageType, Logoff logoff)
         {
             try
             {
@@ -824,12 +866,12 @@ namespace DTCCommon.Codecs
             catch (IOException)
             {
                 // // Ignore this exception, which happens on Dispose() if the stream has already gone away, as when the ClientHandler finishes sending zipped historical records 
-                // var tmp = ex;
+                // var _ = ex;
                 throw;
             }
         }
 
-        private byte[] ConvertToBufferHeartbeat(DTCMessageType messageType, Heartbeat heartbeat)
+        private static byte[] ConvertToBufferHeartbeat(DTCMessageType messageType, Heartbeat heartbeat)
         {
             using var bufferBuilder = new BufferBuilder(12);
             bufferBuilder.Add(heartbeat.NumDroppedMessages);
@@ -837,7 +879,7 @@ namespace DTCCommon.Codecs
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferLogonResponse(DTCMessageType messageType, LogonResponse logonResponse)
+        private static byte[] ConvertToBufferLogonResponse(DTCMessageType messageType, LogonResponse logonResponse)
         {
             const int SizeExcludingHeader = 4 + 4 + TEXT_DESCRIPTION_LENGTH + 64 + 4 + 60 + 4 * 1 + SYMBOL_EXCHANGE_DELIMITER_LENGTH + 8 * 1 + 4;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
@@ -858,13 +900,13 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add((byte)logonResponse.MarketDepthIsSupported);
             bufferBuilder.Add((byte)logonResponse.OneHistoricalPriceDataRequestPerConnection);
             bufferBuilder.Add((byte)logonResponse.BracketOrdersSupported);
-            bufferBuilder.Add((byte)logonResponse.UseIntegerPriceOrderMessages);
+            bufferBuilder.Add((byte)logonResponse.Unused1);
             bufferBuilder.Add((byte)logonResponse.UsesMultiplePositionsPerSymbolAndTradeAccount);
             bufferBuilder.Add(logonResponse.MarketDataSupported);
             return bufferBuilder.Buffer;
         }
 
-        private byte[] ConvertToBufferLogonRequest(DTCMessageType messageType, LogonRequest logonRequest)
+        private static byte[] ConvertToBufferLogonRequest(DTCMessageType messageType, LogonRequest logonRequest)
         {
             const int SizeExcludingHeader = 4
                                             + USERNAME_PASSWORD_LENGTH
@@ -876,7 +918,7 @@ namespace DTCCommon.Codecs
                                             + 4
                                             + TRADE_ACCOUNT_LENGTH
                                             + GENERAL_IDENTIFIER_LENGTH
-                                            + 32;
+                                            + 36;
             using var bufferBuilder = new BufferBuilder(SizeExcludingHeader);
             bufferBuilder.Add(logonRequest.ProtocolVersion);
             bufferBuilder.Add(logonRequest.Username.ToFixedBytes(USERNAME_PASSWORD_LENGTH));
@@ -885,10 +927,11 @@ namespace DTCCommon.Codecs
             bufferBuilder.Add(logonRequest.Integer1);
             bufferBuilder.Add(logonRequest.Integer2);
             bufferBuilder.Add(logonRequest.HeartbeatIntervalInSeconds);
-            bufferBuilder.Add((int)logonRequest.TradeMode);
+            bufferBuilder.Add(logonRequest.Unused1);
             bufferBuilder.Add(logonRequest.TradeAccount.ToFixedBytes(TRADE_ACCOUNT_LENGTH));
             bufferBuilder.Add(logonRequest.HardwareIdentifier.ToFixedBytes(GENERAL_IDENTIFIER_LENGTH));
-            bufferBuilder.Add(logonRequest.ClientName.ToFixedBytes(32));
+            bufferBuilder.Add(logonRequest.ClientName.ToFixedBytes(CLIENT_NAME_LENGTH));
+            bufferBuilder.Add(logonRequest.MarketDataTransmissionInterval);
             return bufferBuilder.Buffer;
         }
     }

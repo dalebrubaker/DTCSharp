@@ -1,12 +1,24 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 
 namespace TestClient
 {
     public partial class LogControl : UserControl
     {
+        private readonly ConcurrentStack<string> _messageStack;
+        private readonly SynchronizationContextHelper _syncContextHelper;
+
+        public LogControl()
+        {
+            InitializeComponent();
+            _messageStack = new ConcurrentStack<string>();
+            MaximumLogLengthChars = 1024 * 1024 * 100;
+            _syncContextHelper = new SynchronizationContextHelper();
+        }
+
         /// <summary>
         /// The title of this control
         /// </summary>
@@ -16,10 +28,8 @@ namespace TestClient
             set => groupBoxLog.Text = value;
         }
 
-        public LogControl()
-        {
-            InitializeComponent();
-        }
+        public int MaximumLogLengthChars { get; set; }
+        public bool HideTimestamps { get; set; }
 
         /// <summary>
         /// Put a message at the TOP of the panel, along with a timestamp
@@ -27,20 +37,7 @@ namespace TestClient
         /// <param name="message">the message to display</param>
         public void LogMessage(string message)
         {
-            if (rtbMessages.InvokeRequired)
-            {
-                BeginInvoke(new MethodInvoker(() => LogMessage(message)));
-            }
-            else
-            {
-                const int longestText = 100000;
-                var msg = $"{DateTime.Now.ToString("h:mm:ss.fff")} {message}";
-                rtbMessages.Text = msg + Environment.NewLine + rtbMessages.Text;
-                if (rtbMessages.TextLength > longestText)
-                {
-                    rtbMessages.Text = rtbMessages.Text.Substring(0, longestText / 2);
-                }
-            }
+            PushMessageOntoStack(message);
         }
 
         public void LogMessage(string format, params object[] args)
@@ -55,56 +52,18 @@ namespace TestClient
         /// <param name="newLines">the lines to display</param>
         public void LogMessages(IEnumerable<string> newLines)
         {
-            if (rtbMessages.InvokeRequired)
+            foreach (var message in newLines)
             {
-                BeginInvoke(new MethodInvoker(() => LogMessages(newLines)));
-            }
-            else
-            {
-                const int longestText = 100000;
-                foreach (var line in newLines)
-                {
-                    var msg = $"{DateTime.Now.ToString("h:mm:ss.fff")} {line}";
-                    rtbMessages.Text = msg + Environment.NewLine + rtbMessages.Text;
-                }
-                if (rtbMessages.TextLength > longestText)
-                {
-                    rtbMessages.Text = rtbMessages.Text.Substring(0, longestText / 2);
-                }
+                PushMessageOntoStack(message);
             }
         }
 
         /// <summary>
-        /// Put newLines at the TOP of the panel, along with a timestamp, first lines to the top
+        /// Erase the log
         /// </summary>
-        /// <param name="newLines">the lines to display</param>
-        public void LogMessagesReversed(IEnumerable<string> newLines)
-        {
-            if (rtbMessages.InvokeRequired)
-            {
-                BeginInvoke(new MethodInvoker(() => LogMessagesReversed(newLines)));
-            }
-            else
-            {
-                var list = newLines.ToList();
-                list.Reverse();
-                foreach (var line in list)
-                {
-                    LogMessage(line);
-                }
-            }
-        }
-
         public void Clear()
         {
-            if (rtbMessages.InvokeRequired)
-            {
-                BeginInvoke(new MethodInvoker(() => rtbMessages.Clear()));
-            }
-            else
-            {
-                rtbMessages.Clear();
-            }
+            SafeInvoke(this, () => rtbMessages.Clear());
         }
 
         /// <summary>
@@ -113,14 +72,89 @@ namespace TestClient
         /// <param name="newLines"></param>
         public void Reset(IEnumerable<string> newLines)
         {
-            if (rtbMessages.InvokeRequired)
+            Clear();
+            foreach (var message in newLines)
             {
-                BeginInvoke(new MethodInvoker(() => Reset(newLines)));
+                PushMessageOntoStack(message);
+            }
+        }
+
+        private void PushMessageOntoStack(string message)
+        {
+            if (HideTimestamps)
+            {
+                var msg = message;
+                _messageStack.Push(msg);
             }
             else
             {
-                rtbMessages.Lines = newLines.ToArray();
+                var msg = $"{DateTime.Now:h:mm:ss.fff} {message}";
+                _messageStack.Push(msg);
             }
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            if (_messageStack.IsEmpty)
+            {
+                return;
+            }
+            SafeInvoke(this, LogMessagesOnStack);
+        }
+
+        /// <summary>
+        /// Put messages on the stack at the TOP of the panel, along with a timestamp
+        /// </summary>
+        private void LogMessagesOnStack()
+        {
+            var sb = new StringBuilder();
+            while (!_messageStack.IsEmpty)
+            {
+                if (_messageStack.TryPop(out var msg))
+                {
+                    sb.AppendLine(msg);
+                }
+            }
+            sb.AppendLine(rtbMessages.Text);
+            if (sb.Length > MaximumLogLengthChars)
+            {
+                var oldLength = sb.Length;
+                var saveStr = sb.ToString().Substring(1, MaximumLogLengthChars / 2);
+                sb = new StringBuilder();
+                sb.Append("Truncated the log from ")
+                    .AppendFormat("{0:N0}", oldLength).Append(" to ")
+                    .AppendFormat("{0:N0}", saveStr.Length)
+                    .AppendLine(" characters");
+                sb.AppendLine(saveStr);
+            }
+            rtbMessages.Text = sb.ToString();
+        }
+
+        private void LogControl_Load(object sender, EventArgs e)
+        {
+            timer1.Enabled = true;
+        }
+
+        private void tsbClear_Click(object sender, EventArgs e)
+        {
+            Clear();
+        }
+        
+        public bool SafeInvoke(Control control, MethodInvoker method)
+        {
+            if (control is { IsDisposed: false, IsHandleCreated: true })
+            {
+                if (control.InvokeRequired)
+                {
+                    control.Invoke(method);
+                }
+                else
+                {
+                    method();
+                }
+                return true;
+            }
+            return false;
         }
     }
 }

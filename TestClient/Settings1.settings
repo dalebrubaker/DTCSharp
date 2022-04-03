@@ -6,19 +6,19 @@
       <Value Profile="(Default)" />
     </Setting>
     <Setting Name="SymbolHistorical" Type="System.String" Scope="User">
-      <Value Profile="(Default)">ESZ6</Value>
+      <Value Profile="(Default)">MNQM21-CME</Value>
     </Setting>
     <Setting Name="SymbolDef" Type="System.String" Scope="User">
-      <Value Profile="(Default)">ESZ6</Value>
+      <Value Profile="(Default)">MNQM21-CME</Value>
     </Setting>
     <Setting Name="SymbolLevel1_1" Type="System.String" Scope="User">
-      <Value Profile="(Default)">ESZ6</Value>
+      <Value Profile="(Default)">MNQM21-CME</Value>
     </Setting>
     <Setting Name="SymbolLevel1_2" Type="System.String" Scope="User">
-      <Value Profile="(Default)">NQZ6</Value>
+      <Value Profile="(Default)">NQM21-CME</Value>
     </Setting>
     <Setting Name="HistStart" Type="System.DateTime" Scope="User">
-      <Value Profile="(Default)">2016-10-21</Value>
+      <Value Profile="(Default)">2021-05-21</Value>
     </Setting>
     <Setting Name="Zip" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
@@ -37,6 +37,48 @@
     </Setting>
     <Setting Name="Password" Type="System.String" Scope="User">
       <Value Profile="(Default)">xxx</Value>
+    </Setting>
+    <Setting Name="ExchangeSymbols" Type="System.String" Scope="User">
+      <Value Profile="(Default)">CME</Value>
+    </Setting>
+    <Setting Name="ExchangeHistorical" Type="System.String" Scope="User">
+      <Value Profile="(Default)">CME</Value>
+    </Setting>
+    <Setting Name="Account" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Sim1</Value>
+    </Setting>
+    <Setting Name="SymbolTrade" Type="System.String" Scope="User">
+      <Value Profile="(Default)">EURUSD</Value>
+    </Setting>
+    <Setting Name="ExchangeTrade" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="OrderType" Type="DTCPB.OrderTypeEnum" Scope="User">
+      <Value Profile="(Default)">OrderTypeMarket</Value>
+    </Setting>
+    <Setting Name="Qty" Type="System.String" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="Price1" Type="System.String" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="Price2" Type="System.String" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="ShowHeartbeats" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="OrderTypeOCO" Type="DTCPB.OrderTypeEnum" Scope="User">
+      <Value Profile="(Default)">OrderTypeMarket</Value>
+    </Setting>
+    <Setting Name="QtyOCO" Type="System.String" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="Price1OCO" Type="System.String" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="Price2OCO" Type="System.String" Scope="User">
+      <Value Profile="(Default)">0</Value>
     </Setting>
   </Settings>
 </SettingsFile>

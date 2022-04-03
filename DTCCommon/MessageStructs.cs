@@ -53,31 +53,31 @@ namespace DTCCommon
 
         public static int Size => Marshal.SizeOf(new s_IntradayHeader());
 
-        public static s_IntradayHeader CopyFrom(byte[] bytes)
-        {
-            var size = Size;
-            if (bytes.Length < size)
-            {
-                size = bytes.Length;
-            }
-            IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.Copy(bytes, 0, ptr, size);
-            var result = (s_IntradayHeader)Marshal.PtrToStructure(ptr, typeof(s_IntradayHeader));
-            Marshal.FreeHGlobal(ptr);
-            return result;
-        }
-
-        public byte[] GetBytes()
-        {
-            int size = Size;
-            byte[] bytes = new byte[size];
-
-            IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(this, ptr, true);
-            Marshal.Copy(ptr, bytes, 0, size);
-            Marshal.FreeHGlobal(ptr);
-            return bytes;
-        }
+        // public static s_IntradayHeader CopyFrom(byte[] bytes)
+        // {
+        //     var size = Size;
+        //     if (bytes.Length < size)
+        //     {
+        //         size = bytes.Length;
+        //     }
+        //     IntPtr ptr = Marshal.AllocHGlobal(size);
+        //     Marshal.Copy(bytes, 0, ptr, size);
+        //     var result = (s_IntradayHeader)Marshal.PtrToStructure(ptr, typeof(s_IntradayHeader));
+        //     Marshal.FreeHGlobal(ptr);
+        //     return result;
+        // }
+        //
+        // public byte[] GetBytes()
+        // {
+        //     int size = Size;
+        //     byte[] bytes = new byte[size];
+        //
+        //     IntPtr ptr = Marshal.AllocHGlobal(size);
+        //     Marshal.StructureToPtr(this, ptr, true);
+        //     Marshal.Copy(ptr, bytes, 0, size);
+        //     Marshal.FreeHGlobal(ptr);
+        //     return bytes;
+        // }
     }
 
     /// <summary>
@@ -86,26 +86,29 @@ namespace DTCCommon
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 8)]
     public struct s_IntradayRecord
     {
-        [MarshalAs(UnmanagedType.R8)]
-        public double DateTime;
+        /// <summary>
+        /// SCDateTimeMS per https://www.sierrachart.com/index.php?page=doc/SCDateTime.html#SCDateTimeMillisecondVariables
+        /// </summary>
+        [MarshalAs(UnmanagedType.U8)]
+        public long StartDateTime;
 
         [MarshalAs(UnmanagedType.R4)]
-        public float Open;
+        public float OpenPrice;
 
         [MarshalAs(UnmanagedType.R4)]
-        public float High;
+        public float HighPrice;
 
         [MarshalAs(UnmanagedType.R4)]
-        public float Low;
+        public float LowPrice;
 
         [MarshalAs(UnmanagedType.R4)]
-        public float Close;
+        public float LastPrice;
 
         [MarshalAs(UnmanagedType.U4)]
         public uint NumTrades;
 
         [MarshalAs(UnmanagedType.U4)]
-        public uint TotalVolume;
+        public uint Volume;
 
         [MarshalAs(UnmanagedType.U4)]
         public uint BidVolume;
@@ -113,31 +116,52 @@ namespace DTCCommon
         [MarshalAs(UnmanagedType.U4)]
         public uint AskVolume;
 
+        // public s_IntradayRecord(HistoricalPriceDataRecordResponse record)
+        // {
+        //                     
+        //     // Convert the HistoricalPriceDataRecordResponse StartDateTime (unix seconds) to SCID StartDateTime (microseconds since 12/30/1899) to 
+        //     // https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html#s_IntradayRecord__DateTime
+        //     // https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime
+        //     var startDateTimeScMicroseconds = record.StartDateTimeUtc.ToScMicroSeconds();
+        //
+        //     StartDateTime = startDateTimeScMicroseconds;
+        //     OpenPrice = (float)record.OpenPrice;
+        //     HighPrice = (float)record.HighPrice;
+        //     LowPrice = (float)record.LowPrice;
+        //     LastPrice = (float)record.LastPrice;
+        //     Volume = (uint)record.Volume;
+        //     BidVolume = (uint)record.BidVolume;
+        //     AskVolume = (uint)record.AskVolume;
+        //     NumTrades = record.NumTrades;
+        // }
+
         public static int Size => Marshal.SizeOf(new s_IntradayRecord());
 
-        public static s_IntradayRecord CopyFrom(byte[] bytes)
-        {
-            int size = Size;
-            if (bytes.Length < size)
-            {
-                size = bytes.Length;
-            }
-            IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.Copy(bytes, 0, ptr, size);
-            var result = (s_IntradayRecord)Marshal.PtrToStructure(ptr, typeof(s_IntradayRecord));
-            Marshal.FreeHGlobal(ptr);
-            return result;
-        }
+        public DateTime StartDateTimeUtc => StartDateTime.FromScMicroSecondsToDateTime();
 
-        public byte[] GetBytes()
-        {
-            byte[] bytes = new byte[Size];
+        // public static s_IntradayRecord CopyFrom(byte[] bytes)
+        // {
+        //     int size = Size;
+        //     if (bytes.Length < size)
+        //     {
+        //         size = bytes.Length;
+        //     }
+        //     IntPtr ptr = Marshal.AllocHGlobal(size);
+        //     Marshal.Copy(bytes, 0, ptr, size);
+        //     var result = (s_IntradayRecord)Marshal.PtrToStructure(ptr, typeof(s_IntradayRecord));
+        //     Marshal.FreeHGlobal(ptr);
+        //     return result;
+        // }
 
-            IntPtr ptr = Marshal.AllocHGlobal(Size);
-            Marshal.StructureToPtr(this, ptr, true);
-            Marshal.Copy(ptr, bytes, 0, Size);
-            Marshal.FreeHGlobal(ptr);
-            return bytes;
-        }
+        // public byte[] GetBytes()
+        // {
+        //     byte[] bytes = new byte[Size];
+        //
+        //     IntPtr ptr = Marshal.AllocHGlobal(Size);
+        //     Marshal.StructureToPtr(this, ptr, true);
+        //     Marshal.Copy(ptr, bytes, 0, Size);
+        //     Marshal.FreeHGlobal(ptr);
+        //     return bytes;
+        // }
     }
 }

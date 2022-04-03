@@ -4,9 +4,9 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using DTCClient;
-using DTCCommon;
 using DTCPB;
 using DTCServer;
+using FluentAssertions;
 using NLog;
 using TestServer;
 using Xunit;
@@ -21,7 +21,7 @@ namespace TestsDTC
         // ReSharper disable once InconsistentNaming
         private static int _nextServerPort = 54321;
 
-        private static readonly object Lock = new object();
+        private static readonly object s_lock = new object();
         private readonly ITestOutputHelper _output;
 
         public ClientServerTests(ITestOutputHelper output)
@@ -33,7 +33,7 @@ namespace TestsDTC
         {
             get
             {
-                lock (Lock)
+                lock (s_lock)
                 {
                     return _nextServerPort++;
                 }
@@ -48,36 +48,28 @@ namespace TestsDTC
         [Fact]
         public async Task StartServerTest()
         {
-            using var server = StartExampleServer(1000, NextServerPort);
-            await Task.Delay(100).ConfigureAwait(true); // give it time to start
+            using var server = StartExampleServer(NextServerPort);
+            await Task.Delay(100); // give it time to start
             Assert.Equal(0, server.NumberOfClientHandlers);
         }
 
-        private ExampleService StartExampleServer(int timeoutNoActivity, int port)
+        private ExampleService StartExampleServer(int port)
         {
-            var server = new ExampleService(IPAddress.Loopback, port, timeoutNoActivity, 100, 200);
-            try
-            {
-                //TaskHelper.RunBg(async () => await server.RunAsync().ConfigureAwait(true));
-                var task = server.RunAsync().ConfigureAwait(true);
-            }
-            catch (AggregateException)
-            {
-            }
-            catch (ThreadAbortException)
-            {
-                // normal
-            }
+            var server = new ExampleService(IPAddress.Loopback, port, 100, 200);
             return server;
         }
 
-        private async Task<Client> ConnectClientAsync(int timeoutNoActivity, int timeoutForConnect, int port,
-            EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
+        private ClientDTC ConnectClient(int port, EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
         {
-            var client = new Client(IPAddress.Loopback.ToString(), port, timeoutNoActivity);
-            var encodingResponse = await client.ConnectAsync(encoding, "TestClient" + port, timeoutForConnect).ConfigureAwait(false);
-            Assert.NotNull(encodingResponse);
-            Assert.Equal(encoding, encodingResponse.Encoding);
+            var client = new ClientDTC("localhost", port);
+            return ConnectClient(encoding, client);
+        }
+
+        private static ClientDTC ConnectClient(EncodingEnum encoding, ClientDTC client)
+        {
+            var (loginResponse, error) = client.Logon("TestClient", requestedEncoding: encoding);
+            Assert.NotNull(loginResponse);
+            Assert.False(error.IsError);
             return client;
         }
 
@@ -86,51 +78,48 @@ namespace TestsDTC
         {
             var numConnects = 0;
             var numDisconnects = 0;
-            const int TimeoutNoActivity = 10000;
-            const int TimeoutForConnect = 10000;
             var port = NextServerPort;
-            using (var server = StartExampleServer(TimeoutNoActivity, port))
+            using var server = StartExampleServer(port);
+
+            // Set up the handler to capture the ClientHandlerConnected event
+            void ClientHandlerConnected(object s, ClientHandlerDTC clientHandler)
             {
-                // Set up the handler to capture the ClientHandlerConnected event
-                void ClientHandlerConnected(object s, ClientHandler clientHandler)
-                {
-                    _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
-                    numConnects++;
-                }
-
-                server.ClientConnected += ClientHandlerConnected;
-
-                // Set up the handler to capture the ClientHandlerDisconnected event
-                void ClientHandlerDisconnected(object s, ClientHandler clientHandler)
-                {
-                    _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
-                    numDisconnects++;
-                }
-
-                server.ClientDisconnected += ClientHandlerDisconnected;
-
-                var sw = Stopwatch.StartNew();
-                using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
-                {
-                    while (numConnects != 1 && sw.ElapsedMilliseconds < 10000)
-                    {
-                        // Wait for the client to connect
-                        await Task.Delay(1).ConfigureAwait(false);
-                    }
-                    Assert.Equal(1, server.NumberOfClientHandlers);
-                    Assert.Equal(1, server.NumberOfClientHandlersConnected);
-                    var elapsed1 = sw.ElapsedMilliseconds;
-                    _output.WriteLine($"Elapsed msecs:{elapsed1}");
-                }
-                while (server.NumberOfClientHandlersConnected > 0 && server.NumberOfClientHandlers > 0)
-                {
-                    // Wait for the client to be disconnected by the server
-                    await Task.Delay(1).ConfigureAwait(true);
-                }
-                var elapsed2 = sw.ElapsedMilliseconds;
-                _output.WriteLine($"Elapsed msecs:{elapsed2}");
-                Assert.Equal(0, server.NumberOfClientHandlers);
+                _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
+                numConnects++;
             }
+
+            server.ClientConnected += ClientHandlerConnected;
+
+            // Set up the handler to capture the ClientHandlerDisconnected event
+            void ClientHandlerDisconnected(object s, ClientHandlerDTC clientHandler)
+            {
+                _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
+                numDisconnects++;
+            }
+
+            server.ClientDisconnected += ClientHandlerDisconnected;
+
+            var sw = Stopwatch.StartNew();
+            using (var client1 = ConnectClient(port))
+            {
+                while (numConnects != 1 && sw.ElapsedMilliseconds < 10000)
+                {
+                    // Wait for the client to connect
+                    await Task.Delay(1).ConfigureAwait(false);
+                }
+                Assert.Equal(1, server.NumberOfClientHandlers);
+                Assert.Equal(1, server.NumberOfClientHandlersConnected);
+                var elapsed1 = sw.ElapsedMilliseconds;
+                _output.WriteLine($"Elapsed msecs:{elapsed1}");
+            }
+            while (server.NumberOfClientHandlersConnected > 0 && server.NumberOfClientHandlers > 0)
+            {
+                // Wait for the client to be disconnected by the server
+                await Task.Delay(1);
+            }
+            var elapsed2 = sw.ElapsedMilliseconds;
+            _output.WriteLine($"Elapsed msecs:{elapsed2}");
+            Assert.Equal(0, server.NumberOfClientHandlers);
         }
 
         [Fact]
@@ -138,37 +127,40 @@ namespace TestsDTC
         {
             var numConnects = 0;
             var numDisconnects = 0;
-            const int TimeoutNoActivity = 1000; // int.MaxValue; // 1000;
-            const int TimeoutForConnect = 1000; //int.MaxValue; // 10000;
             var port = NextServerPort;
-            using (var server = StartExampleServer(TimeoutNoActivity, port))
+            using (var server = StartExampleServer(port))
             {
+
                 // Set up the handler to capture the ClientHandlerConnected event
-                void ClientHandlerConnected(object s, ClientHandler clientHandler)
+                void ClientHandlerConnected(object s, ClientHandlerDTC clientHandler)
                 {
-                    _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}");
+                    var msg = $"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}";
+                    s_logger.Debug(msg);
+                    _output.WriteLine(msg);
                     numConnects++;
                 }
 
                 server.ClientConnected += ClientHandlerConnected;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
-                void ClientHandlerDisconnected(object s, ClientHandler clientHandler)
+                void ClientHandlerDisconnected(object s, ClientHandlerDTC clientHandler)
                 {
-                    _output.WriteLine($"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}");
+                    var msg = $"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}";
+                    s_logger.Debug(msg);
+                    _output.WriteLine(msg);
                     numDisconnects++;
                 }
 
                 server.ClientDisconnected += ClientHandlerDisconnected;
                 var sw = Stopwatch.StartNew();
-                using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
-                using (var client2 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
+                using (var client1 = ConnectClient(port))
+                using (var client2 = ConnectClient(port))
                 {
                     //while (numConnects != 2 && sw.ElapsedMilliseconds < 1000)
                     while (server.NumberOfClientHandlersConnected != 2) // && sw.ElapsedMilliseconds < 1000)
                     {
                         // Wait for the clients to connect
-                        await Task.Delay(1).ConfigureAwait(false);
+                        await Task.Delay(10).ConfigureAwait(false);
                     }
                     Assert.Equal(2, server.NumberOfClientHandlers);
                     var elapsed1 = sw.ElapsedMilliseconds;
@@ -177,18 +169,21 @@ namespace TestsDTC
                 while (server.NumberOfClientHandlersConnected > 0)
                 {
                     // Wait for the client to be disconnected by the server
-                    await Task.Delay(1).ConfigureAwait(true);
+                    await Task.Delay(10);
                 }
                 var elapsed2 = sw.ElapsedMilliseconds;
                 _output.WriteLine($"Elapsed msecs:{elapsed2}");
-                Assert.Equal(0, server.NumberOfClientHandlersConnected);
+                server.NumberOfClientHandlersConnected.Should().Be(0, "NumberOfClientHandlersConnected");
                 while (server.NumberOfClientHandlers > 0)
                 {
                     // Wait longer to be sure they really go away
-                    await Task.Delay(1).ConfigureAwait(true);
+                    await Task.Delay(10);
                 }
-                Assert.Equal(0, server.NumberOfClientHandlers);
+                server.NumberOfClientHandlers.Should().Be(0, "NumberOfClientHandlers");
             }
+            await Task.Delay(100);
+            numConnects.Should().Be(2);
+            numDisconnects.Should().Be(0);
         }
 
         [Fact]
@@ -196,22 +191,22 @@ namespace TestsDTC
         {
             var numConnects = 0;
             var numDisconnects = 0;
-            const int TimeoutNoActivity = int.MaxValue; // 30000;
-            const int TimeoutForConnect = int.MaxValue; // 5000;
             var port = NextServerPort;
-            using var server = StartExampleServer(TimeoutNoActivity, port);
+            var signal = new ManualResetEvent(false);
+            using var server = StartExampleServer(port);
 
             // Set up the handler to capture the ClientConnected event
-            void ClientConnected(object s, ClientHandler clientHandler)
+            void ClientConnected(object s, ClientHandlerDTC clientHandler)
             {
                 _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} connected to {clientHandler}");
                 numConnects++;
+                signal.Set();
             }
 
             server.ClientConnected += ClientConnected;
 
             // Set up the handler to capture the ClientDisconnected event
-            void ClientDisconnected(object s, ClientHandler clientHandler)
+            void ClientDisconnected(object s, ClientHandlerDTC clientHandler)
             {
                 _output.WriteLine($"Server in {nameof(ClientLogonAndHeartbeatTest)} disconnected from {clientHandler}");
                 numDisconnects++;
@@ -219,7 +214,7 @@ namespace TestsDTC
 
             server.ClientDisconnected += ClientDisconnected;
 
-            using var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false);
+            using var client1 = ConnectClient(port);
             var sw = Stopwatch.StartNew();
             while (numConnects != 1 && sw.ElapsedMilliseconds < 1000)
             {
@@ -228,9 +223,6 @@ namespace TestsDTC
             }
             Assert.Equal(1, server.NumberOfClientHandlers);
 
-            var loginResponse = await client1.LogonAsync(1, true, TimeoutForConnect).ConfigureAwait(true);
-            Assert.NotNull(loginResponse);
-
             // Set up the handler to capture the HeartBeat event
             var numHeartbeats = 0;
 
@@ -238,75 +230,71 @@ namespace TestsDTC
             {
                 _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs");
                 numHeartbeats++;
+                if (numHeartbeats == 2)
+                {
+                    signal.Set();
+                }
             }
 
             client1.HeartbeatEvent += HeartbeatEvent;
             sw.Restart();
-            while (numHeartbeats < 2)
-            {
-                // Wait for the first two heartbeats
-                await Task.Delay(1).ConfigureAwait(false);
-            }
+            signal.WaitOne(1000);
             var elapsed = sw.ElapsedMilliseconds;
             _output.WriteLine($"Client1 received first two heartbeats in {elapsed} msecs");
         }
 
         [Fact]
-        public async Task ClientDisconnectedServerDownTest()
+        public void ClientDisconnectedServerDownTest()
         {
-            const int TimeoutNoActivity = 10000;
-            const int TimeoutForConnect = 10000;
             var port = NextServerPort;
-            var server = StartExampleServer(TimeoutNoActivity, port);
-            using (var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false))
+            var server = StartExampleServer(port);
+            var wasConnected = false;
+            var wasDisconnected = false;
+            var client = new ClientDTC("localhost", port);
+            client.ConnectedEvent += Connected;
+            ConnectClient(EncodingEnum.ProtocolBuffers, client);
+
+            var sw = Stopwatch.StartNew();
+            var signal = new ManualResetEvent(false);
+            
+            // Set up the handler to capture the Connected event
+            void Connected(object s, EventArgs e)
             {
-#pragma warning disable 219
-                var isConnected = false;
-#pragma warning restore 219
-                var sw = Stopwatch.StartNew();
-                while (!client1.IsConnected && sw.ElapsedMilliseconds < 1000)
-                {
-                    // Wait for the client to connect
-                    await Task.Delay(1).ConfigureAwait(false);
-                }
-
-                // Set up the handler to capture the Connected event
-                void Connected(object s, EventArgs e)
-                {
-                    _output.WriteLine($"Client is connected to {server.Address}");
-                    isConnected = true;
-                }
-
-                client1.Connected += Connected;
-
-                // Set up the handler to capture the Disconnected event
-                void Disconnected(object s, Error error)
-                {
-                    _output.WriteLine($"Client is disconnected from {server.Address} due to {error}");
-                    isConnected = false;
-                }
-
-                client1.Disconnected += Disconnected;
-
-                // Set up the handler to capture the HeartBeat event
-                var numHeartbeats = 0;
-
-                void HeartbeatEvent(object s, Heartbeat e)
-                {
-                    _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs after server shutdown.");
-                    numHeartbeats++;
-                }
-
-                client1.HeartbeatEvent += HeartbeatEvent;
-
-                client1.Dispose(); // So it won't error trying to read
-
-                // Now kill the server
-                server.Dispose();
-                sw.Restart();
-                var loginResponse = await client1.LogonAsync(1, true, 5000).ConfigureAwait(true);
-                Assert.Null(loginResponse);
+                _output.WriteLine($"Client is connected to {server.Address}");
+                wasConnected = true;
             }
+
+
+            // Set up the handler to capture the Disconnected event
+            void Disconnected(object s, EventArgs e)
+            {
+                _output.WriteLine($"Client is disconnected from {server.Address}");
+                wasDisconnected = true;
+            }
+
+            client.DisconnectedEvent += Disconnected;
+
+            // Set up the handler to capture the HeartBeat event
+            var numHeartbeats = 0;
+
+            void HeartbeatEvent(object s, Heartbeat e)
+            {
+                _output.WriteLine($"Client1 received a heartbeat after {sw.ElapsedMilliseconds} msecs after server shutdown.");
+                numHeartbeats++;
+                signal.Set();
+            }
+
+            client.HeartbeatEvent += HeartbeatEvent;
+
+            client.Dispose(); // So it won't error trying to read
+
+            // Now kill the server
+            server.Dispose();
+            
+            signal.WaitOne(1000);
+            wasConnected.Should().BeTrue("Did the connect");
+            wasDisconnected.Should().BeTrue("Did the disconnect.");
+            numHeartbeats.Should().Be(0, "Should not get a heartbeat after server goes doen");
         }
 
         /// <summary>
@@ -316,23 +304,12 @@ namespace TestsDTC
         [Fact]
         public async Task MarketDataCompactTest()
         {
-            const int TimeoutNoActivity = 1000;
-            const int TimeoutForConnect = 1000;
-
             // Set up the exampleService responses
             var port = NextServerPort;
-            using var exampleService = StartExampleServer(TimeoutNoActivity, port);
-            using var client1 = await ConnectClientAsync(TimeoutNoActivity, TimeoutForConnect, port).ConfigureAwait(false);
+            using var exampleService = StartExampleServer(port);
+            using var client1 = ConnectClient(port);
             var sw = Stopwatch.StartNew();
-            while (!client1.IsConnected) // && sw.ElapsedMilliseconds < 1000)
-            {
-                // Wait for the client to connect
-                await Task.Delay(1).ConfigureAwait(false);
-            }
             Assert.Equal(1, exampleService.NumberOfClientHandlers);
-
-            var loginResponse = await client1.LogonAsync(useHeartbeat: false, timeout: TimeoutNoActivity).ConfigureAwait(true);
-            Assert.NotNull(loginResponse);
 
             var numSnapshots = 0;
             var numBidAsks = 0;
@@ -380,7 +357,36 @@ namespace TestsDTC
             Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numTrades);
             Assert.Equal(exampleService.NumTradesAndBidAsksToSend, numBidAsks);
 
-            client1.UnsubscribeMarketData(symbolId);
+            client1.UnsubscribeMarketData(symbolId, "ESZ6", "");
+        }
+
+        [Fact(Skip = "Manual")] // manual with SC running"
+        public void TcpConnectTests()
+        {
+            var sw = Stopwatch.StartNew();
+            try
+            {
+                using var client = new ClientDTC("localhost", 11099);
+                var ms = sw.ElapsedMilliseconds;
+                var isConnected = client.Connected;
+                client.NoDelay = true;
+                var timeout = client.ReceiveTimeout;
+                var readBufferSize = client.ReceiveBufferSize;
+                //tcpClient.ReceiveTimeout = 100;
+                var networkStream = client.GetStream();
+                //var b = networkStream.ReadByte();
+            }
+            catch (Exception ex)
+            {
+                var ms = sw.ElapsedMilliseconds;
+                s_logger.Error(ex, ex.Message);
+                throw;
+            }
+
+            //
+            // using var server = StartExampleServer(1000, NextServerPort);
+            // await Task.Delay(100); // give it time to start
+            // Assert.Equal(0, server.NumberOfClientHandlers);
         }
     }
 }

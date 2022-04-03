@@ -31,18 +31,11 @@ namespace TestsDTC
         public async Task StartDuplicateServerThrowsSocketExceptionTest()
         {
             var port = ClientServerTests.NextServerPort;
-            using var server1 = new ExampleService(IPAddress.Loopback, port, 1000, 10, 20);
-            try
-            {
-                var task = Task.Run(async () => await server1.RunAsync().ConfigureAwait(false));
-            }
-            catch (Exception exception)
-            {
-                var typeName = exception.GetType().Name;
-                throw;
-            }
+            using var server1 = new ExampleService(IPAddress.Loopback, port, 10, 20);
             await Task.Delay(200).ConfigureAwait(false);
-            using var server2 = new ExampleService(IPAddress.Loopback, port, 1000, 10, 20);
+            using var server2 = new ExampleService(IPAddress.Loopback, port, 10, 20);
+
+            // Connecting to the same part, should throw a SocketException
             await Assert.ThrowsAsync<SocketException>(() => server2.RunAsync()).ConfigureAwait(false);
             await Task.Delay(100).ConfigureAwait(false);
             Assert.Equal(0, server1.NumberOfClientHandlers);

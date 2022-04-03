@@ -9,5 +9,7 @@ namespace DTCPB
             get => useZLibCompression_ != 0;
             set => useZLibCompression_ = value ? 1u : 0u;
         }
+
+        public bool IsNoRecordsAvailable => NoRecordsToReturn != 0;
     }
 }

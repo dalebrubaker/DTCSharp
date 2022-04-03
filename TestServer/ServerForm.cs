@@ -2,9 +2,8 @@
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using DTCCommon.Extensions;
+using DTCCommon;
 using DTCServer;
 using static DTCCommon.WindowConfig;
 
@@ -12,15 +11,14 @@ namespace TestServer
 {
     public partial class ServerForm : Form
     {
-        private ServerBase _serverPrimary;
-        private ServerBase _serverHistorical;
+        private ExampleService _serverPrimary;
+        private ExampleService _serverHistorical;
         private IPAddress _ipAddress;
 
         public ServerForm()
         {
             InitializeComponent();
-            var exampleService = new ExampleService(_ipAddress, PortListener, 1000, 100, 20);
-            exampleService.MessageEvent += ExampleServiceMessageEvent;
+            SetIpAddress();
         }
 
         private void ExampleServiceMessageEvent(object sender, string message)
@@ -32,8 +30,7 @@ namespace TestServer
         {
             get
             {
-                int port;
-                int.TryParse(txtPortListening.Text, out port);
+                int.TryParse(txtPortListening.Text, out var port);
                 return port;
             }
         }
@@ -42,25 +39,18 @@ namespace TestServer
         {
             get
             {
-                int port;
-                int.TryParse(txtPortHistorical.Text, out port);
+                int.TryParse(txtPortHistorical.Text, out var port);
                 return port;
             }
         }
 
-        private async void btnStartPrimary_Click(object sender, EventArgs e)
+        private void btnStartPrimary_Click(object sender, EventArgs e)
         {
             btnStartPrimary.Enabled = false;
             btnStopPrimary.Enabled = true;
-            _serverPrimary = new ExampleService(_ipAddress, PortListener, 30000, 100, 200);
-            try
-            {
-                await _serverPrimary.RunAsync().ConfigureAwait(false);
-            }
-            catch (TaskCanceledException)
-            {
-                // ignore. Server was disconnected
-            }
+            _serverPrimary = new ExampleService(_ipAddress, PortListener, 100, 200);
+            _serverPrimary.MessageEvent += ExampleServiceMessageEvent;
+            logControl1.LogMessage($"Started {_serverPrimary}");
         }
 
         private void btnStopPrimary_Click(object sender, EventArgs e)
@@ -68,21 +58,16 @@ namespace TestServer
             btnStartPrimary.Enabled = true;
             btnStopPrimary.Enabled = false;
             _serverPrimary.Dispose();
+            logControl1.LogMessage($"Stopped {_serverPrimary}");
         }
 
-        private async void btnStartHistorical_Click(object sender, EventArgs e)
+        private void btnStartHistorical_Click(object sender, EventArgs e)
         {
             btnStartHistorical.Enabled = false;
             btnStopHistorical.Enabled = true;
-            _serverHistorical = new ExampleService(_ipAddress, PortHistorical, 30000, 1000, 2000);
-            try
-            {
-                await _serverHistorical.RunAsync().ConfigureAwait(false);
-            }
-            catch (TaskCanceledException)
-            {
-                // ignore. Server was disconnected
-            }
+            _serverHistorical = new ExampleService(_ipAddress, PortHistorical, 1000, 2000);
+            _serverHistorical.MessageEvent += ExampleServiceMessageEvent;
+            logControl1.LogMessage($"Started {_serverHistorical}");
         }
 
         private void btnStopHistorical_Click(object sender, EventArgs e)
@@ -90,6 +75,7 @@ namespace TestServer
             btnStartHistorical.Enabled = true;
             btnStopHistorical.Enabled = false;
             _serverHistorical.Dispose();
+            logControl1.LogMessage($"Stopped {_serverHistorical}");
         }
 
         private void ServerForm_Load(object sender, EventArgs e)
@@ -126,8 +112,8 @@ namespace TestServer
         {
             Settings1.Default.MainWindowPlacement = WindowPlacement.GetPlacement(Handle);
             Settings1.Default.ServerName = txtServer.Text;
-            Settings1.Default.PortListening = txtPortListening.Text.ToInt32();
-            Settings1.Default.PortHistorical = txtPortHistorical.Text.ToInt32();
+            Settings1.Default.PortListening = txtPortListening.Text.ToInt();
+            Settings1.Default.PortHistorical = txtPortHistorical.Text.ToInt();
             Settings1.Default.Save();
         }
 
