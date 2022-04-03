@@ -1,0 +1,46 @@
+﻿// Extensions for DTCProtocol.proto
+// Starting above 10000 per https://dtcprotocol.org/#TightProtocol and https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#NonstandardMessages
+
+syntax = "proto3";
+//import "DTCProtocol.proto";
+
+
+package DTC_PB;
+
+//============================================================================
+// DTCSharp protocol version
+enum DTCSharpVersion
+{
+	d_t_c_sharp_version_unset = 0;
+	current_version = 8;
+}
+
+//============================================================================
+// All messages are preceded by the following 4-byte little-endian binary
+// header:
+//
+//	uint16 Size;  // size of the entire message including this 4-byte header
+//	uint16 Type;  // DTC message type - see DTCProtocol.h
+//
+
+//============================================================================
+//----Message types----
+
+enum DTCSharpMessageType
+{
+	d_t_c_sharp_message_type_unset = 0;
+}
+
+
+
+//============================================================================
+// This message combines two enums: BuySellEnum and OpenCloseTradeEnum 
+enum OrderAction
+{
+	order_action_unset = 0;
+	buy = 1;
+	buy_to_cover = 2; // We always convert to Buy
+	sell = 3;
+	sell_short = 4; // We always convert to Sell
+}
+
