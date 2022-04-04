@@ -14,7 +14,7 @@ namespace TestServer
     /// </summary>
     public sealed class ExampleService : ListenerDTC
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         public ExampleService(IPAddress ipAddress, int port, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) :
             base(ipAddress, port)
@@ -227,7 +227,7 @@ namespace TestServer
                         MinPriceIncrement = 0.25f,
                         Description = "Description must not be empty."
                     };
-                    //s_logger.Debug("Sending SecurityDefinitionResponse");
+                    //s_logger.ConditionalDebug("Sending SecurityDefinitionResponse");
                     clientHandler.SendResponse(DTCMessageType.SecurityDefinitionResponse, securityDefinitionResponse);
                     break;
                 case DTCMessageType.MarketDataReject:
@@ -365,7 +365,7 @@ namespace TestServer
                     clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                 }
             }
-            s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
+            s_logger.ConditionalDebug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
         }
 
         private static void SendSnapshot(ClientHandlerDTC clientHandler)

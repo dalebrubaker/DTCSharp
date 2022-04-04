@@ -8,7 +8,7 @@ namespace DTCCommon
 {
     public static class StreamExtensions
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// Read count bytes from stream into destination
@@ -21,7 +21,7 @@ namespace DTCCommon
         /// <exception cref="IOException">when a read cannot occur</exception>
         private static bool Fill(Stream stream, byte[] destination, int count)
         {
-            //s_logger.Debug($"Starting to Fill from stream={stream}");
+            //s_logger.ConditionalDebug($"Starting to Fill from stream={stream}");
             int bytesRead, offset = 0;
             while (count > 0
                    && (bytesRead = stream.Read(destination, offset, count)) > 0)
@@ -42,7 +42,7 @@ namespace DTCCommon
         /// <exception cref="IOException">when a read cannot occur</exception>
         public static unsafe MessageEncoded ReadMessageEncoded(this Stream stream)
         {
-            //s_logger.Debug($"Starting to ReadMessageEncoded from stream={stream}");
+            //s_logger.ConditionalDebug($"Starting to ReadMessageEncoded from stream={stream}");
             var buffer = new byte[4];
             fixed (byte* pbyte = &buffer[0])
             {
@@ -52,7 +52,7 @@ namespace DTCCommon
                     // Read the message size, including the 4-byte header
                     if (!Fill(stream, buffer, 4))
                     {
-                        //s_logger.Debug("Reached end of stream");
+                        //s_logger.ConditionalDebug("Reached end of stream");
                         throw new EndOfStreamException();
                     }
                     var messageSize = *((short*)pbyte);
@@ -66,12 +66,12 @@ namespace DTCCommon
                     messageEncoded = new MessageEncoded(messageTypeShort, new byte[messageSize - 4]);
                     if (!Fill(stream, messageEncoded.MessageBytes, messageSize - 4))
                     {
-                        //s_logger.Debug("Reached end of stream");
+                        //s_logger.ConditionalDebug("Reached end of stream");
                         throw new EndOfStreamException();
                     }
                     break;
                 }
-                //s_logger.Trace($"Read {messageEncoded} from stream={stream} messageSize={messageSize} messageTypeShort={messageTypeShort}");
+                //s_logger.ConditionalTrace($"Read {messageEncoded} from stream={stream} messageSize={messageSize} messageTypeShort={messageTypeShort}");
                 return messageEncoded;
             }
         }
@@ -83,7 +83,7 @@ namespace DTCCommon
         /// <param name="messageEncoded"></param>
         public static void WriteMessageEncoded(this Stream stream, MessageEncoded messageEncoded)
         {
-            //s_logger.Debug($"Starting to WriteMessageEncoded to stream={stream}");
+            //s_logger.ConditionalDebug($"Starting to WriteMessageEncoded to stream={stream}");
             // try
             // {
                 // Write the header
@@ -98,7 +98,7 @@ namespace DTCCommon
 
                 // Write the message
                 stream.Write(messageEncoded.MessageBytes, 0, messageEncoded.MessageBytes.Length);
-                //s_logger.Debug($"Wrote {messageEncoded} to stream={stream}");
+                //s_logger.ConditionalDebug($"Wrote {messageEncoded} to stream={stream}");
             // }
             // catch (IOException ex)
             // {

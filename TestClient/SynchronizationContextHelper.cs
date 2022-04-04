@@ -11,7 +11,7 @@ namespace TestClient
     /// </summary>
     public class SynchronizationContextHelper
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         public SynchronizationContext SyncContext { get; }
 
@@ -21,7 +21,7 @@ namespace TestClient
         {
             SyncContext = SynchronizationContext.Current;
             ThreadId = Environment.CurrentManagedThreadId;
-            //s_logger.Debug("Setting _syncContext");
+            //s_logger.ConditionalDebug("Setting _syncContext");
         }
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace TestClient
                 // System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. --->
                 // System.ComponentModel.InvalidAsynchronousStateException: An error occurred invoking the method.
                 // The destination thread no longer exists.
-                s_logger.Debug(" Ignoring InvalidAsynchronousStateException, probably due to chart closing.");
+                s_logger.ConditionalDebug(" Ignoring InvalidAsynchronousStateException, probably due to chart closing.");
             }
             catch (TargetInvocationException)
             {
@@ -69,7 +69,7 @@ namespace TestClient
                 // System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation. --->
                 // System.ComponentModel.InvalidAsynchronousStateException: An error occurred invoking the method.
                 // The destination thread no longer exists.
-                s_logger.Debug(" Ignoring TargetInvocationException, probably due to chart closing.");
+                s_logger.ConditionalDebug(" Ignoring TargetInvocationException, probably due to chart closing.");
             }
             catch (Exception ex)
             {

@@ -8,7 +8,7 @@ namespace DTCCommon.Codecs
 {
     public static class CodecBinaryConverter
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         // Text string lengths. Copied from DTCProtocol.h
         private const int USERNAME_PASSWORD_LENGTH = 32;
@@ -332,7 +332,7 @@ namespace DTCCommon.Codecs
                     index += 2; // align for packing
                     historicalPriceDataResponseHeader.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, index);
 
-                    //Logger.Debug($"{nameof(CodecBinary)} loaded {messageType} {result}");
+                    //Logger.ConditionalDebug($"{nameof(CodecBinary)} loaded {messageType} {result}");
                     return;
                 case DTCMessageType.HistoricalPriceDataReject:
                     var historicalPriceDataReject = (HistoricalPriceDataReject)message;
@@ -479,7 +479,7 @@ namespace DTCCommon.Codecs
 
         private static byte[] ConvertToBinary(MessageProto messageProto)
         {
-            //Logger.Debug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
+            //Logger.ConditionalDebug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
             var messageType = messageProto.MessageType;
             var message = messageProto.Message;
             switch (messageType)
@@ -532,7 +532,7 @@ namespace DTCCommon.Codecs
                     var historicalPriceDataRequest = (HistoricalPriceDataRequest)message;
                     return ConvertToBufferHistoricalPriceDataRequest(messageType, historicalPriceDataRequest);
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    // Logger.Debug($"{nameof(CodecBinary)} is writing {messageType} {message}");
+                    // Logger.ConditionalDebug($"{nameof(CodecBinary)} is writing {messageType} {message}");
                     var historicalPriceDataResponseHeader = (HistoricalPriceDataResponseHeader)message;
                     return ConvertToBufferHistoricalPriceDataResponseHeader(messageType, historicalPriceDataResponseHeader);
                 case DTCMessageType.HistoricalPriceDataReject:

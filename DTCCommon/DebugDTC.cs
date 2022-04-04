@@ -5,7 +5,7 @@ namespace DTCCommon
 {
     public static class DebugDTC
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         public static void Assert(bool condition, string message = null)
         {

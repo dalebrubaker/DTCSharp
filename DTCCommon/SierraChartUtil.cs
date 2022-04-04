@@ -11,7 +11,7 @@ namespace DTCCommon
     /// </summary>
     public static class SierraChartUtil
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         private const string TimeFormatStringSortsWithMsecs = "yyyyMMdd.HHmmss.fffffff";
         private static readonly Dictionary<string, SymbolSettings> s_symbolSettingsBySierraChartDirectoryAndSettingsFilename = new Dictionary<string, SymbolSettings>();
@@ -429,7 +429,7 @@ namespace DTCCommon
                 {
                     responseRecord.IsFinalRecordBool = true;
                     yield return responseRecord;
-                    s_logger.Trace($"Returned final record {responseRecord} from {path}");
+                    s_logger.ConditionalTrace($"Returned final record {responseRecord} from {path}");
                     yield break;
                 }
                 yield return responseRecord;
@@ -573,7 +573,7 @@ namespace DTCCommon
             lock (s_lock)
             {
                 // Lock or throws because duplicate adds to an inner dictionary
-                //s_logger.Debug($"Getting tickSizeStr from symbolSettings for {symbol}");
+                //s_logger.ConditionalDebug($"Getting tickSizeStr from symbolSettings for {symbol}");
                 var tickSizeStr = symbolSettings.GetInnerText(symbol, "tick-size");
                 double.TryParse(tickSizeStr, out var tickSize);
                 return tickSize;
@@ -590,7 +590,7 @@ namespace DTCCommon
             lock (s_lock)
             {
                 // Lock or throws because duplicate adds to an inner dictionary
-                //s_logger.Debug($"Getting real-time-multiplier from symbolSettings for {symbol}");
+                //s_logger.ConditionalDebug($"Getting real-time-multiplier from symbolSettings for {symbol}");
                 var str = symbolSettings.GetInnerText(symbol, "real-time-multiplier");
                 if (string.IsNullOrEmpty(str))
                 {
@@ -621,9 +621,9 @@ namespace DTCCommon
                             throw new FileNotFoundException(xmlPath);
                         }
                         symbolSettings = new SymbolSettings(xmlPath);
-                        //s_logger.Debug($"Adding symbolSettings to dictionary for {SierraChartDirectory}");
+                        //s_logger.ConditionalDebug($"Adding symbolSettings to dictionary for {SierraChartDirectory}");
                         s_symbolSettingsBySierraChartDirectoryAndSettingsFilename.Add(key, symbolSettings);
-                        //s_logger.Debug($"Added symbolSettings to dictionary for {SierraChartDirectory}");
+                        //s_logger.ConditionalDebug($"Added symbolSettings to dictionary for {SierraChartDirectory}");
                     }
                     return symbolSettings;
                 }
@@ -661,9 +661,9 @@ namespace DTCCommon
                         {
                             throw new ArgumentNullException(nameof(symbolSettings));
                         }
-                        //s_logger.Debug($"Got symbolSettings={symbolSettings} for symbolPrefix= {symbolPrefix}");
+                        //s_logger.ConditionalDebug($"Got symbolSettings={symbolSettings} for symbolPrefix= {symbolPrefix}");
                         symbolPattern = symbolSettings.GetFuturesSymbolPattern(symbolPrefix);
-                        //s_logger.Debug($"Got symbolPattern={symbolPattern} for symbolSettings={symbolSettings} and symbolPrefix= {symbolPrefix}");
+                        //s_logger.ConditionalDebug($"Got symbolPattern={symbolPattern} for symbolSettings={symbolSettings} and symbolPrefix= {symbolPrefix}");
                         s_futuresSymbolPatternByPrefix.Add(symbolPrefix, symbolPattern);
                         return symbolPattern;
                     }

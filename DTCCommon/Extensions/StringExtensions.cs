@@ -7,7 +7,7 @@ namespace DTCCommon
 {
     public static class StringExtensions
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
         
         /// <summary>
         /// Convert a message string to bytes of a fixed width

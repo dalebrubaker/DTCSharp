@@ -12,7 +12,7 @@ namespace DTCServer
 {
     public abstract class ListenerDTC : TcpListener, IDisposable
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         private readonly IPAddress _localaddr;
         private readonly int _port;
@@ -31,7 +31,7 @@ namespace DTCServer
             _cts = new CancellationTokenSource();
             _clientHandlers = new List<ClientHandlerDTC>();
             Address = new IPEndPoint(_localaddr, _port).ToString();
-            //s_logger.Trace($"ctor {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
+            //s_logger.ConditionalTrace($"ctor {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
             Task.Factory.StartNew(RunAsync, TaskCreationOptions.LongRunning);
         }
 
@@ -74,7 +74,7 @@ namespace DTCServer
         {
             try
             {
-                s_logger.Trace($"Starting {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
+                s_logger.ConditionalTrace($"Starting {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
                 Start();
             }
             catch (SocketException ex)
@@ -215,7 +215,7 @@ namespace DTCServer
             Stop();
             Server.Dispose();
             CloseAllClientHandlers();
-            //s_logger.Trace($"Disposed {nameof(ListenerDTC)} {this}");
+            //s_logger.ConditionalTrace($"Disposed {nameof(ListenerDTC)} {this}");
         }
 
         public void Dispose()

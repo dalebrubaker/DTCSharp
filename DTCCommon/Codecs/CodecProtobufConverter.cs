@@ -6,7 +6,7 @@ namespace DTCCommon.Codecs
 {
     public static class CodecProtobufConverter
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// This is the Func used when the current encoding is EncodingEnum.ProtocolBuffers

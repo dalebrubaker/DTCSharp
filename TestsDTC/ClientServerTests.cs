@@ -16,7 +16,7 @@ namespace TestsDTC
 {
     public class ClientServerTests : IDisposable
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         // ReSharper disable once InconsistentNaming
         private static int _nextServerPort = 54321;
@@ -135,7 +135,7 @@ namespace TestsDTC
                 void ClientHandlerConnected(object s, ClientHandlerDTC clientHandler)
                 {
                     var msg = $"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}";
-                    s_logger.Debug(msg);
+                    s_logger.ConditionalDebug(msg);
                     _output.WriteLine(msg);
                     numConnects++;
                 }
@@ -146,7 +146,7 @@ namespace TestsDTC
                 void ClientHandlerDisconnected(object s, ClientHandlerDTC clientHandler)
                 {
                     var msg = $"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}";
-                    s_logger.Debug(msg);
+                    s_logger.ConditionalDebug(msg);
                     _output.WriteLine(msg);
                     numDisconnects++;
                 }
@@ -328,7 +328,7 @@ namespace TestsDTC
             void MarketDataUpdateTradeCompactEvent(object s, MarketDataUpdateTradeCompact trade)
             {
                 numTrades++;
-                //s_logger.Debug("numTrades={numTrades}", numTrades);
+                //s_logger.ConditionalDebug("numTrades={numTrades}", numTrades);
             }
 
             client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
@@ -337,7 +337,7 @@ namespace TestsDTC
             void MarketDataUpdateBidAskCompactEvent(object s, MarketDataUpdateBidAskCompact bidAsk)
             {
                 numBidAsks++;
-                //s_logger.Debug("numBidAsks={numBidAsks}", numBidAsks);
+                //s_logger.ConditionalDebug("numBidAsks={numBidAsks}", numBidAsks);
             }
 
             client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;

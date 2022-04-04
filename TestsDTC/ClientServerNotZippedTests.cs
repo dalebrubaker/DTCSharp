@@ -16,7 +16,7 @@ namespace TestsDTC
 {
     public class ClientServerNotZippedTests : IDisposable
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         private readonly ITestOutputHelper _output;
 

@@ -12,7 +12,7 @@ namespace DTCCommon
     public class SymbolSettings
     {
         private readonly string _path;
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         private readonly Dictionary<string, XmlNode> _nodesBySymbolPattern = new Dictionary<string, XmlNode>();
         private readonly Dictionary<string, XmlNode> _nodesBySymbol = new Dictionary<string, XmlNode>();
@@ -43,7 +43,7 @@ namespace DTCCommon
 
         public string GetInnerText(string symbol, string elementName)
         {
-            // s_logger.Debug($"Getting tickSizeStr from symbolSettings for {symbol}");
+            // s_logger.ConditionalDebug($"Getting tickSizeStr from symbolSettings for {symbol}");
             var node = GetNode(symbol);
             if (node == null)
             {

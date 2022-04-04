@@ -44,7 +44,7 @@ namespace DTCServer
                 case DTCMessageType.Heartbeat:
                     // We don't process this message. ResponseReader records the last message received,
                     //  whether a heartbeat or any other record, as required while reading historical records without intermingled heartbeats
-                    //s_logger.Debug($"Heartbeat received from DTC in {this}");
+                    //s_logger.ConditionalDebug($"Heartbeat received from DTC in {this}");
                     SendResponse(messageProto);
                     _callback.Invoke(this, messageProto); // send this to the callback for informational purposes
                     return true;
@@ -142,13 +142,13 @@ namespace DTCServer
                     case EncodingEnum.BinaryEncoding:
                     case EncodingEnum.ProtocolBuffers:
                         // Accept the encodingRequest
-                        s_logger.Trace($"ClientHandler is changing encoding from {_currentEncoding} to {encodingRequest.Encoding} in {this}");
+                        s_logger.ConditionalTrace($"ClientHandler is changing encoding from {_currentEncoding} to {encodingRequest.Encoding} in {this}");
                         encodingResponse.Encoding = encodingRequest.Encoding;
                         break;
                     case EncodingEnum.BinaryWithVariableLengthStrings:
                     case EncodingEnum.JsonEncoding:
                     case EncodingEnum.JsonCompactEncoding:
-                        s_logger.Trace($"ClientHandler is rejecting the encoding request change to {encodingRequest.Encoding}, encoding remains {_currentEncoding} in {this}");
+                        s_logger.ConditionalTrace($"ClientHandler is rejecting the encoding request change to {encodingRequest.Encoding}, encoding remains {_currentEncoding} in {this}");
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -167,7 +167,7 @@ namespace DTCServer
                     case EncodingEnum.BinaryEncoding:
                         _encode = CodecBinaryConverter.EncodeBinary;
                         _decode = CodecBinaryConverter.DecodeBinary;
-                        s_logger.Trace($"Changed codec from {_currentEncoding} to {encodingResponse.Encoding} in {this}");
+                        s_logger.ConditionalTrace($"Changed codec from {_currentEncoding} to {encodingResponse.Encoding} in {this}");
                         break;
                     case EncodingEnum.BinaryWithVariableLengthStrings:
                     case EncodingEnum.JsonEncoding:
@@ -201,7 +201,7 @@ namespace DTCServer
             try
             {
                 _currentStream = new DeflateStream(_currentStream, CompressionMode.Compress, true);
-                s_logger.Debug($"Switched clientHandler to write zipped in {this}");
+                s_logger.ConditionalDebug($"Switched clientHandler to write zipped in {this}");
             }
             catch (Exception ex)
             {

@@ -18,7 +18,7 @@ namespace DTCServer
 {
     public partial class ClientHandlerDTC : IEquatable<ClientHandlerDTC>, IDisposable
     {
-        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
         private static int s_instanceId;
 
         public int InstanceId { get; }
@@ -78,7 +78,7 @@ namespace DTCServer
             {
                 while (!_cts.IsCancellationRequested)
                 {
-                    //s_logger.Debug($"Waiting to read a message in {this}.{nameof(ClientMessageReader)} using {_currentCodec}");
+                    //s_logger.ConditionalDebug($"Waiting to read a message in {this}.{nameof(ClientMessageReader)} using {_currentCodec}");
                     var messageEncoded = _currentStream.ReadMessageEncoded();
                     LastMessageReceivedTimeUtc = DateTime.UtcNow;
                     messageProto = _decode(messageEncoded);
@@ -88,7 +88,7 @@ namespace DTCServer
                     }
                     if (messageProto.MessageType != DTCMessageType.Heartbeat)
                     {
-                        //s_logger.Trace($"Received message={messageProto} in {this}.{nameof(RequestsReader)} using encoding={_currentEncoding}");
+                        //s_logger.ConditionalTrace($"Received message={messageProto} in {this}.{nameof(RequestsReader)} using encoding={_currentEncoding}");
                     }
                     if (PreProcessRequest(messageProto))
                     {
@@ -145,7 +145,7 @@ namespace DTCServer
                         continue;
                     }
 
-                    //s_logger.Trace($"{this}.{nameof(RequestsProcessor)} took from _requestsQueue: {message}");
+                    //s_logger.ConditionalTrace($"{this}.{nameof(RequestsProcessor)} took from _requestsQueue: {message}");
                     ProcessRequest(message);
                 }
                 catch (Exception ex)
@@ -196,7 +196,7 @@ namespace DTCServer
                 _currentStream.WriteMessageEncoded(messageEncoded);
                 if (messageProto.MessageType != DTCMessageType.Heartbeat)
                 {
-                    //s_logger.Trace($"{this} {nameof(SendResponse)} wrote with {_currentEncoding} {messageProto}");
+                    //s_logger.ConditionalTrace($"{this} {nameof(SendResponse)} wrote with {_currentEncoding} {messageProto}");
                 }
                 PostProcessSentMessage(messageType, message);
             }
@@ -237,7 +237,7 @@ namespace DTCServer
 
             // Go back to the NetworkStream
             _currentStream = _tcpClient.GetStream();
-            //s_logger.Debug($"Ended zipped historical {this} ");
+            //s_logger.ConditionalDebug($"Ended zipped historical {this} ");
         }
 
         /// <summary>
@@ -262,7 +262,7 @@ namespace DTCServer
             if (secondsSinceLastMessageReceived > 2 * _heartbeatIntervalInSeconds)
             {
                 // The client has disappeared. This is normal
-                s_logger.Trace($"Client disappeared from {this}");
+                s_logger.ConditionalTrace($"Client disappeared from {this}");
                 Dispose();
                 return;
             }
@@ -286,11 +286,11 @@ namespace DTCServer
             {
                 // DTC disconnected? No point in continuing with heartbeats
                 _timerHeartbeat.Enabled = false;
-                s_logger.Debug(ex, $"{ex.Message} in {this}");
+                s_logger.ConditionalDebug(ex, $"{ex.Message} in {this}");
             }
             catch (Exception ex)
             {
-                s_logger.Debug(ex, $"{ex.Message} in {this}");
+                s_logger.ConditionalDebug(ex, $"{ex.Message} in {this}");
                 throw;
             }
         }
@@ -299,7 +299,7 @@ namespace DTCServer
         {
             if (!_isDisposed)
             {
-                //s_logger.Debug("Disposing ClientHandler");
+                //s_logger.ConditionalDebug("Disposing ClientHandler");
                 _isDisposed = true;
                 OnDisconnected(new Result("Disposed"));
                 _cts.Cancel();
@@ -326,7 +326,7 @@ namespace DTCServer
                 }
             }
             GC.SuppressFinalize(this);
-            s_logger.Trace($"Disposed {this}");
+            s_logger.ConditionalTrace($"Disposed {this}");
         }
 
         public bool Equals(ClientHandlerDTC other)
