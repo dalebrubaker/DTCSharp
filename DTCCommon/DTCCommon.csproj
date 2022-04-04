@@ -100,6 +100,7 @@
     <Compile Include="ErrorTypes.cs" />
     <Compile Include="Exceptions\OrderRejectedException.cs" />
     <Compile Include="Extensions\EnumExtensions.cs" />
+    <Compile Include="Extensions\IntExtensions.cs" />
     <Compile Include="Extensions\OrderExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="IOrderDTC.cs" />
@@ -116,7 +117,6 @@
     <Compile Include="Result.cs" />
     <Compile Include="Exceptions\DTCSharpException.cs" />
     <Compile Include="Extensions\DateTimeExtensions.cs" />
-    <Compile Include="Extensions\IntExtensions.cs" />
     <Compile Include="Extensions\StreamExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="MessageStructs.cs" />
