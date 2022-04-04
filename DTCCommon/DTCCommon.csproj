@@ -58,9 +58,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="System.Xml.Serialization" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Remove="Codecs\Codec.cs" />
     <Compile Remove="Codecs\CodecBinary.cs" />
     <Compile Remove="Codecs\CodecProtobuf.cs" />
