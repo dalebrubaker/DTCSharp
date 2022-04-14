@@ -9,14 +9,12 @@ namespace TestClient
     public partial class LogControl : UserControl
     {
         private readonly ConcurrentStack<string> _messageStack;
-        private readonly SynchronizationContextHelper _syncContextHelper;
 
         public LogControl()
         {
             InitializeComponent();
             _messageStack = new ConcurrentStack<string>();
             MaximumLogLengthChars = 1024 * 1024 * 100;
-            _syncContextHelper = new SynchronizationContextHelper();
         }
 
         /// <summary>

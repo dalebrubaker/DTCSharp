@@ -7,7 +7,6 @@ using DTCClient;
 using DTCPB;
 using DTCServer;
 using FluentAssertions;
-using NLog;
 using TestServer;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,8 +15,6 @@ namespace TestsDTC
 {
     public class ClientServerTests : IDisposable
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
-
         // ReSharper disable once InconsistentNaming
         private static int _nextServerPort = 54321;
 
@@ -130,12 +127,10 @@ namespace TestsDTC
             var port = NextServerPort;
             using (var server = StartExampleServer(port))
             {
-
                 // Set up the handler to capture the ClientHandlerConnected event
                 void ClientHandlerConnected(object s, ClientHandlerDTC clientHandler)
                 {
                     var msg = $"Server in {nameof(StartServerAddRemoveOneClientTest)} connected to {clientHandler}";
-                    s_logger.ConditionalDebug(msg);
                     _output.WriteLine(msg);
                     numConnects++;
                 }
@@ -146,7 +141,6 @@ namespace TestsDTC
                 void ClientHandlerDisconnected(object s, ClientHandlerDTC clientHandler)
                 {
                     var msg = $"Server in {nameof(StartServerAddRemoveOneClientTest)} disconnected from {clientHandler}";
-                    s_logger.ConditionalDebug(msg);
                     _output.WriteLine(msg);
                     numDisconnects++;
                 }
@@ -256,14 +250,13 @@ namespace TestsDTC
 
             var sw = Stopwatch.StartNew();
             var signal = new ManualResetEvent(false);
-            
+
             // Set up the handler to capture the Connected event
             void Connected(object s, EventArgs e)
             {
                 _output.WriteLine($"Client is connected to {server.Address}");
                 wasConnected = true;
             }
-
 
             // Set up the handler to capture the Disconnected event
             void Disconnected(object s, EventArgs e)
@@ -290,7 +283,7 @@ namespace TestsDTC
 
             // Now kill the server
             server.Dispose();
-            
+
             signal.WaitOne(1000);
             wasConnected.Should().BeTrue("Did the connect");
             wasDisconnected.Should().BeTrue("Did the disconnect.");
@@ -379,10 +372,9 @@ namespace TestsDTC
             catch (Exception ex)
             {
                 var ms = sw.ElapsedMilliseconds;
-                s_logger.Error(ex, ex.Message);
+                _output.WriteLine(ex.Message);
                 throw;
             }
-
             //
             // using var server = StartExampleServer(1000, NextServerPort);
             // await Task.Delay(100); // give it time to start
