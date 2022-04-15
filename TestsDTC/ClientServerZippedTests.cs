@@ -145,5 +145,11 @@ namespace TestsDTC
             Assert.Equal(2, numHistoricalPriceDataResponseHeader);
             Assert.Equal(server.NumHistoricalPriceDataRecordsToSend * 2, numTrades);
         }
+
+        [Fact]
+        public void BreakBuild()
+        {
+            Assert.True(false);
+        }
     }
 }
