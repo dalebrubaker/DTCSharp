@@ -30,7 +30,8 @@ namespace TestsDTC
 
         private ClientDTC ConnectClientHistorical(int port, EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
         {
-            var client = new ClientDTC("localhost", port);
+            var client = new ClientDTC();
+            client.Start("localhost", port);
             var (loginResponse, error) = client.Logon("TestClient", requestedEncoding: encoding);
             Assert.NotNull(loginResponse);
             return client;

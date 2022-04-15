@@ -48,7 +48,8 @@ namespace TestsDTC
             // Set up the exampleService responses
             var port = ClientServerTests.NextServerPort;
             using var exampleService = StartExampleServer(port);
-            using var clientHistorical = new ClientDTC("localhost", port);
+            using var clientHistorical = new ClientDTC();
+            clientHistorical.Start("localhost", port);
             var (loginResponse, error) = clientHistorical.Logon("TestClient", 1);
             Assert.NotNull(loginResponse);
             Assert.Equal(1, exampleService.NumberOfClientHandlers);

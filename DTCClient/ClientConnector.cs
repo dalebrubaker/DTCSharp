@@ -77,9 +77,9 @@ namespace DTCClient
             {
                 //s_logger.ConditionalDebug($"Entered TimerOnElapsed, trying to connect {this}");
                 _logonResponse = null;
-                _client = new ClientDTC(_hostname, _port);
-                Result error;
-                (_logonResponse, error) = _client.Logon(_logonRequest, _requestedEncoding);
+                _client = new ClientDTC();
+                _client.Start(_hostname, _port);
+                (_logonResponse, var error) = _client.Logon(_logonRequest, _requestedEncoding);
                 if (error.IsError || _logonResponse is not { Result: LogonStatusEnum.LogonSuccess })
                 {
                     var resultText = error.IsError ? error.ResultText : LastLogonResultText;
