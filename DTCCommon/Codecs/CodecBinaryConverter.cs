@@ -9,6 +9,7 @@ namespace DTCCommon.Codecs
     public static class CodecBinaryConverter
     {
         private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
+        
 
         // Text string lengths. Copied from DTCProtocol.h
         private const int USERNAME_PASSWORD_LENGTH = 32;

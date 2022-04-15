@@ -33,7 +33,7 @@ namespace DTCClient
                 case DTCMessageType.Heartbeat:
                     // We don't process this message. ResponseReader records the last message received,
                     //  whether a heartbeat or any other record, as required while reading historical records without intermingled heartbeats
-                    //s_logger.ConditionalDebug($"Heartbeat received from DTC in {this}");
+                    //_logger.Debug($"Heartbeat received from DTC in {this}");
                     OnEveryResponse(messageProto.Message);
                     OnIMessage((Heartbeat)messageProto.Message, HeartbeatEvent);
                     return true;
@@ -368,7 +368,7 @@ namespace DTCClient
                     case EncodingEnum.BinaryEncoding:
                         _encode = CodecBinaryConverter.EncodeBinary;
                         _decode = CodecBinaryConverter.DecodeBinary;
-                        s_logger.ConditionalTrace($"Changed codec from {_currentEncoding} to {encodingResponse.Encoding} in {this}");
+                        _logger.Verbose($"Changed codec from {_currentEncoding} to {encodingResponse.Encoding} in {this}");
                         break;
                     case EncodingEnum.BinaryWithVariableLengthStrings:
                     case EncodingEnum.JsonEncoding:
@@ -377,7 +377,7 @@ namespace DTCClient
                     case EncodingEnum.ProtocolBuffers:
                         _encode = CodecProtobufConverter.EncodeProtobuf;
                         _decode = CodecProtobufConverter.DecodeProtobuf;
-                        s_logger.ConditionalTrace($"Changed codec from {_currentEncoding} to {encodingResponse.Encoding} in {this}");
+                        _logger.Verbose($"Changed codec from {_currentEncoding} to {encodingResponse.Encoding} in {this}");
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -408,7 +408,7 @@ namespace DTCClient
 
             // Go back to the NetworkStream
             _currentStream = GetStream();
-            //s_logger.ConditionalDebug($"Ended zipped historical {this} ");
+            //_logger.Debug($"Ended zipped historical {this} ");
         }
 
         private void SwitchCurrentStreamToZipped()
@@ -418,11 +418,11 @@ namespace DTCClient
             {
                 // Leave the network stream open, but wrap it with DeflateStream so future reads and writes are zipped.
                 _currentStream = new DeflateStream(_currentStream, CompressionMode.Decompress, true);
-                s_logger.ConditionalDebug($"{this} switched stream to read zipped.");
+                _logger.Debug($"{this} switched stream to read zipped.");
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, $"{ex.Message} in {this}");
+                _logger.Error(ex, $"{ex.Message} in {this}");
                 Dispose();
             }
         }

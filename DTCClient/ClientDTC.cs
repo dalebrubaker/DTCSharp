@@ -12,13 +12,13 @@ using DTCCommon.Codecs;
 using DTCPB;
 using Google.Protobuf;
 using NLog;
+using ILogger = Serilog.ILogger;
 using Timer = System.Timers.Timer;
 
 namespace DTCClient
 {
     public partial class ClientDTC : TcpClient
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
         private static int s_instanceId;
         
         private const int TimeoutMs = 30 * 1000; // 5 is not enough // 10 is low for debugging // 30 is standard
@@ -63,6 +63,7 @@ namespace DTCClient
         private Func<MessageProto, MessageEncoded> _encode;
         private Func<MessageEncoded, MessageProto> _decode;
         private EncodingEnum _currentEncoding;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// The most recent _logonResponse.
@@ -78,6 +79,7 @@ namespace DTCClient
             InstanceId = s_instanceId++;
             _cts = new CancellationTokenSource();
             _responsesQueue = new BlockingCollection<MessageProto>(1024 * 1024);
+            _logger = Serilog.Log.ForContext<ClientDTC>();
         }
 
         /// <summary>
@@ -125,12 +127,12 @@ namespace DTCClient
                 // This is what we use for Historical connections. 0 means infinite
                 //throw new ArgumentException("heartbeatIntervalInSeconds must be at least 1");
             }
-            s_logger.ConditionalTrace($"Starting encoding/logon for {_clientName} in {this}");
+            _logger.Verbose($"Starting encoding/logon for {_clientName} in {this}");
             var encodingResult = SetEncoding(requestedEncoding);
             if (encodingResult.IsError)
             {
                 var msg = $"Client is not able to connect because {encodingResult.ResultText} in {this}";
-                s_logger.Error(msg);
+                _logger.Error(msg);
                 var error = new Result(msg, ErrorTypes.LogonRefused);
                 return (null, error);
             }
@@ -151,21 +153,21 @@ namespace DTCClient
             // Wait until the response is received or the networkStream times out
             if (LogonResponse == null)
             {
-                s_logger.ConditionalTrace($"Waiting for logon response in {this}");
+                _logger.Verbose($"Waiting for logon response in {this}");
                 signal.WaitOne(TimeoutMs);
                 if (LogonResponse == null)
                 {
                     var msg = $"LogonAsync timed out after {TimeoutMs} milliseconds in {this}";
-                    s_logger.Error(msg);
+                    _logger.Error(msg);
                     var error = new Result(msg, ErrorTypes.LogonRefused);
                     return (null, error);
                 }
-                s_logger.ConditionalTrace($"Done waiting for logon response in {this}, received {LogonResponse}");
+                _logger.Verbose($"Done waiting for logon response in {this}, received {LogonResponse}");
             }
             if (LogonResponse.Result != LogonStatusEnum.LogonSuccess)
             {
                 // unsuccessful logon
-                s_logger.ConditionalTrace($"Unsuccessful logon for {_clientName} due to {LogonResponse.ResultText} in {this}");
+                _logger.Verbose($"Unsuccessful logon for {_clientName} due to {LogonResponse.ResultText} in {this}");
                 var error = new Result(LogonResponse.ResultText);
                 return (null, error);
             }
@@ -180,7 +182,7 @@ namespace DTCClient
             }
             IsConnected = true;
             OnConnected();
-            //s_logger.ConditionalDebug($"Successful logon for {_clientName} in {this}");
+            //_logger.Debug($"Successful logon for {_clientName} in {this}");
             return (LogonResponse, new Result());
         }
 
@@ -298,18 +300,18 @@ namespace DTCClient
                     _currentStream.WriteMessageEncoded(messageEncoded);
                     if (messageProto.MessageType != DTCMessageType.Heartbeat)
                     {
-                        s_logger.ConditionalTrace($"{this} {nameof(SendRequest)} sent with {_currentEncoding} {messageProto}");
+                        _logger.Verbose($"{this} {nameof(SendRequest)} sent with {_currentEncoding} {messageProto}");
                     }
                 }
             }
             catch (ObjectDisposedException ex)
             {
-                s_logger.Error(ex, $"{ex.Message} in {this}");
+                _logger.Error(ex, $"{ex.Message} in {this}");
                 Dispose();
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, $"{ex.Message} in {this}");
+                _logger.Error(ex, $"{ex.Message} in {this}");
                 Dispose();
             }
         }
@@ -321,7 +323,7 @@ namespace DTCClient
             if (secondsSinceLastMessageReceived > 2 * _heartbeatIntervalInSeconds)
             {
                 // The server has disappeared
-                s_logger.Error($"Server disappeared from {this}");
+                _logger.Error($"Server disappeared from {this}");
                 Dispose();
                 return;
             }
@@ -350,11 +352,11 @@ namespace DTCClient
             {
                 // DTC disconnected? No point in continuing with heartbeats
                 _timerHeartbeat.Enabled = false;
-                s_logger.ConditionalDebug(ex, ex.Message);
+                _logger.Debug(ex, ex.Message);
             }
             catch (Exception ex)
             {
-                s_logger.ConditionalDebug(ex, ex.Message);
+                _logger.Debug(ex, ex.Message);
                 throw;
             }
         }
@@ -374,14 +376,14 @@ namespace DTCClient
             {
                 while (!_cts.IsCancellationRequested)
                 {
-                    //s_logger.ConditionalDebug($"About to read a message in {nameof(ClientDTC)}.{nameof(ResponsesReader)} using {_currentEncoding}");
+                    //_logger.Debug($"About to read a message in {nameof(ClientDTC)}.{nameof(ResponsesReader)} using {_currentEncoding}");
                     messageEncoded = _currentStream.ReadMessageEncoded();
                     _lastMessageReceivedTimeUtc = DateTime.UtcNow;
                     messageProto = null; // in case we throw an exception during decod
                     messageProto = _decode(messageEncoded);
                     if (messageProto.MessageType != DTCMessageType.Heartbeat)
                     {
-                        //s_logger.ConditionalTrace($"Received messageEncoded={messageEncoded} - message={messageProto} in {this} {nameof(ResponsesReader)} using encoding={_currentEncoding}");
+                        //_logger.Verbose($"Received messageEncoded={messageEncoded} - message={messageProto} in {this} {nameof(ResponsesReader)} using encoding={_currentEncoding}");
                     }
                     if (PreProcessResponse(messageProto))
                     {
@@ -398,24 +400,24 @@ namespace DTCClient
             }
             catch (InvalidProtocolBufferException ex)
             {
-                s_logger.Error(ex, $"Client {this}: error messageEncoded={messageEncoded} - {messageProto} {ex.Message} _currentEncoding={_currentEncoding} in {this}");
+                _logger.Error(ex, $"Client {this}: error messageEncoded={messageEncoded} - {messageProto} {ex.Message} _currentEncoding={_currentEncoding} in {this}");
                 Dispose();
             }
             catch (EndOfStreamException)
             {
-                s_logger.ConditionalTrace($"Client {this} reached end of stream {_currentStream} in {this}");
+                _logger.Verbose($"Client {this} reached end of stream {_currentStream} in {this}");
                 Dispose();
             }
             catch (IOException)
             {
-                s_logger.ConditionalTrace($"Client {this} reached end of stream {_currentStream} in {this}");
+                _logger.Verbose($"Client {this} reached end of stream {_currentStream} in {this}");
                 Dispose();
             }
             catch (Exception ex)
             {
                 if (!_cts.IsCancellationRequested)
                 {
-                    s_logger.Error(ex, $"{ex.Message} in {this}");
+                    _logger.Error(ex, $"{ex.Message} in {this}");
                 }
                 Dispose();
             }
@@ -435,10 +437,10 @@ namespace DTCClient
                         continue;
                     }
 
-                    //s_logger.ConditionalTrace($"{this}.{nameof(ResponsesProcessor)} took from _responsesQueue: {messageProto}");
+                    //_logger.Verbose($"{this}.{nameof(ResponsesProcessor)} took from _responsesQueue: {messageProto}");
                     if (messageProto.MessageType is DTCMessageType.OrderUpdate ) // or DTCMessageType.PositionUpdate) // or DTCMessageType.AccountBalanceUpdate)
                     {
-                        s_logger.ConditionalTrace($"{TradeMessageLogging}{this}.{nameof(ResponsesProcessor)} took from _responsesQueue: {messageProto}");
+                        _logger.Verbose($"{TradeMessageLogging}{this}.{nameof(ResponsesProcessor)} took from _responsesQueue: {messageProto}");
                     }
                     ProcessResponse(messageProto);
                 }
@@ -451,7 +453,7 @@ namespace DTCClient
                 {
                     if (!_cts.IsCancellationRequested)
                     {
-                        s_logger.Error(ex, $"{ex.Message} in {this}");
+                        _logger.Error(ex, $"{ex.Message} in {this}");
                     }
                     Dispose();
                     throw;
@@ -482,7 +484,7 @@ namespace DTCClient
             IsConnected = false;
             OnDisconnected();
             base.Dispose(disposing); // same as dispose
-            s_logger.ConditionalTrace($"Disposed {this}");
+            _logger.Verbose($"Disposed {this}");
         }
 
         public override string ToString()
