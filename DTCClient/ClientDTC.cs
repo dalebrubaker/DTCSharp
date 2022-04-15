@@ -11,7 +11,6 @@ using DTCCommon;
 using DTCCommon.Codecs;
 using DTCPB;
 using Google.Protobuf;
-using NLog;
 using ILogger = Serilog.ILogger;
 using Timer = System.Timers.Timer;
 

@@ -4,7 +4,7 @@ using System.Net;
 using System.Threading.Tasks;
 using DTCCommon;
 using DTCPB;
-using NLog;
+using Serilog;
 
 namespace DTCServer
 {
@@ -13,10 +13,11 @@ namespace DTCServer
     /// </summary>
     public sealed class ExampleService : ListenerDTC
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
+        private readonly ILogger _logger;
 
         public ExampleService(IPAddress ipAddress, int port, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) : base(ipAddress, port)
         {
+            _logger = Log.ForContext<ExampleService>();
             NumTradesAndBidAsksToSend = numTradesAndBidAsksToSend;
             MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>(NumTradesAndBidAsksToSend);
             MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>(NumTradesAndBidAsksToSend);
@@ -225,7 +226,7 @@ namespace DTCServer
                         MinPriceIncrement = 0.25f,
                         Description = "Description must not be empty."
                     };
-                    //s_logger.ConditionalDebug("Sending SecurityDefinitionResponse");
+                    //s_logger.Debug("Sending SecurityDefinitionResponse");
                     clientHandler.SendResponse(DTCMessageType.SecurityDefinitionResponse, securityDefinitionResponse);
                     break;
                 case DTCMessageType.MarketDataReject:
@@ -363,7 +364,7 @@ namespace DTCServer
                     clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                 }
             }
-            s_logger.ConditionalDebug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
+            _logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
         }
 
         private static void SendSnapshot(ClientHandlerDTC clientHandler)

@@ -2,14 +2,13 @@
 using System.IO;
 using DTCPB;
 using Google.Protobuf;
-using NLog;
+using Serilog;
 
 namespace DTCCommon.Codecs
 {
     public static class CodecBinaryConverter
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
-        
+        private static readonly ILogger s_logger = Log.ForContext(typeof(CodecBinaryConverter));
 
         // Text string lengths. Copied from DTCProtocol.h
         private const int USERNAME_PASSWORD_LENGTH = 32;
@@ -288,7 +287,7 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.AccountBalanceUpdate:
                 case DTCMessageType.PositionUpdate:
                     // Probably being thrown from SC on an open trade while connecting binary for Encoding change
-                    s_logger.Warn($"Ignoring binary message {messageEncoded}");
+                    s_logger.Warning($"Ignoring binary message {messageEncoded}");
                     break;
                 case DTCMessageType.UserMessage:
                     var userMessage = (UserMessage)message;
@@ -333,7 +332,7 @@ namespace DTCCommon.Codecs
                     index += 2; // align for packing
                     historicalPriceDataResponseHeader.IntToFloatPriceDivisor = BitConverter.ToSingle(bytes, index);
 
-                    //Logger.ConditionalDebug($"{nameof(CodecBinary)} loaded {messageType} {result}");
+                    //Logger.Debug($"{nameof(CodecBinary)} loaded {messageType} {result}");
                     return;
                 case DTCMessageType.HistoricalPriceDataReject:
                     var historicalPriceDataReject = (HistoricalPriceDataReject)message;
@@ -480,7 +479,7 @@ namespace DTCCommon.Codecs
 
         private static byte[] ConvertToBinary(MessageProto messageProto)
         {
-            //Logger.ConditionalDebug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
+            //Logger.Debug($"Writing {messageType} when _isZippedStream={_isZippedStream}");
             var messageType = messageProto.MessageType;
             var message = messageProto.Message;
             switch (messageType)
@@ -533,7 +532,7 @@ namespace DTCCommon.Codecs
                     var historicalPriceDataRequest = (HistoricalPriceDataRequest)message;
                     return ConvertToBufferHistoricalPriceDataRequest(messageType, historicalPriceDataRequest);
                 case DTCMessageType.HistoricalPriceDataResponseHeader:
-                    // Logger.ConditionalDebug($"{nameof(CodecBinary)} is writing {messageType} {message}");
+                    // Logger.Debug($"{nameof(CodecBinary)} is writing {messageType} {message}");
                     var historicalPriceDataResponseHeader = (HistoricalPriceDataResponseHeader)message;
                     return ConvertToBufferHistoricalPriceDataResponseHeader(messageType, historicalPriceDataResponseHeader);
                 case DTCMessageType.HistoricalPriceDataReject:

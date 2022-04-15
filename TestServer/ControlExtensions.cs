@@ -19,7 +19,7 @@ public static class ControlExtensions
             // ReSharper disable once PossibleNullReferenceException
             if (control.IsDisposed || !control.IsHandleCreated || control.FindForm()?.IsHandleCreated == false)
             {
-                //s_logger.ConditionalTrace($"Ignoring SafeInvoke on {control}.{method}");
+                //s_logger.Verbose($"Ignoring SafeInvoke on {control}.{method}");
                 return false;
             }
             if (control.InvokeRequired)
@@ -63,7 +63,7 @@ public static class ControlExtensions
             // ReSharper disable once PossibleNullReferenceException
             if (control.IsDisposed || !control.IsHandleCreated || control.FindForm()?.IsHandleCreated == false)
             {
-                //s_logger.ConditionalTrace($"Ignoring SafeInvoke on {control}.{method}");
+                //s_logger.Verbose($"Ignoring SafeInvoke on {control}.{method}");
                 return false;
             }
             if (control.InvokeRequired)

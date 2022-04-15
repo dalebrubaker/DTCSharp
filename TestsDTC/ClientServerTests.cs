@@ -323,7 +323,7 @@ namespace TestsDTC
             void MarketDataUpdateTradeCompactEvent(object s, MarketDataUpdateTradeCompact trade)
             {
                 numTrades++;
-                //s_logger.ConditionalDebug("numTrades={numTrades}", numTrades);
+                //s_logger.Debug("numTrades={numTrades}", numTrades);
             }
 
             client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
@@ -332,7 +332,7 @@ namespace TestsDTC
             void MarketDataUpdateBidAskCompactEvent(object s, MarketDataUpdateBidAskCompact bidAsk)
             {
                 numBidAsks++;
-                //s_logger.ConditionalDebug("numBidAsks={numBidAsks}", numBidAsks);
+                //s_logger.Debug("numBidAsks={numBidAsks}", numBidAsks);
             }
 
             client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;

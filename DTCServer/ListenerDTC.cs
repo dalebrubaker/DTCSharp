@@ -6,13 +6,12 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using DTCCommon;
-using NLog;
+using Serilog;
 
 namespace DTCServer
 {
     public abstract class ListenerDTC : TcpListener, IDisposable
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         private readonly IPAddress _localaddr;
         private readonly int _port;
@@ -20,18 +19,20 @@ namespace DTCServer
         private readonly List<ClientHandlerDTC> _clientHandlers; // parallel list to _ClientHandlerDTCTasks
         private bool _isDisposed;
         private readonly CancellationTokenSource _cts;
+        private readonly ILogger _logger;
 
         public string Address { get; }
 
         protected ListenerDTC(IPAddress localaddr, int port) : base(localaddr, port)
         {
+            _logger = Log.ForContext<ListenerDTC>();
             _localaddr = localaddr;
             _port = port;
             _lock = new object();
             _cts = new CancellationTokenSource();
             _clientHandlers = new List<ClientHandlerDTC>();
             Address = new IPEndPoint(_localaddr, _port).ToString();
-            //s_logger.ConditionalTrace($"ctor {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
+            //s_logger.Verbose($"ctor {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
         }
 
         public int NumberOfClientHandlers
@@ -65,12 +66,12 @@ namespace DTCServer
         {
             try
             {
-                s_logger.ConditionalTrace($"Starting {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
+                _logger.Verbose($"Starting {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
                 Start();
             }
             catch (SocketException ex)
             {
-                s_logger.Error(ex, ex.Message);
+                _logger.Error(ex, ex.Message);
                 throw;
             }
             catch (ThreadAbortException)
@@ -156,7 +157,7 @@ namespace DTCServer
                     }
                     catch (Exception ex)
                     {
-                        s_logger.Warn($"Ignoring {ex.Message} during dispose of clientHandler");
+                        _logger.Warning($"Ignoring {ex.Message} during dispose of clientHandler");
                     }
                 }
             }
@@ -222,7 +223,7 @@ namespace DTCServer
             Stop();
             Server.Dispose();
             CloseAllClientHandlers();
-            //s_logger.ConditionalTrace($"Disposed {nameof(ListenerDTC)} {this}");
+            //s_logger.Verbose($"Disposed {nameof(ListenerDTC)} {this}");
         }
 
         public void Dispose()

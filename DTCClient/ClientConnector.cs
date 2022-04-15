@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Timers;
 using DTCCommon;
 using DTCPB;
-using NLog;
+using Serilog;
 
 namespace DTCClient
 {
@@ -12,8 +12,6 @@ namespace DTCClient
     /// </summary>
     public class ClientConnector : IDisposable
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
-
         private readonly string _hostname;
         private readonly int _port;
         private readonly int _interval;
@@ -24,6 +22,7 @@ namespace DTCClient
         private ClientDTC _client;
         private LogonResponse _logonResponse;
         private bool _isDisposed;
+        private readonly ILogger _logger;
 
         public string LastLogonResultText => _logonResponse?.ResultText;
 
@@ -46,6 +45,7 @@ namespace DTCClient
         public ClientConnector(string hostname, int port, string clientName, int interval = 2000, int heartbeatIntervalInSeconds = 10, EncodingEnum requestedEncoding = EncodingEnum.ProtocolBuffers,
             string userName = "", string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0, string tradeAccount = "", string hardwareIdentifier = "")
         {
+            _logger = Log.ForContext<ClientConnector>();
             _hostname = hostname;
             _port = port;
             _interval = interval;
@@ -67,7 +67,7 @@ namespace DTCClient
                 TradeAccount = tradeAccount
             };
             _timer.Start();
-            //s_logger.ConditionalDebug($"Started timer in ctor of {this}");
+            //s_logger.Debug($"Started timer in ctor of {this}");
         }
 
         private void TimerOnElapsed(object sender, ElapsedEventArgs e)
@@ -75,7 +75,7 @@ namespace DTCClient
             DebugDTC.Assert(_client == null, "timer is turned off while we have a connected client");
             try
             {
-                //s_logger.ConditionalDebug($"Entered TimerOnElapsed, trying to connect {this}");
+                //s_logger.Debug($"Entered TimerOnElapsed, trying to connect {this}");
                 _logonResponse = null;
                 _client = new ClientDTC();
                 _client.Start(_hostname, _port);
@@ -83,7 +83,7 @@ namespace DTCClient
                 if (error.IsError || _logonResponse is not { Result: LogonStatusEnum.LogonSuccess })
                 {
                     var resultText = error.IsError ? error.ResultText : LastLogonResultText;
-                    s_logger.ConditionalTrace($"Client {this} logon failed because {resultText}, timer started to keep trying");
+                    _logger.Verbose($"Client {this} logon failed because {resultText}, timer started to keep trying");
                     // Tell the ClientHandler that we're done, rather than wait for this client to disappear
                     _client?.SendRequest(DTCMessageType.Logoff, new Logoff { Reason = "Unable to logon, giving up." });
                     _client = null;
@@ -100,18 +100,18 @@ namespace DTCClient
                     return;
                 }
                 _client.DisconnectedEvent += ClientOnDisconnectedEvent;
-                s_logger.ConditionalTrace($"Sending OnClientConnected with {_client}");
+                _logger.Verbose($"Sending OnClientConnected with {_client}");
                 OnClientConnected(_client);
             }
             catch (SocketException sex)
             {
                 // ignore exception, but keep trying unti the server appears
-                s_logger.ConditionalTrace($"Client {this} logon failed because {sex.Message}, timer started to keep trying.");
+                _logger.Verbose($"Client {this} logon failed because {sex.Message}, timer started to keep trying.");
                 _timer?.Start();
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                _logger.Error(ex, ex.Message);
                 throw;
             }
         }
@@ -123,7 +123,7 @@ namespace DTCClient
                 OnClientDisconnected(_client);
                 _client = null;
                 _timer?.Start();
-                //s_logger.ConditionalDebug("Started timer after disconnect");
+                //s_logger.Debug("Started timer after disconnect");
             }
         }
 

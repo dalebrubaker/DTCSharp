@@ -18,9 +18,6 @@
     <Compile Update="ToolStripEx.cs">
       <SubType>Component</SubType>
     </Compile>
-    <None Update="NLog.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Remove="AnalysisReport.sarif" />
     <None Remove=".upgrade-assistant" />
     <None Remove="upgrade-assistant.clef" />

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
-using NLog;
+using Serilog;
 
 namespace DTCCommon
 {
@@ -12,10 +12,10 @@ namespace DTCCommon
     public class SymbolSettings
     {
         private readonly string _path;
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         private readonly Dictionary<string, XmlNode> _nodesBySymbolPattern = new Dictionary<string, XmlNode>();
         private readonly Dictionary<string, XmlNode> _nodesBySymbol = new Dictionary<string, XmlNode>();
+        private readonly ILogger _logger;
 
         /// <summary>
         /// ctor
@@ -23,6 +23,7 @@ namespace DTCCommon
         /// <param name="path">fully-qualified path to the SierraChart symbol settings file</param>
         public SymbolSettings(string path)
         {
+            _logger = Log.ForContext<SymbolSettings>();
             _path = path;
             using var sr = File.OpenText(path);
             lock (_nodesBySymbolPattern)
@@ -43,7 +44,7 @@ namespace DTCCommon
 
         public string GetInnerText(string symbol, string elementName)
         {
-            // s_logger.ConditionalDebug($"Getting tickSizeStr from symbolSettings for {symbol}");
+            // s_logger.Debug($"Getting tickSizeStr from symbolSettings for {symbol}");
             var node = GetNode(symbol);
             if (node == null)
             {
