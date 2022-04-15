@@ -15,7 +15,6 @@ namespace TestsDTC
 {
     public class ClientServerZippedTests : IDisposable
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         private readonly ITestOutputHelper _output;
 
@@ -56,7 +55,7 @@ namespace TestsDTC
             // SierraChart supports compression only with BinaryEncoding, but we support it also with EncodingEnum.ProtocolBuffers
             using var clientHistorical = ConnectClientHistorical(port);
             Assert.NotNull(clientHistorical);
-            s_logger.ConditionalDebug($"Started zip ExampleService and client on port={port}");
+            _output.WriteLine($"Started zip ExampleService and client on port={port}");
 
             var sw = Stopwatch.StartNew();
             Assert.Equal(1, server.NumberOfClientHandlers);
@@ -131,7 +130,7 @@ namespace TestsDTC
 
             // And do another batch of zipped historical records to prove we can do that again
             isFinalRecordReceived = false;
-            s_logger.ConditionalDebug("Starting to request a second batch of historical records.");
+            _output.WriteLine("Starting to request a second batch of historical records.");
             clientHistorical.SendRequest(DTCMessageType.HistoricalPriceDataRequest, historicalPriceDataRequest1);
             if (!isFinalRecordReceived)
             {

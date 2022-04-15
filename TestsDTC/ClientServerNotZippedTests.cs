@@ -7,7 +7,6 @@ using DTCCommon;
 using DTCPB;
 using FluentAssertions;
 using Google.Protobuf;
-using NLog;
 using TestServer;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,8 +15,6 @@ namespace TestsDTC
 {
     public class ClientServerNotZippedTests : IDisposable
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
-
         private readonly ITestOutputHelper _output;
 
         public ClientServerNotZippedTests(ITestOutputHelper output)
