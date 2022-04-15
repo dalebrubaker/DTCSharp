@@ -76,18 +76,8 @@ namespace DTCClient
         public ClientDTC()
         {
             InstanceId = s_instanceId++;
-            NoDelay = true;
-            ReceiveBufferSize = SendBufferSize = 65536; // maximum DTC message size
             _cts = new CancellationTokenSource();
-            _currentEncoding = EncodingEnum.BinaryEncoding;
-
-            // Start off binary until changed
-            _encode = CodecBinaryConverter.EncodeBinary;
-            _decode = CodecBinaryConverter.DecodeBinary;
             _responsesQueue = new BlockingCollection<MessageProto>(1024 * 1024);
-
-            Task.Factory.StartNew(ResponsesReader, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
-            Task.Factory.StartNew(ResponsesProcessor, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
         }
 
         /// <summary>
@@ -103,6 +93,17 @@ namespace DTCClient
             // Do a separate connect, because base(hostname, port) is VERY slow due to IPV6 check/fail
             Connect(_hostname, _port);
             _currentStream = GetStream();
+            
+            NoDelay = true;
+            ReceiveBufferSize = SendBufferSize = 65536; // maximum DTC message size
+            _currentEncoding = EncodingEnum.BinaryEncoding;
+
+            // Start off binary until changed
+            _encode = CodecBinaryConverter.EncodeBinary;
+            _decode = CodecBinaryConverter.DecodeBinary;
+
+            Task.Factory.StartNew(ResponsesReader, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            Task.Factory.StartNew(ResponsesProcessor, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
         }
        
         /// <summary>
@@ -363,6 +364,10 @@ namespace DTCClient
         /// </summary>
         private void ResponsesReader()
         {
+            if (_currentStream == null)
+            {
+                throw new DTCSharpException($"{nameof(Start)} must be called");
+            }
             MessageProto messageProto = null;
             MessageEncoded messageEncoded = null;
             try
