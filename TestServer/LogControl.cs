@@ -1,126 +1,155 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 
-namespace TestServer
+namespace TestServer;
+
+/// <summary>
+///     Log messages at the bottom of a richTextGBox
+/// </summary>
+public partial class LogControl : UserControl
 {
-    public partial class LogControl : UserControl
+    /// <summary>
+    ///     These are the messages not yet added to the richTextBox
+    ///     They are added on a timer so we don't overwhelm the form as individual messages arrive
+    /// </summary>
+    private readonly ConcurrentQueue<string> _messageQueue;
+
+    public LogControl()
     {
-        /// <summary>
-        /// The title of this control
-        /// </summary>
-        public string Title
-        {
-            get => groupBoxLog.Text;
-            set => groupBoxLog.Text = value;
-        }
+        InitializeComponent();
+        _messageQueue = new ConcurrentQueue<string>();
+        MaximumLogLengthChars = 1024 * 1024 * 100;
+    }
 
-        public LogControl()
-        {
-            InitializeComponent();
-        }
+    /// <summary>
+    ///     The title of this control
+    /// </summary>
+    public string Title
+    {
+        get => groupBoxLog.Text;
+        set => groupBoxLog.Text = value;
+    }
 
-        /// <summary>
-        /// Put a message at the TOP of the panel, along with a timestamp
-        /// </summary>
-        /// <param name="message">the message to display</param>
-        public void LogMessage(string message)
-        {
-            if (rtbMessages.InvokeRequired)
-            {
-                BeginInvoke(new MethodInvoker(() => LogMessage(message)));
-            }
-            else
-            {
-                const int longestText = 100000;
-                var msg = $"{DateTime.Now.ToString("h:mm:ss.fff")} {message}";
-                rtbMessages.Text = msg + Environment.NewLine + rtbMessages.Text;
-                if (rtbMessages.TextLength > longestText)
-                {
-                    rtbMessages.Text = rtbMessages.Text.Substring(0, longestText / 2);
-                }
-            }
-        }
+    public int MaximumLogLengthChars { get; set; }
+    public bool HideTimestamps { get; set; }
 
-        public void LogMessage(string format, params object[] args)
-        {
-            var line = string.Format(format, args);
-            LogMessage(line);
-        }
+    /// <summary>
+    ///     Put a message at the TOP of the panel, along with a timestamp
+    /// </summary>
+    /// <param name="message">the message to display</param>
+    public void LogMessage(string message)
+    {
+        PushMessageOntoQueue(message);
+    }
 
-        /// <summary>
-        /// Put newLines at the TOP of the panel, along with a timestamp, last lines to the top
-        /// </summary>
-        /// <param name="newLines">the lines to display</param>
-        public void LogMessages(IEnumerable<string> newLines)
-        {
-            if (rtbMessages.InvokeRequired)
-            {
-                BeginInvoke(new MethodInvoker(() => LogMessages(newLines)));
-            }
-            else
-            {
-                const int longestText = 100000;
-                foreach (var line in newLines)
-                {
-                    var msg = $"{DateTime.Now.ToString("h:mm:ss.fff")} {line}";
-                    rtbMessages.Text = msg + Environment.NewLine + rtbMessages.Text;
-                }
-                if (rtbMessages.TextLength > longestText)
-                {
-                    rtbMessages.Text = rtbMessages.Text.Substring(0, longestText / 2);
-                }
-            }
-        }
+    public void LogMessage(string format, params object[] args)
+    {
+        var line = string.Format(format, args);
+        LogMessage(line);
+    }
 
-        /// <summary>
-        /// Put newLines at the TOP of the panel, along with a timestamp, first lines to the top
-        /// </summary>
-        /// <param name="newLines">the lines to display</param>
-        public void LogMessagesReversed(IEnumerable<string> newLines)
+    /// <summary>
+    ///     Put newLines at the TOP of the panel, along with a timestamp, last lines to the top
+    /// </summary>
+    /// <param name="newLines">the lines to display</param>
+    public void LogMessages(IEnumerable<string> newLines)
+    {
+        foreach (var message in newLines)
         {
-            if (rtbMessages.InvokeRequired)
-            {
-                BeginInvoke(new MethodInvoker(() => LogMessagesReversed(newLines)));
-            }
-            else
-            {
-                var list = newLines.ToList();
-                list.Reverse();
-                foreach (var line in list)
-                {
-                    LogMessage(line);
-                }
-            }
-        }
-
-        public void Clear()
-        {
-            if (rtbMessages.InvokeRequired)
-            {
-                BeginInvoke(new MethodInvoker(() => rtbMessages.Clear()));
-            }
-            else
-            {
-                rtbMessages.Clear();
-            }
-        }
-
-        /// <summary>
-        /// Clear the old contents and add newLines
-        /// </summary>
-        /// <param name="newLines"></param>
-        public void Reset(IEnumerable<string> newLines)
-        {
-            if (rtbMessages.InvokeRequired)
-            {
-                BeginInvoke(new MethodInvoker(() => Reset(newLines)));
-            }
-            else
-            {
-                rtbMessages.Lines = newLines.ToArray();
-            }
+            PushMessageOntoQueue(message);
         }
     }
+
+    /// <summary>
+    ///     Erase the log
+    /// </summary>
+    public void Clear()
+    {
+        this.SafeInvoke(() => rtbMessages.Clear());
+    }
+
+    /// <summary>
+    ///     Clear the old contents and add newLines
+    /// </summary>
+    /// <param name="newLines"></param>
+    public void Reset(IEnumerable<string> newLines)
+    {
+        Clear();
+        foreach (var message in newLines)
+        {
+            PushMessageOntoQueue(message);
+        }
+    }
+
+    private void PushMessageOntoQueue(string message)
+    {
+        var msg = HideTimestamps ? $"{DateTime.Now:h:mm:ss.fff} {message}" : message;
+        _messageQueue.Enqueue(msg);
+    }
+
+    private void timer1_Tick(object sender, EventArgs e)
+    {
+        if (_messageQueue.IsEmpty)
+        {
+            return;
+        }
+        AddQueuedMessages();
+    }
+
+    /// <summary>
+    ///     Put messages on the stack at the TOP of the panel, along with a timestamp
+    /// </summary>
+    private void AddQueuedMessages()
+    {
+        this.SafeInvoke(() =>
+        {
+            var sb = new StringBuilder();
+            while (!_messageQueue.IsEmpty)
+            {
+                if (_messageQueue.TryDequeue(out var msg))
+                {
+                    sb.AppendLine(msg);
+                }
+            }
+            if (sb.Length > MaximumLogLengthChars)
+            {
+                var oldLength = sb.Length;
+                var saveStr = sb.ToString().Substring(1, MaximumLogLengthChars / 2);
+                sb = new StringBuilder();
+                sb.Append("Truncated the log from ")
+                    .AppendFormat("{0:N0}", oldLength).Append(" to ")
+                    .AppendFormat("{0:N0}", saveStr.Length)
+                    .AppendLine(" characters");
+                sb.AppendLine(saveStr);
+            }
+            var t = rtbMessages.Text;
+            rtbMessages.AppendText(sb.ToString());
+            rtbMessages.ScrollToCaret();
+        });
+    }
+
+    private void LogControl_Load(object sender, EventArgs e)
+    {
+        timer1.Enabled = true;
+    }
+
+    private void tsbClear_Click(object sender, EventArgs e)
+    {
+        Clear();
+    }
+    //
+    // [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    // private static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, IntPtr wParam, IntPtr lParam);
+    // private const int WM_VSCROLL = 277;
+    // private const int SB_PAGEBOTTOM = 7;
+    //
+    // private void ScrollToBottom(RichTextBox richTextBox)
+    // {
+    //     SendMessage(richTextBox.Handle, WM_VSCROLL, (IntPtr)SB_PAGEBOTTOM, IntPtr.Zero);
+    //     richTextBox.SelectionStart = richTextBox.Text.Length;
+    // }
 }

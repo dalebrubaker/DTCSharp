@@ -32,7 +32,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LogControl));
             this.groupBoxLog = new System.Windows.Forms.GroupBox();
             this.rtbMessages = new System.Windows.Forms.RichTextBox();
-            this.toolStrip1 = new TestClient.ToolStripEx();
+            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.tsbClear = new System.Windows.Forms.ToolStripButton();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.groupBoxLog.SuspendLayout();
@@ -63,7 +63,6 @@
             // 
             // toolStrip1
             // 
-            this.toolStrip1.ClickThrough = true;
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[]
             {
                 this.tsbClear
@@ -106,7 +105,7 @@
         private System.Windows.Forms.GroupBox groupBoxLog;
         private System.Windows.Forms.RichTextBox rtbMessages;
         private System.Windows.Forms.Timer timer1;
-        private ToolStripEx toolStrip1;
+        private System.Windows.Forms.ToolStrip toolStrip1;
         private System.Windows.Forms.ToolStripButton tsbClear;
 
         #endregion
