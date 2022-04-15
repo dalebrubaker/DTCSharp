@@ -36,8 +36,8 @@ namespace DTCClient
 
         private string _clientName;
         private int _heartbeatIntervalInSeconds;
-        private readonly string _hostname;
-        private readonly int _port;
+        private string _hostname;
+        private int _port;
 
         /// <summary>
         /// SierraChart can't handle rapid requests for symbols, and they don't change over time. So we cache them here
@@ -71,55 +71,40 @@ namespace DTCClient
         public LogonResponse LogonResponse { get; set; }
 
         /// <summary>
-        /// Immediately connect to this TcpClient, if possible, using DNS to resolve the serverName into an IPEndpoint
-        /// This will take at least a couple of seconds, and will throw an exception if connection cannot be made.
+        /// Do a separate connect, because base(hostname, port) is VERY slow due to IPV6 check/fail
+        /// </summary>
+        public ClientDTC()
+        {
+            InstanceId = s_instanceId++;
+            NoDelay = true;
+            ReceiveBufferSize = SendBufferSize = 65536; // maximum DTC message size
+            _cts = new CancellationTokenSource();
+            _currentEncoding = EncodingEnum.BinaryEncoding;
+
+            // Start off binary until changed
+            _encode = CodecBinaryConverter.EncodeBinary;
+            _decode = CodecBinaryConverter.DecodeBinary;
+            _responsesQueue = new BlockingCollection<MessageProto>(1024 * 1024);
+
+            Task.Factory.StartNew(ResponsesReader, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            Task.Factory.StartNew(ResponsesProcessor, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+        }
+
+        /// <summary>
+        /// Connect and start running this client
         /// </summary>
         /// <param name="hostname">the server name, e.g. could be localhost or an 127.0.0.1</param>
         /// <param name="port">the server port</param>
-        public ClientDTC(string hostname, int port)
+        public void Start(string hostname, int port)
         {
             _hostname = hostname;
             _port = port;
             
             // Do a separate connect, because base(hostname, port) is VERY slow due to IPV6 check/fail
             Connect(_hostname, _port);
-            InstanceId = s_instanceId++;
-            NoDelay = true;
-            ReceiveBufferSize = SendBufferSize = 65536; // maximum DTC message size
             _currentStream = GetStream();
-            _responsesQueue = new BlockingCollection<MessageProto>(1024 * 1024);
-            _cts = new CancellationTokenSource();
-
-            // Start off binary until changed
-            _currentEncoding = EncodingEnum.BinaryEncoding;
-            _encode = CodecBinaryConverter.EncodeBinary;
-            _decode = CodecBinaryConverter.DecodeBinary;
-            Task.Factory.StartNew(ResponsesReader, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
-            Task.Factory.StartNew(ResponsesProcessor, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
         }
-
-        /// <summary>
-        /// Create and return a new client instance, or return <c>null</c> if there is a SocketException (the client is not available)
-        /// </summary>
-        /// <param name="hostname"></param>
-        /// <param name="port"></param>
-        /// <returns></returns>
-        public static ClientDTC Create(string hostname, int port)
-        {
-            //var sw = Stopwatch.StartNew();
-            try
-            {
-                var client = new ClientDTC(hostname, port);
-                //s_logger.ConditionalDebug($"Connected to {hostname}:{port} in {sw.ElapsedMilliseconds:N0} ms");
-                return client;
-            }
-            catch (SocketException)
-            {
-                //s_logger.ConditionalDebug($"Failed to connect to {hostname}:{port} in {sw.ElapsedMilliseconds:N0} ms");
-                return null;
-            }
-        }
-
+       
         /// <summary>
         /// <c>true</c> after a successful Logon
         /// </summary>

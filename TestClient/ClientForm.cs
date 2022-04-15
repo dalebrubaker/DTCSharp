@@ -8,11 +8,13 @@ using DTCClient;
 using DTCCommon;
 using DTCPB;
 using Google.Protobuf;
+using Microsoft.Extensions.Logging;
 
 namespace TestClient
 {
     public partial class ClientForm : Form
     {
+        private readonly ILogger<ClientForm> _logger;
         private const int MaxLevel1Rows = 100;
         private ClientDTC _clientListener;
         private ClientDTC _clientHistorical;
@@ -42,8 +44,9 @@ namespace TestClient
 
         public static uint NextClientId => ++s_nextClientId;
 
-        public ClientForm()
+        public ClientForm(ILogger<ClientForm> logger)
         {
+            _logger = logger;
             InitializeComponent();
             btnDisconnectListener.Enabled = false;
             Disposed += Form1_Disposed;
@@ -115,7 +118,8 @@ namespace TestClient
             const string ClientName = "TestClient Listener";
             try
             {
-                _clientListener = ClientDTC.Create(txtServer.Text, PortListener);
+                _clientListener = new ClientDTC();
+                _clientListener.Start(txtServer.Text, PortListener);
                 if (_clientListener == null)
                 {
                     MessageBox.Show($"Cannot connect to {txtServer.Text}:{PortListener}");
@@ -619,59 +623,58 @@ namespace TestClient
             }
             _historicalPriceDataRecordResponses = new List<HistoricalPriceDataRecordResponse>();
             var clientName = $"HistoricalClient|{txtSymbolHistorical.Text}";
-            using (var clientHistorical = ClientDTC.Create(txtServer.Text, PortHistorical))
+            using var clientHistorical = new ClientDTC();
+            try
             {
-                try
+                clientHistorical.Start(txtServer.Text, PortHistorical);
+                // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
+                var encoding = (EncodingEnum)cbxEncoding.SelectedItem;
+                DisplayEncodingResponse(logControlHistorical, encoding);
+                var (logonResponse, result) = clientHistorical.Logon(clientName, requestedEncoding: encoding, userName: txtUsername.Text, password: txtPassword.Text);
+                if (result.IsError)
                 {
-                    // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
-                    var encoding = (EncodingEnum)cbxEncoding.SelectedItem;
-                    DisplayEncodingResponse(logControlHistorical, encoding);
-                    var (logonResponse, result) = clientHistorical.Logon(clientName, requestedEncoding: encoding, userName: txtUsername.Text, password: txtPassword.Text);
-                    if (result.IsError)
-                    {
-                        logControlHistorical.LogMessage($"{result} on logon attempt to " + clientName);
+                    logControlHistorical.LogMessage($"{result} on logon attempt to " + clientName);
+                    return;
+                }
+                switch (logonResponse.Result)
+                {
+                    case LogonStatusEnum.LogonStatusUnset:
+                        throw new ArgumentException("Unexpected logon result");
+                    case LogonStatusEnum.LogonSuccess:
+                        DisplayLogonResponse(logControlHistorical, clientHistorical, logonResponse);
+                        break;
+                    case LogonStatusEnum.LogonErrorNoReconnect:
+                        logControlHistorical.LogMessage(
+                            $"{clientHistorical} Login failed: {logonResponse.Result} {logonResponse.ResultText}. Reconnect not allowed.");
                         return;
-                    }
-                    switch (logonResponse.Result)
-                    {
-                        case LogonStatusEnum.LogonStatusUnset:
-                            throw new ArgumentException("Unexpected logon result");
-                        case LogonStatusEnum.LogonSuccess:
-                            DisplayLogonResponse(logControlHistorical, clientHistorical, logonResponse);
-                            break;
-                        case LogonStatusEnum.LogonErrorNoReconnect:
-                            logControlHistorical.LogMessage(
-                                $"{clientHistorical} Login failed: {logonResponse.Result} {logonResponse.ResultText}. Reconnect not allowed.");
-                            return;
-                        case LogonStatusEnum.LogonError:
-                            logControlHistorical.LogMessage($"{clientHistorical} Login failed: {logonResponse.Result} {logonResponse.ResultText}.");
-                            return;
-                        case LogonStatusEnum.LogonReconnectNewAddress:
-                            logControlHistorical.LogMessage(
-                                $"{clientHistorical} Login failed: {logonResponse.Result} {logonResponse.ResultText}\nReconnect to: {logonResponse.ReconnectAddress}");
-                            return;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                    case LogonStatusEnum.LogonError:
+                        logControlHistorical.LogMessage($"{clientHistorical} Login failed: {logonResponse.Result} {logonResponse.ResultText}.");
+                        return;
+                    case LogonStatusEnum.LogonReconnectNewAddress:
+                        logControlHistorical.LogMessage(
+                            $"{clientHistorical} Login failed: {logonResponse.Result} {logonResponse.ResultText}\nReconnect to: {logonResponse.ReconnectAddress}");
+                        return;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
-                catch (TaskCanceledException exc)
-                {
-                    MessageBox.Show(exc.Message);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                }
+            }
+            catch (TaskCanceledException exc)
+            {
+                MessageBox.Show(exc.Message);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
 
-                // Now we have successfully logged on
-                _stopWatch = Stopwatch.StartNew();
-                var error = clientHistorical.GetHistoricalData(ClientDTC.NextRequestId, txtSymbolHistorical.Text, txtExchangeHistorical.Text,
-                    recordInterval, dtpStart.Value.ToUniversalTime(), DateTime.MinValue, 0U, cbZip.Checked, false,
-                    false, HistoricalPriceDataResponseHeaderCallback, HistoricalPriceDataRecordResponseCallback);
-                if (error.IsError)
-                {
-                    logControlHistorical.LogMessage(error.ResultText);
-                }
+            // Now we have successfully logged on
+            _stopWatch = Stopwatch.StartNew();
+            var error = clientHistorical.GetHistoricalData(ClientDTC.NextRequestId, txtSymbolHistorical.Text, txtExchangeHistorical.Text,
+                recordInterval, dtpStart.Value.ToUniversalTime(), DateTime.MinValue, 0U, cbZip.Checked, false,
+                false, HistoricalPriceDataResponseHeaderCallback, HistoricalPriceDataRecordResponseCallback);
+            if (error.IsError)
+            {
+                logControlHistorical.LogMessage(error.ResultText);
             }
         }
 
@@ -964,7 +967,8 @@ namespace TestClient
             btnConnectHistorical.Enabled = false;
             btnDisconnectHistorical.Enabled = true;
             const string ClientName = "TestClientHistorical";
-            _clientHistorical = ClientDTC.Create(txtServer.Text, PortHistorical);
+            _clientHistorical = new ClientDTC();
+            _clientHistorical.Start(txtServer.Text, PortHistorical);
             RegisterClientEvents(_clientHistorical);
             try
             {
