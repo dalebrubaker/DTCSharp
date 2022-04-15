@@ -7,7 +7,7 @@ using DTCCommon;
 using DTCPB;
 using FluentAssertions;
 using Google.Protobuf;
-using TestServer;
+using DTCServer;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -7,7 +7,6 @@ using DTCClient;
 using DTCPB;
 using DTCServer;
 using FluentAssertions;
-using TestServer;
 using Xunit;
 using Xunit.Abstractions;
 

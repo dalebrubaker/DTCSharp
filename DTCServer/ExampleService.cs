@@ -4,10 +4,9 @@ using System.Net;
 using System.Threading.Tasks;
 using DTCCommon;
 using DTCPB;
-using DTCServer;
 using NLog;
 
-namespace TestServer
+namespace DTCServer
 {
     /// <summary>
     /// The service implementation that provides responses to client requests.
@@ -16,8 +15,7 @@ namespace TestServer
     {
         private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
-        public ExampleService(IPAddress ipAddress, int port, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) :
-            base(ipAddress, port)
+        public ExampleService(IPAddress ipAddress, int port, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) : base(ipAddress, port)
         {
             NumTradesAndBidAsksToSend = numTradesAndBidAsksToSend;
             MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>(NumTradesAndBidAsksToSend);

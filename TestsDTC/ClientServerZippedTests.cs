@@ -5,9 +5,8 @@ using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
 using DTCPB;
+using DTCServer;
 using FluentAssertions;
-using NLog;
-using TestServer;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +14,6 @@ namespace TestsDTC
 {
     public class ClientServerZippedTests : IDisposable
     {
-
         private readonly ITestOutputHelper _output;
 
         public ClientServerZippedTests(ITestOutputHelper output)
@@ -146,10 +144,10 @@ namespace TestsDTC
             Assert.Equal(server.NumHistoricalPriceDataRecordsToSend * 2, numTrades);
         }
 
-        [Fact]
-        public void BreakBuild()
-        {
-            Assert.True(false);
-        }
+        // [Fact]
+        // public void BreakBuild()
+        // {
+        //     Assert.True(false);
+        // }
     }
 }
