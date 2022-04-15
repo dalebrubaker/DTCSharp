@@ -30,9 +30,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="System.Net" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="MNQU21-CME.scid">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
