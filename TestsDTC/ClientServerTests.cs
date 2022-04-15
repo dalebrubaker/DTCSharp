@@ -52,6 +52,7 @@ namespace TestsDTC
         private ExampleService StartExampleServer(int port)
         {
             var server = new ExampleService(IPAddress.Loopback, port, 100, 200);
+            server.StartServer();
             return server;
         }
 

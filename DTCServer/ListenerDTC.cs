@@ -32,7 +32,6 @@ namespace DTCServer
             _clientHandlers = new List<ClientHandlerDTC>();
             Address = new IPEndPoint(_localaddr, _port).ToString();
             //s_logger.ConditionalTrace($"ctor {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
-            Task.Factory.StartNew(RunAsync, TaskCreationOptions.LongRunning);
         }
 
         public int NumberOfClientHandlers
@@ -58,19 +57,11 @@ namespace DTCServer
         }
 
         public bool IsConnected { get; private set; }
-
+        
         /// <summary>
-        /// This method is called for every request received by a client connected to this server.
+        /// Use this method to start this server 
         /// </summary>
-        /// <param name="clientHandler">The handler for a particular client connected to this server</param>
-        /// <param name="messageProto">the message (a Google.Protobuf message)</param>
-        /// <returns></returns>
-        protected abstract Task HandleRequestAsync(ClientHandlerDTC clientHandler, MessageProto messageProto);
-
-        /// <summary>
-        /// Run until cancelled by Dispose()
-        /// </summary>
-        public async Task RunAsync()
+        public void StartServer()
         {
             try
             {
@@ -87,6 +78,22 @@ namespace DTCServer
                 // Dispose() has been called
                 CloseAllClientHandlers();
             }
+            Task.Factory.StartNew(RunAsync, TaskCreationOptions.LongRunning);
+        }
+
+        /// <summary>
+        /// This method is called for every request received by a client connected to this server.
+        /// </summary>
+        /// <param name="clientHandler">The handler for a particular client connected to this server</param>
+        /// <param name="messageProto">the message (a Google.Protobuf message)</param>
+        /// <returns></returns>
+        protected abstract Task HandleRequestAsync(ClientHandlerDTC clientHandler, MessageProto messageProto);
+
+        /// <summary>
+        /// Run until cancelled by Dispose()
+        /// </summary>
+        public async Task RunAsync()
+        {
 #pragma warning disable 168
             IsConnected = true;
             while (!_cts.Token.IsCancellationRequested)

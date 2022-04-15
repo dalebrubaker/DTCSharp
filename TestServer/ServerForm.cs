@@ -50,6 +50,7 @@ namespace TestServer
             btnStopPrimary.Enabled = true;
             _serverPrimary = new ExampleService(_ipAddress, PortListener, 100, 200);
             _serverPrimary.MessageEvent += ExampleServiceMessageEvent;
+            _serverPrimary.StartServer();
             logControl1.LogMessage($"Started {_serverPrimary}");
         }
 
@@ -67,6 +68,7 @@ namespace TestServer
             btnStopHistorical.Enabled = true;
             _serverHistorical = new ExampleService(_ipAddress, PortHistorical, 1000, 2000);
             _serverHistorical.MessageEvent += ExampleServiceMessageEvent;
+            _serverHistorical.StartServer();
             logControl1.LogMessage($"Started {_serverHistorical}");
         }
 

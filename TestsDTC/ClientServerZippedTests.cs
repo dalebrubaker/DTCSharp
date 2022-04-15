@@ -50,6 +50,7 @@ namespace TestsDTC
             // Set up the exampleService responses
             var port = ClientServerTests.NextServerPort;
             var server = new ExampleService(IPAddress.Loopback, port, 10, 20);
+            server.StartServer();
 
             // SierraChart supports compression only with BinaryEncoding, but we support it also with EncodingEnum.ProtocolBuffers
             using var clientHistorical = ConnectClientHistorical(port);
