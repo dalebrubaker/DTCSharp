@@ -5,23 +5,20 @@ using System.Threading;
 using DTCClient;
 using DTCCommon;
 using DTCPB;
-using DTCServer;
 using FluentAssertions;
 using Google.Protobuf;
+using DTCServer;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace TestsDTC
 {
-    [Collection("Logging collection")]
     public class ClientServerNotZippedTests : IDisposable
     {
-        private readonly TestFixture _fixture;
         private readonly ITestOutputHelper _output;
 
-        public ClientServerNotZippedTests(TestFixture fixture, ITestOutputHelper output)
+        public ClientServerNotZippedTests(ITestOutputHelper output)
         {
-            _fixture = fixture;
             _output = output;
         }
 

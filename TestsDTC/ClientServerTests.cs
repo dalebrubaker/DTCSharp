@@ -12,19 +12,16 @@ using Xunit.Abstractions;
 
 namespace TestsDTC
 {
-    [Collection("Logging collection")]
     public class ClientServerTests : IDisposable
     {
         // ReSharper disable once InconsistentNaming
         private static int _nextServerPort = 54321;
 
         private static readonly object s_lock = new object();
-        private readonly TestFixture _fixture;
         private readonly ITestOutputHelper _output;
 
-        public ClientServerTests(TestFixture fixture, ITestOutputHelper output)
+        public ClientServerTests(ITestOutputHelper output)
         {
-            _fixture = fixture;
             _output = output;
         }
 

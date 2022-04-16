@@ -11,16 +11,8 @@ using Xunit;
 
 namespace TestsDTC
 {
-    [Collection("Logging collection")]
     public class ConverterTests
     {
-        private readonly TestFixture _fixture;
-
-        public ConverterTests(TestFixture fixture)
-        {
-            _fixture = fixture;
-        }
-        
         [Fact]
         public void ProtoToProtoRoundTrip()
         {

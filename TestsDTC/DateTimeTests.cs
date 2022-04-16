@@ -4,7 +4,6 @@ using Xunit;
 
 namespace TestsDTC
 {
-    [Collection("Logging collection")]
     public class DateTimeTests : IDisposable
     {
         public void Dispose()

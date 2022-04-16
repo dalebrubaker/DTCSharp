@@ -7,7 +7,6 @@ using Xunit;
 
 namespace TestsDTC
 {
-    [Collection("Logging collection")]
     public class ScidTests
     {
         public const string TestFilePath = "MNQU21-CME.scid";
