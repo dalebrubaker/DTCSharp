@@ -20,7 +20,6 @@ insert_final_newline=false
 # Organize usings
 dotnet_separate_import_directive_groups=false
 dotnet_sort_system_directives_first=true
-file_header_template=unset
 
 # this. and Me. preferences
 dotnet_style_qualification_for_event=false:silent
@@ -271,7 +270,7 @@ dotnet_naming_symbols.all_members.applicable_kinds=*
 dotnet_naming_style.pascal_case_style.capitalization=pascal_case
 
 # Other
-max_line_length=180
+max_line_length=200
 
 # ReSharper properties
 resharper_csharp_keep_blank_lines_in_code=1
@@ -307,11 +306,12 @@ resharper_blank_lines_after_block_statements=0
 resharper_blank_lines_after_start_comment=0
 resharper_csharp_keep_blank_lines_in_code=1
 resharper_csharp_keep_blank_lines_in_declarations=1
-resharper_csharp_max_line_length=160
+resharper_csharp_max_line_length=200
 resharper_csharp_wrap_before_binary_opsign=true
 resharper_keep_existing_embedded_block_arrangement=true
 resharper_keep_existing_enum_arrangement=false
-resharper_keep_existing_linebreaks=false
+resharper_keep_existing_linebreaks=true
+resharper_keep_user_linebreaks=true
 resharper_max_array_initializer_elements_on_line=1
 resharper_max_initializer_elements_on_line=1
 resharper_place_accessorholder_attribute_on_same_line=false
@@ -331,6 +331,8 @@ resharper_redundant_base_qualifier_highlighting=warning
 resharper_suggest_var_or_type_built_in_types_highlighting=hint
 resharper_suggest_var_or_type_elsewhere_highlighting=hint
 resharper_suggest_var_or_type_simple_types_highlighting=hint
+dotnet_diagnostic.xUnit2001.severity=warning
+dotnet_diagnostic.xUnit2019.severity=warning
 
 [*.{appxmanifest,asax,ascx,aspx,axml,build,c,c++,cc,config,cp,cpp,cshtml,csproj,css,cu,cuh,cxx,dbml,discomap,dtd,h,hh,hlsl,hlsli,hpp,htm,html,hxx,inc,inl,ino,ipp,js,json,jsproj,jsx,lsproj,master,mpp,njsproj,nuspec,proj,props,proto,razor,resjson,resw,resx,skin,StyleCop,targets,tasks,tpp,ts,tsx,usf,ush,vbproj,xml,xsd}]
 indent_style=tab
