@@ -18,8 +18,15 @@ namespace TestServer
 
             var seqURL = Environment.GetEnvironmentVariable("SeqURL");
             var apiKey = Environment.GetEnvironmentVariable("DTCSharpSeqApiKey");
-            Log.Logger = new LoggerConfiguration().MinimumLevel.Verbose().Enrich.FromLogContext().Enrich.WithThreadId().Enrich.WithThreadName().Enrich
-                .WithProperty("Application", nameof(TestServer)).WriteTo.Seq(seqURL, apiKey: apiKey).CreateLogger();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .Enrich.FromLogContext()
+                .Enrich.WithThreadId()
+                .Enrich.WithThreadName()
+                .Enrich
+                .WithProperty("Application", nameof(TestServer))
+                .WriteTo.Seq(seqURL, apiKey: apiKey)
+                .CreateLogger();
             try
             {
                 Log.Verbose("Starting");

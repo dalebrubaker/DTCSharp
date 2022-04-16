@@ -44,10 +44,12 @@
         <Compile Include="ClientServerZippedTests.cs" />
         <Compile Include="ConverterTests.cs" />
         <Compile Include="DateTimeTests.cs" />
+        <Compile Include="LoggingCollection.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="ScidTests.cs" />
         <Compile Include="ServerThrowTests.cs" />
         <Compile Include="SymbolTests.cs" />
+        <Compile Include="TestFixture.cs" />
     </ItemGroup>
     <ItemGroup>
       <None Include="app.config" />
@@ -79,6 +81,8 @@
     <ItemGroup>
       <PackageReference Include="fluentassertions" Version="6.6.0" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.1" />
+      <PackageReference Include="Serilog.Enrichers.Thread" Version="3.1.0" />
+      <PackageReference Include="Serilog.Sinks.Seq" Version="5.1.1" />
       <PackageReference Include="SerilogTimings" Version="2.3.0" />
       <PackageReference Include="xunit" Version="2.4.1" />
     </ItemGroup>

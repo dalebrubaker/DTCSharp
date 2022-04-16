@@ -12,12 +12,15 @@ using Xunit.Abstractions;
 
 namespace TestsDTC
 {
-    public class ClientServerZippedTests : IDisposable
+    [Collection("Logging collection")]
+    public class ClientServerZippedTests :   IDisposable
     {
+        private readonly TestFixture _fixture;
         private readonly ITestOutputHelper _output;
 
-        public ClientServerZippedTests(ITestOutputHelper output)
+        public ClientServerZippedTests(TestFixture fixture, ITestOutputHelper output)
         {
+            _fixture = fixture;
             _output = output;
         }
 

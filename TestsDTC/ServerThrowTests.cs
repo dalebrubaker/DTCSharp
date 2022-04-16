@@ -11,6 +11,7 @@ namespace TestsDTC
     /// <summary>
     /// This tests needs to be in its own class or it causes others to fail
     /// </summary>
+    [Collection("Logging collection")]
     public class ServerThrowTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
