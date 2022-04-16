@@ -9,6 +9,9 @@
 
   <ItemGroup>
     <None Remove="SymbolSettings.rithmic_v2.trading.xml" />
+    <None Update="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

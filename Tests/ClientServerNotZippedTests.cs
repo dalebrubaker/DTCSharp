@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 namespace Tests
 {
     [Collection("Logging collection")]
-    public class ClientServerNotZippedTests : IClassFixture<TestFixture>, IDisposable
+    public class ClientServerNotZippedTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly TestFixture _fixture;

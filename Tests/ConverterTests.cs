@@ -12,7 +12,7 @@ using Xunit;
 namespace Tests
 {
     [Collection("Logging collection")]
-    public class ConverterTests : IClassFixture<TestFixture>
+    public class ConverterTests
     {
         private readonly TestFixture _fixture;
 

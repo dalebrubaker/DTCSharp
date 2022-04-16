@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 namespace Tests
 {
     [Collection("Logging collection")]
-    public class ClientServerTests : IClassFixture<TestFixture>, IDisposable
+    public class ClientServerTests : IDisposable
     {
         // ReSharper disable once InconsistentNaming
         private static int _nextServerPort = 54321;

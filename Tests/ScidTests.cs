@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 namespace Tests
 {
     [Collection("Logging collection")]
-    public class ScidTests : IClassFixture<TestFixture>
+    public class ScidTests
     {
         private readonly TestFixture _fixture;
         private readonly ITestOutputHelper _output;

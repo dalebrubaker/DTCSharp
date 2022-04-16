@@ -4,13 +4,21 @@ using Xunit;
 
 namespace Tests
 {
-    public class DateTimeTests : IClassFixture<TestFixture>, IDisposable
+    [Collection("Logging collection")]
+    public class DateTimeTests : IDisposable
     {
+        private readonly TestFixture _fixture;
+
+        public DateTimeTests(TestFixture fixture)
+        {
+            _fixture = fixture;
+        }
+
         public void Dispose()
         {
             Console.WriteLine("Disposing");
         }
-        
+
         [Fact]
         public void ScDateTimeTest()
         {

@@ -6,7 +6,7 @@ using Xunit;
 namespace Tests
 {
     [Collection("Logging collection")]
-    public class SymbolTests : IClassFixture<TestFixture>
+    public class SymbolTests
     {
         private readonly TestFixture _fixture;
 

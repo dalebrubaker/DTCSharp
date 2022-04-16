@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using Serilog;
 
 namespace Tests;
@@ -28,6 +29,8 @@ public class TestFixture : IDisposable
                 .WriteTo.Seq(seqURL, apiKey: apiKey)
                 .CreateLogger();
         }
+        var method = (MethodBase.GetCurrentMethod());
+        var stackTrace = Environment.StackTrace;
         Log.Verbose("Starting {counter} {classType}", s_counterStart++, GetType().Name);
     }
 

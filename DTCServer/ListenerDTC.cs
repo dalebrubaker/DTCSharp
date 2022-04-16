@@ -65,7 +65,7 @@ namespace DTCServer
         {
             try
             {
-                s_logger.Verbose($"Starting {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
+                s_logger.Verbose("Starting {This}", ToString());
                 Start();
             }
             catch (SocketException ex)
@@ -222,7 +222,7 @@ namespace DTCServer
             Stop();
             Server.Dispose();
             CloseAllClientHandlers();
-            //s_logger.Verbose($"Disposed {nameof(ListenerDTC)} {this}");
+            s_logger.Verbose("Disposed {This}", ToString());
         }
 
         public void Dispose()

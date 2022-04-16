@@ -3,7 +3,7 @@
 namespace Tests;
 
 [CollectionDefinition("Logging collection", DisableParallelization = true)]
-public class LoggingCollection
+public class LoggingCollection: ICollectionFixture<TestFixture>
 {
     
 }
