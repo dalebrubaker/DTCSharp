@@ -71,7 +71,7 @@ namespace Tests
                 numHistoricalPriceDataResponseHeader++;
             }
 
-            clientHistorical.HistoricalPriceDataResponseHeaderEvent += ResponseHeaderEvent;
+            clientHistorical.HistoricalPriceDataResponseHeaderEvent += ResponseHeaderEvent!;
 
             // Set up the handler to capture the HistoricalPriceDataRecordResponse events
             void HistoricalPriceDataRecordResponseEvent(object s, HistoricalPriceDataRecordResponse trade)
@@ -87,7 +87,7 @@ namespace Tests
                 }
             }
 
-            clientHistorical.HistoricalPriceDataRecordResponseEvent += HistoricalPriceDataRecordResponseEvent;
+            clientHistorical.HistoricalPriceDataRecordResponseEvent += HistoricalPriceDataRecordResponseEvent!;
             const string Symbol = "ESZ16";
             var (securityDefinitionResponse, result) = clientHistorical.GetSecurityDefinition(Symbol, "");
             result.IsError.Should().BeFalse();

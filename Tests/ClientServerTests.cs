@@ -86,7 +86,7 @@ namespace Tests
                 numConnects++;
             }
 
-            server.ClientConnected += ClientHandlerConnected;
+            server.ClientConnected += ClientHandlerConnected!;
 
             // Set up the handler to capture the ClientHandlerDisconnected event
             void ClientHandlerDisconnected(object s, ClientHandlerDTC clientHandler)
@@ -95,7 +95,7 @@ namespace Tests
                 numDisconnects++;
             }
 
-            server.ClientDisconnected += ClientHandlerDisconnected;
+            server.ClientDisconnected += ClientHandlerDisconnected!;
 
             var sw = Stopwatch.StartNew();
             using (var client1 = ConnectClient(port))
@@ -136,7 +136,7 @@ namespace Tests
                     numConnects++;
                 }
 
-                server.ClientConnected += ClientHandlerConnected;
+                server.ClientConnected += ClientHandlerConnected!;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
                 void ClientHandlerDisconnected(object s, ClientHandlerDTC clientHandler)
@@ -146,7 +146,7 @@ namespace Tests
                     numDisconnects++;
                 }
 
-                server.ClientDisconnected += ClientHandlerDisconnected;
+                server.ClientDisconnected += ClientHandlerDisconnected!;
                 var sw = Stopwatch.StartNew();
                 using (var client1 = ConnectClient(port))
                 using (var client2 = ConnectClient(port))
@@ -198,7 +198,7 @@ namespace Tests
                 signal.Set();
             }
 
-            server.ClientConnected += ClientConnected;
+            server.ClientConnected += ClientConnected!;
 
             // Set up the handler to capture the ClientDisconnected event
             void ClientDisconnected(object s, ClientHandlerDTC clientHandler)
@@ -207,7 +207,7 @@ namespace Tests
                 numDisconnects++;
             }
 
-            server.ClientDisconnected += ClientDisconnected;
+            server.ClientDisconnected += ClientDisconnected!;
 
             using var client1 = ConnectClient(port);
             var sw = Stopwatch.StartNew();
@@ -231,7 +231,7 @@ namespace Tests
                 }
             }
 
-            client1.HeartbeatEvent += HeartbeatEvent;
+            client1.HeartbeatEvent += HeartbeatEvent!;
             sw.Restart();
             signal.WaitOne(1000);
             var elapsed = sw.ElapsedMilliseconds;
@@ -247,7 +247,7 @@ namespace Tests
             var wasDisconnected = false;
             var client = new ClientDTC();
             client.StartClient("localhost", port);
-            client.ConnectedEvent += Connected;
+            client.ConnectedEvent += Connected!;
             ConnectClient(EncodingEnum.ProtocolBuffers, client);
 
             var sw = Stopwatch.StartNew();
@@ -267,7 +267,7 @@ namespace Tests
                 wasDisconnected = true;
             }
 
-            client.DisconnectedEvent += Disconnected;
+            client.DisconnectedEvent += Disconnected!;
 
             // Set up the handler to capture the HeartBeat event
             var numHeartbeats = 0;
@@ -279,7 +279,7 @@ namespace Tests
                 signal.Set();
             }
 
-            client.HeartbeatEvent += HeartbeatEvent;
+            client.HeartbeatEvent += HeartbeatEvent!;
 
             client.Dispose(); // So it won't error trying to read
 
@@ -317,7 +317,7 @@ namespace Tests
                 numSnapshots++;
             }
 
-            client1.MarketDataSnapshotEvent += MarketDataSnapshotEvent;
+            client1.MarketDataSnapshotEvent += MarketDataSnapshotEvent!;
 
             // Set up the handler to capture the MarketDataUpdateTradeCompact events
             void MarketDataUpdateTradeCompactEvent(object s, MarketDataUpdateTradeCompact trade)
@@ -326,7 +326,7 @@ namespace Tests
                 //s_logger.Debug("numTrades={numTrades}", numTrades);
             }
 
-            client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
+            client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent!;
 
             // Set up the handler to capture the MarketDataUpdateBidAskCompact events
             void MarketDataUpdateBidAskCompactEvent(object s, MarketDataUpdateBidAskCompact bidAsk)
@@ -335,7 +335,7 @@ namespace Tests
                 //s_logger.Debug("numBidAsks={numBidAsks}", numBidAsks);
             }
 
-            client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;
+            client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent!;
 
             // Now subscribe to the data
             sw.Restart();

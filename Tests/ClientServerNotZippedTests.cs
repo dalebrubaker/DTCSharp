@@ -66,7 +66,7 @@ namespace Tests
                 numHistoricalPriceDataResponseHeader++;
             }
 
-            clientHistorical.HistoricalPriceDataResponseHeaderEvent += ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent;
+            clientHistorical.HistoricalPriceDataResponseHeaderEvent += ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent!;
 
             // Set up the handler to capture the HistoricalPriceDataRecordResponse events
             void ClientHistoricalOnHistoricalPriceDataResponseEvent(object sender, HistoricalPriceDataRecordResponse trade)
@@ -82,7 +82,7 @@ namespace Tests
                 }
             }
 
-            clientHistorical.HistoricalPriceDataRecordResponseEvent += ClientHistoricalOnHistoricalPriceDataResponseEvent;
+            clientHistorical.HistoricalPriceDataRecordResponseEvent += ClientHistoricalOnHistoricalPriceDataResponseEvent!;
 
             var countEvents = 0;
 
@@ -91,7 +91,7 @@ namespace Tests
                 countEvents++;
             }
 
-            clientHistorical.EveryMessageFromServer += ClientHistoricalOnEveryMessageFromServer;
+            clientHistorical.EveryMessageFromServer += ClientHistoricalOnEveryMessageFromServer!;
 
             // Now request the data
             var request = new HistoricalPriceDataRequest
