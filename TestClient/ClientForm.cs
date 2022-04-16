@@ -14,7 +14,6 @@ namespace TestClient
 {
     public partial class ClientForm : Form
     {
-        private readonly ILogger<ClientForm> _logger;
         private const int MaxLevel1Rows = 100;
         private ClientDTC _clientListener;
         private ClientDTC _clientHistorical;
@@ -44,9 +43,8 @@ namespace TestClient
 
         public static uint NextClientId => ++s_nextClientId;
 
-        public ClientForm(ILogger<ClientForm> logger)
+        public ClientForm()
         {
-            _logger = logger;
             InitializeComponent();
             btnDisconnectListener.Enabled = false;
             Disposed += Form1_Disposed;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using Serilog;
 
 namespace TestServer
 {
@@ -14,7 +15,35 @@ namespace TestServer
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new ServerForm());
+
+            var seqURL = Environment.GetEnvironmentVariable("SeqURL");
+            var apiKey = Environment.GetEnvironmentVariable("DTCSharpSeqApiKey");
+            if (seqURL != null)
+            {
+                Log.Logger = new LoggerConfiguration()
+                    .MinimumLevel.Verbose()
+                    .Enrich.FromLogContext()
+                    .Enrich.WithThreadId()
+                    .Enrich.WithThreadName()
+                    .Enrich
+                    .WithProperty("Application", nameof(TestServer))
+                    .WriteTo.Seq(seqURL, apiKey: apiKey)
+                    .CreateLogger();
+            }
+            try
+            {
+                Log.Verbose("Starting");
+                Application.Run(new ServerForm());
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Failed to run");
+            }
+            finally
+            {
+                Log.Verbose("Exiting");
+                Log.CloseAndFlush();
+            }
         }
     }
 }

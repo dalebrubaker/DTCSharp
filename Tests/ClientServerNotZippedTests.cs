@@ -7,18 +7,21 @@ using DTCCommon;
 using DTCPB;
 using FluentAssertions;
 using Google.Protobuf;
-using TestServer;
+using DTCServer;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace TestsDTC
+namespace Tests
 {
+    [Collection("Logging collection")]
     public class ClientServerNotZippedTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
+        private readonly TestFixture _fixture;
 
-        public ClientServerNotZippedTests(ITestOutputHelper output)
+        public ClientServerNotZippedTests(TestFixture fixture, ITestOutputHelper output)
         {
+            _fixture = fixture;
             _output = output;
         }
 
@@ -30,6 +33,7 @@ namespace TestsDTC
         private ExampleService StartExampleServer(int port)
         {
             var server = new ExampleService(IPAddress.Loopback, port, 10, 20);
+            server.StartServer();
             return server;
         }
 
@@ -49,7 +53,7 @@ namespace TestsDTC
             var port = ClientServerTests.NextServerPort;
             using var exampleService = StartExampleServer(port);
             using var clientHistorical = new ClientDTC();
-            clientHistorical.Start("localhost", port);
+            clientHistorical.StartClient("localhost", port);
             var (loginResponse, error) = clientHistorical.Logon("TestClient", 1);
             Assert.NotNull(loginResponse);
             Assert.Equal(1, exampleService.NumberOfClientHandlers);
@@ -65,7 +69,7 @@ namespace TestsDTC
                 numHistoricalPriceDataResponseHeader++;
             }
 
-            clientHistorical.HistoricalPriceDataResponseHeaderEvent += ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent;
+            clientHistorical.HistoricalPriceDataResponseHeaderEvent += ClientHistoricalOnHistoricalPriceDataResponseHeaderEvent!;
 
             // Set up the handler to capture the HistoricalPriceDataRecordResponse events
             void ClientHistoricalOnHistoricalPriceDataResponseEvent(object sender, HistoricalPriceDataRecordResponse trade)
@@ -81,7 +85,7 @@ namespace TestsDTC
                 }
             }
 
-            clientHistorical.HistoricalPriceDataRecordResponseEvent += ClientHistoricalOnHistoricalPriceDataResponseEvent;
+            clientHistorical.HistoricalPriceDataRecordResponseEvent += ClientHistoricalOnHistoricalPriceDataResponseEvent!;
 
             var countEvents = 0;
 
@@ -90,7 +94,7 @@ namespace TestsDTC
                 countEvents++;
             }
 
-            clientHistorical.EveryMessageFromServer += ClientHistoricalOnEveryMessageFromServer;
+            clientHistorical.EveryMessageFromServer += ClientHistoricalOnEveryMessageFromServer!;
 
             // Now request the data
             var request = new HistoricalPriceDataRequest

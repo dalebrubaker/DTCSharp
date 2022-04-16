@@ -7,12 +7,12 @@ using DTCClient;
 using DTCPB;
 using DTCServer;
 using FluentAssertions;
-using TestServer;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace TestsDTC
+namespace Tests
 {
+    [Collection("Logging collection")]
     public class ClientServerTests : IDisposable
     {
         // ReSharper disable once InconsistentNaming
@@ -20,9 +20,11 @@ namespace TestsDTC
 
         private static readonly object s_lock = new object();
         private readonly ITestOutputHelper _output;
+        private readonly TestFixture _fixture;
 
-        public ClientServerTests(ITestOutputHelper output)
+        public ClientServerTests(TestFixture fixture, ITestOutputHelper output)
         {
+            _fixture = fixture;
             _output = output;
         }
 
@@ -53,13 +55,14 @@ namespace TestsDTC
         private ExampleService StartExampleServer(int port)
         {
             var server = new ExampleService(IPAddress.Loopback, port, 100, 200);
+            server.StartServer();
             return server;
         }
 
         private ClientDTC ConnectClient(int port, EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
         {
             var client = new ClientDTC();
-            client.Start("localhost", port);
+            client.StartClient("localhost", port);
             return ConnectClient(encoding, client);
         }
 
@@ -86,7 +89,7 @@ namespace TestsDTC
                 numConnects++;
             }
 
-            server.ClientConnected += ClientHandlerConnected;
+            server.ClientConnected += ClientHandlerConnected!;
 
             // Set up the handler to capture the ClientHandlerDisconnected event
             void ClientHandlerDisconnected(object s, ClientHandlerDTC clientHandler)
@@ -95,7 +98,7 @@ namespace TestsDTC
                 numDisconnects++;
             }
 
-            server.ClientDisconnected += ClientHandlerDisconnected;
+            server.ClientDisconnected += ClientHandlerDisconnected!;
 
             var sw = Stopwatch.StartNew();
             using (var client1 = ConnectClient(port))
@@ -136,7 +139,7 @@ namespace TestsDTC
                     numConnects++;
                 }
 
-                server.ClientConnected += ClientHandlerConnected;
+                server.ClientConnected += ClientHandlerConnected!;
 
                 // Set up the handler to capture the ClientHandlerDisconnected event
                 void ClientHandlerDisconnected(object s, ClientHandlerDTC clientHandler)
@@ -146,7 +149,7 @@ namespace TestsDTC
                     numDisconnects++;
                 }
 
-                server.ClientDisconnected += ClientHandlerDisconnected;
+                server.ClientDisconnected += ClientHandlerDisconnected!;
                 var sw = Stopwatch.StartNew();
                 using (var client1 = ConnectClient(port))
                 using (var client2 = ConnectClient(port))
@@ -198,7 +201,7 @@ namespace TestsDTC
                 signal.Set();
             }
 
-            server.ClientConnected += ClientConnected;
+            server.ClientConnected += ClientConnected!;
 
             // Set up the handler to capture the ClientDisconnected event
             void ClientDisconnected(object s, ClientHandlerDTC clientHandler)
@@ -207,7 +210,7 @@ namespace TestsDTC
                 numDisconnects++;
             }
 
-            server.ClientDisconnected += ClientDisconnected;
+            server.ClientDisconnected += ClientDisconnected!;
 
             using var client1 = ConnectClient(port);
             var sw = Stopwatch.StartNew();
@@ -231,7 +234,7 @@ namespace TestsDTC
                 }
             }
 
-            client1.HeartbeatEvent += HeartbeatEvent;
+            client1.HeartbeatEvent += HeartbeatEvent!;
             sw.Restart();
             signal.WaitOne(1000);
             var elapsed = sw.ElapsedMilliseconds;
@@ -246,8 +249,8 @@ namespace TestsDTC
             var wasConnected = false;
             var wasDisconnected = false;
             var client = new ClientDTC();
-            client.Start("localhost", port);
-            client.ConnectedEvent += Connected;
+            client.StartClient("localhost", port);
+            client.ConnectedEvent += Connected!;
             ConnectClient(EncodingEnum.ProtocolBuffers, client);
 
             var sw = Stopwatch.StartNew();
@@ -267,7 +270,7 @@ namespace TestsDTC
                 wasDisconnected = true;
             }
 
-            client.DisconnectedEvent += Disconnected;
+            client.DisconnectedEvent += Disconnected!;
 
             // Set up the handler to capture the HeartBeat event
             var numHeartbeats = 0;
@@ -279,7 +282,7 @@ namespace TestsDTC
                 signal.Set();
             }
 
-            client.HeartbeatEvent += HeartbeatEvent;
+            client.HeartbeatEvent += HeartbeatEvent!;
 
             client.Dispose(); // So it won't error trying to read
 
@@ -317,25 +320,25 @@ namespace TestsDTC
                 numSnapshots++;
             }
 
-            client1.MarketDataSnapshotEvent += MarketDataSnapshotEvent;
+            client1.MarketDataSnapshotEvent += MarketDataSnapshotEvent!;
 
             // Set up the handler to capture the MarketDataUpdateTradeCompact events
             void MarketDataUpdateTradeCompactEvent(object s, MarketDataUpdateTradeCompact trade)
             {
                 numTrades++;
-                //s_logger.ConditionalDebug("numTrades={numTrades}", numTrades);
+                //s_logger.Debug("numTrades={numTrades}", numTrades);
             }
 
-            client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent;
+            client1.MarketDataUpdateTradeCompactEvent += MarketDataUpdateTradeCompactEvent!;
 
             // Set up the handler to capture the MarketDataUpdateBidAskCompact events
             void MarketDataUpdateBidAskCompactEvent(object s, MarketDataUpdateBidAskCompact bidAsk)
             {
                 numBidAsks++;
-                //s_logger.ConditionalDebug("numBidAsks={numBidAsks}", numBidAsks);
+                //s_logger.Debug("numBidAsks={numBidAsks}", numBidAsks);
             }
 
-            client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent;
+            client1.MarketDataUpdateBidAskCompactEvent += MarketDataUpdateBidAskCompactEvent!;
 
             // Now subscribe to the data
             sw.Restart();
@@ -362,7 +365,7 @@ namespace TestsDTC
             try
             {
                 using var client = new ClientDTC();
-                client.Start("localhost", 11099);
+                client.StartClient("localhost", 11099);
                 var ms = sw.ElapsedMilliseconds;
                 var isConnected = client.Connected;
                 client.NoDelay = true;
