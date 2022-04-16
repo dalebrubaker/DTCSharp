@@ -11,7 +11,7 @@ namespace DTCCommon
     /// </summary>
     public static class SierraChartUtil
     {
-        private static readonly ILogger s_logger = Log.ForContext(typeof(SierraChartUtil));
+        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         private const string TimeFormatStringSortsWithMsecs = "yyyyMMdd.HHmmss.fffffff";
         private static readonly Dictionary<string, SymbolSettings> s_symbolSettingsBySierraChartDirectoryAndSettingsFilename = new Dictionary<string, SymbolSettings>();

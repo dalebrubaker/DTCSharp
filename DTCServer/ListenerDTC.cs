@@ -12,6 +12,7 @@ namespace DTCServer
 {
     public abstract class ListenerDTC : TcpListener, IDisposable
     {
+        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         private readonly IPAddress _localaddr;
         private readonly int _port;
@@ -19,13 +20,11 @@ namespace DTCServer
         private readonly List<ClientHandlerDTC> _clientHandlers; // parallel list to _ClientHandlerDTCTasks
         private bool _isDisposed;
         private readonly CancellationTokenSource _cts;
-        private readonly ILogger _logger;
 
         public string Address { get; }
 
         protected ListenerDTC(IPAddress localaddr, int port) : base(localaddr, port)
         {
-            _logger = Log.ForContext<ListenerDTC>();
             _localaddr = localaddr;
             _port = port;
             _lock = new object();
@@ -66,12 +65,12 @@ namespace DTCServer
         {
             try
             {
-                _logger.Verbose($"Starting {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
+                s_logger.Verbose($"Starting {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
                 Start();
             }
             catch (SocketException ex)
             {
-                _logger.Error(ex, ex.Message);
+                s_logger.Error(ex, ex.Message);
                 throw;
             }
             catch (ThreadAbortException)
@@ -157,7 +156,7 @@ namespace DTCServer
                     }
                     catch (Exception ex)
                     {
-                        _logger.Warning($"Ignoring {ex.Message} during dispose of clientHandler");
+                        s_logger.Warning($"Ignoring {ex.Message} during dispose of clientHandler");
                     }
                 }
             }

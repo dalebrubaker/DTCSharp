@@ -18,6 +18,7 @@ namespace DTCServer
 {
     public partial class ClientHandlerDTC : IEquatable<ClientHandlerDTC>, IDisposable
     {
+        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private static int s_instanceId;
 
         public int InstanceId { get; }
@@ -41,11 +42,9 @@ namespace DTCServer
         private int _heartbeatIntervalInSeconds;
         private readonly EndPoint _localEndPoint; // persist for ToString to work during Dispose
         private readonly EndPoint _remoteEndPoint; // persist for ToString to work during Dispose
-        private readonly ILogger _logger;
 
         public ClientHandlerDTC(Func<ClientHandlerDTC, MessageProto, Task> callback, TcpClient tcpClient)
         {
-            _logger = Log.ForContext<ClientHandlerDTC>();
             _callback = callback;
             _tcpClient = tcpClient;
             InstanceId = s_instanceId++;
@@ -106,19 +105,19 @@ namespace DTCServer
             }
             catch (InvalidProtocolBufferException ex)
             {
-                _logger.Error(ex, $"ClientHandler {this}: error decoding:{messageProto} {ex.Message} _currentEncoding={_currentEncoding}");
+                s_logger.Error(ex, $"ClientHandler {this}: error decoding:{messageProto} {ex.Message} _currentEncoding={_currentEncoding}");
                 Dispose();
             }
             catch (EndOfStreamException)
             {
-                _logger.Information($"ClientHandler {this} reached end of stream {_currentStream}");
+                s_logger.Information($"ClientHandler {this} reached end of stream {_currentStream}");
                 Dispose();
             }
             catch (IOException ex)
             {
                 if (!_cts.IsCancellationRequested)
                 {
-                    _logger.Warning(ex, $"Disposing {this} because {ex.Message}");
+                    s_logger.Warning(ex, $"Disposing {this} because {ex.Message}");
                 }
                 Dispose();
             }
@@ -126,7 +125,7 @@ namespace DTCServer
             {
                 if (!_cts.IsCancellationRequested)
                 {
-                    _logger.Error(ex, $"{ex.Message} in {this}");
+                    s_logger.Error(ex, $"{ex.Message} in {this}");
                 }
                 Dispose();
             }
@@ -153,7 +152,7 @@ namespace DTCServer
                 {
                     if (!_cts.IsCancellationRequested)
                     {
-                        _logger.Error(ex, $"{ex.Message} in {this}");
+                        s_logger.Error(ex, $"{ex.Message} in {this}");
                     }
                     Dispose();
                     throw;
@@ -263,7 +262,7 @@ namespace DTCServer
             if (secondsSinceLastMessageReceived > 2 * _heartbeatIntervalInSeconds)
             {
                 // The client has disappeared. This is normal
-                _logger.Verbose($"Client disappeared from {this}");
+                s_logger.Verbose($"Client disappeared from {this}");
                 Dispose();
                 return;
             }
@@ -287,11 +286,11 @@ namespace DTCServer
             {
                 // DTC disconnected? No point in continuing with heartbeats
                 _timerHeartbeat.Enabled = false;
-                _logger.Debug(ex, $"{ex.Message} in {this}");
+                s_logger.Debug(ex, $"{ex.Message} in {this}");
             }
             catch (Exception ex)
             {
-                _logger.Debug(ex, $"{ex.Message} in {this}");
+                s_logger.Debug(ex, $"{ex.Message} in {this}");
                 throw;
             }
         }
@@ -327,7 +326,7 @@ namespace DTCServer
                 }
             }
             GC.SuppressFinalize(this);
-            _logger.Verbose($"Disposed {this}");
+            s_logger.Verbose($"Disposed {this}");
         }
 
         public bool Equals(ClientHandlerDTC other)

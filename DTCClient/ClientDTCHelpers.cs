@@ -53,7 +53,7 @@ namespace DTCClient
                 error = new Result(message, ErrorTypes.NoDataAvailableForSymbol);
                 rejectCallback?.Invoke(historicalPriceDataReject);
                 signal.Set();
-                //_logger.Debug($"Rejection historicalPriceDataReject={historicalPriceDataReject}");
+                //s_logger.Debug($"Rejection historicalPriceDataReject={historicalPriceDataReject}");
             }
 
             HistoricalPriceDataRejectEvent += OnHistoricalPriceDataRejectEvent;
@@ -71,7 +71,7 @@ namespace DTCClient
                 {
                     error = new Result();
                     signal.Set();
-                    //_logger.Debug($"No records available for {symbol} {recordInterval} header={header}");
+                    //s_logger.Debug($"No records available for {symbol} {recordInterval} header={header}");
                 }
             }
 
@@ -91,13 +91,13 @@ namespace DTCClient
                 if (e.StartDateTime > 0)
                 {
                     // A final record might not have a value, signified by e.StartDateTime == 0
-                    //_logger.Debug($"Sending for {symbol} response={response}");
+                    //s_logger.Debug($"Sending for {symbol} response={response}");
                     dataCallback(response);
                     countRecordsReceived++;
                 }
                 if (e.IsFinalRecordBool)
                 {
-                    //_logger.Debug($"Received final record for {symbol} e={e}");
+                    //s_logger.Debug($"Received final record for {symbol} e={e}");
                     signal.Set();
                 }
             }
@@ -111,7 +111,7 @@ namespace DTCClient
                 throw new TimeoutException();
             }
 
-            _logger.Verbose($"Received {countRecordsReceived:N0} records for {symbol} {recordInterval}");
+            s_logger.Verbose($"Received {countRecordsReceived:N0} records for {symbol} {recordInterval}");
             return error;
         }
 
@@ -188,7 +188,7 @@ namespace DTCClient
                         // But it isn't reliable, fails even realtime with BTCU21-CME
                         var msg = $"Unrecognized symbol={symbol}. Description is empty or null. {response}";
                         error = new Result(msg, ErrorTypes.UnrecognizedSymbol);
-                        _logger.Debug(msg);
+                        s_logger.Debug(msg);
                         securityDefinitionResponse = null;
                     }
                     else if (string.IsNullOrEmpty(response.Description) && response.SecurityType != SecurityTypeEnum.SecurityTypeStock)
@@ -212,7 +212,7 @@ namespace DTCClient
                         throw new DTCSharpException("Why?");
                     }
                     error = new Result(reject.RejectText);
-                    _logger.Debug($"SecurityDefinitionReject for {symbol} ={requestId} {reject.RejectText}");
+                    s_logger.Debug($"SecurityDefinitionReject for {symbol} ={requestId} {reject.RejectText}");
                     signal.Set();
                 }
 
@@ -226,7 +226,7 @@ namespace DTCClient
                     Exchange = exchange
                 };
 
-                //_logger.Debug($"Sending SecurityDefinitionForSymbolRequest for {symbol} ={requestId}");
+                //s_logger.Debug($"Sending SecurityDefinitionForSymbolRequest for {symbol} ={requestId}");
                 SendRequest(DTCMessageType.SecurityDefinitionForSymbolRequest, securityDefinitionForSymbolRequest);
                 if (!signal.WaitOne(TimeoutMs))
                 {
@@ -343,7 +343,7 @@ namespace DTCClient
                     Symbol = symbol,
                     Exchange = exchange
                 };
-                _logger.Information($"Subscribing to MarketData: {request}");
+                s_logger.Information($"Subscribing to MarketData: {request}");
                 SendRequest(DTCMessageType.MarketDataRequest, request);
                 return symbolId;
             }
@@ -364,7 +364,7 @@ namespace DTCClient
                 Symbol = symbol,
                 Exchange = exchange
             };
-            _logger.Information($"Unsubscribing from MarketData: {request}");
+            s_logger.Information($"Unsubscribing from MarketData: {request}");
             SendRequest(DTCMessageType.MarketDataRequest, request);
         }
 
@@ -628,7 +628,7 @@ namespace DTCClient
                 if (response.RequestID != requestId)
                 {
                     // ignore this one
-                    //_logger.Debug($"Ignoring AccountBalanceUpdate: {response}");
+                    //s_logger.Debug($"Ignoring AccountBalanceUpdate: {response}");
                     return;
                 }
                 if (response.IsNoAccountBalances)
@@ -636,7 +636,7 @@ namespace DTCClient
                     signal.Set();
                     return;
                 }
-                //_logger.Debug($"Accepted AccountBalanceUpdate: {response}");
+                //s_logger.Debug($"Accepted AccountBalanceUpdate: {response}");
                 responses.Add(response);
                 if (response.MessageNumber == response.TotalNumberMessages)
                 {
@@ -651,7 +651,7 @@ namespace DTCClient
                 RequestID = (int)requestId,
                 TradeAccount = accountName // 1/1/2022 seems to be a bug in SierraChart that accountName is ignored. AccountBalanceUpdates ll accounts come back.
             };
-            //_logger.Debug($"Sending request forAccountBalanceUpdates: {request}");
+            //s_logger.Debug($"Sending request forAccountBalanceUpdates: {request}");
             SendRequest(DTCMessageType.AccountBalanceRequest, request);
             if (!signal.WaitOne(TimeoutMs))
             {
@@ -930,12 +930,12 @@ namespace DTCClient
                 request.NumberOfDays = 10000;
             }
             SendRequest(DTCMessageType.HistoricalOrderFillsRequest, request);
-            //_logger.Verbose("Starting to wait for historical fills {request}");
+            //s_logger.Verbose("Starting to wait for historical fills {request}");
             if (!signal.WaitOne(TimeoutMs))
             {
                 throw new TimeoutException();
             }
-            //_logger.Verbose($" for historical fills {request} Done waiting, error={error}");
+            //s_logger.Verbose($" for historical fills {request} Done waiting, error={error}");
             return (responses, error);
         }
 
@@ -999,9 +999,9 @@ namespace DTCClient
                 request.FreeFormText = freeFormText;
             }
 
-            //_logger.Debug($"SendRequest() {request}");
+            //s_logger.Debug($"SendRequest() {request}");
             SendRequest(DTCMessageType.SubmitNewSingleOrder, request);
-            _logger.Information($"{TradeMessageLogging}Sent SubmitNewSingleOrder Request={request}");
+            s_logger.Information($"{TradeMessageLogging}Sent SubmitNewSingleOrder Request={request}");
         }
 
         /// <summary>
@@ -1107,7 +1107,7 @@ namespace DTCClient
             }
 
             SendRequest(DTCMessageType.SubmitNewOcoOrder, request);
-            _logger.Information($"{TradeMessageLogging}Sent SubmitOcoOrder Request={request}");
+            s_logger.Information($"{TradeMessageLogging}Sent SubmitOcoOrder Request={request}");
         }
         // ReSharper restore InconsistentNaming
 
@@ -1123,7 +1123,7 @@ namespace DTCClient
                 IsAutomatedOrder = isAutomatedOrder ? 1u : 0
             };
             SendRequest(DTCMessageType.SubmitFlattenPositionOrder, request);            
-            _logger.Information($"{TradeMessageLogging}Sent SubmitFlattenPositionOrder Request={request}");
+            s_logger.Information($"{TradeMessageLogging}Sent SubmitFlattenPositionOrder Request={request}");
         }
 
         public void CancelOrder(string accountName, string clientOrderId, string serverOrderId)
@@ -1177,9 +1177,9 @@ namespace DTCClient
                 ServerOrderID = serverOrderId
             };
 
-            //_logger.Debug($"SendRequest() {request}");
+            //s_logger.Debug($"SendRequest() {request}");
             SendRequest(DTCMessageType.CancelOrder, request);
-            _logger.Information($"{TradeMessageLogging}Sent CancelOrder Request={request}");
+            s_logger.Information($"{TradeMessageLogging}Sent CancelOrder Request={request}");
         }
 
         /// <summary>
@@ -1288,9 +1288,9 @@ namespace DTCClient
                 request.GoodTillDateTime = (ulong)gtd.Value.UtcToDtcDateTime();
             }
 
-            //_logger.Debug($"SendRequest() {request}");
+            //s_logger.Debug($"SendRequest() {request}");
             SendRequest(DTCMessageType.CancelReplaceOrder, request);
-            _logger.Information($"{TradeMessageLogging} sent CancelReplaceOrder Request={request}");
+            s_logger.Information($"{TradeMessageLogging} sent CancelReplaceOrder Request={request}");
         }
     }
 }

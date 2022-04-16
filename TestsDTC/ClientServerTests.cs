@@ -59,7 +59,7 @@ namespace TestsDTC
         private ClientDTC ConnectClient(int port, EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
         {
             var client = new ClientDTC();
-            client.Start("localhost", port);
+            client.StartClient("localhost", port);
             return ConnectClient(encoding, client);
         }
 
@@ -246,7 +246,7 @@ namespace TestsDTC
             var wasConnected = false;
             var wasDisconnected = false;
             var client = new ClientDTC();
-            client.Start("localhost", port);
+            client.StartClient("localhost", port);
             client.ConnectedEvent += Connected;
             ConnectClient(EncodingEnum.ProtocolBuffers, client);
 
@@ -362,7 +362,7 @@ namespace TestsDTC
             try
             {
                 using var client = new ClientDTC();
-                client.Start("localhost", 11099);
+                client.StartClient("localhost", 11099);
                 var ms = sw.ElapsedMilliseconds;
                 var isConnected = client.Connected;
                 client.NoDelay = true;

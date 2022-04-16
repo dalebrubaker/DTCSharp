@@ -11,11 +11,12 @@ namespace DTCCommon
     /// </summary>
     public class SymbolSettings
     {
+        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         private readonly string _path;
 
         private readonly Dictionary<string, XmlNode> _nodesBySymbolPattern = new Dictionary<string, XmlNode>();
         private readonly Dictionary<string, XmlNode> _nodesBySymbol = new Dictionary<string, XmlNode>();
-        private readonly ILogger _logger;
 
         /// <summary>
         /// ctor
@@ -23,7 +24,6 @@ namespace DTCCommon
         /// <param name="path">fully-qualified path to the SierraChart symbol settings file</param>
         public SymbolSettings(string path)
         {
-            _logger = Log.ForContext<SymbolSettings>();
             _path = path;
             using var sr = File.OpenText(path);
             lock (_nodesBySymbolPattern)

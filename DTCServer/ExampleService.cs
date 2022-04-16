@@ -13,11 +13,10 @@ namespace DTCServer
     /// </summary>
     public sealed class ExampleService : ListenerDTC
     {
-        private readonly ILogger _logger;
+        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         public ExampleService(IPAddress ipAddress, int port, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) : base(ipAddress, port)
         {
-            _logger = Log.ForContext<ExampleService>();
             NumTradesAndBidAsksToSend = numTradesAndBidAsksToSend;
             MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>(NumTradesAndBidAsksToSend);
             MarketDataUpdateBidAskCompacts = new List<MarketDataUpdateBidAskCompact>(NumTradesAndBidAsksToSend);
@@ -364,7 +363,7 @@ namespace DTCServer
                     clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                 }
             }
-            _logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
+            s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
         }
 
         private static void SendSnapshot(ClientHandlerDTC clientHandler)

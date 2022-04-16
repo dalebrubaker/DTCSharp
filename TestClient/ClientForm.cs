@@ -117,7 +117,7 @@ namespace TestClient
             try
             {
                 _clientListener = new ClientDTC();
-                _clientListener.Start(txtServer.Text, PortListener);
+                _clientListener.StartClient(txtServer.Text, PortListener);
                 if (_clientListener == null)
                 {
                     MessageBox.Show($"Cannot connect to {txtServer.Text}:{PortListener}");
@@ -624,7 +624,7 @@ namespace TestClient
             using var clientHistorical = new ClientDTC();
             try
             {
-                clientHistorical.Start(txtServer.Text, PortHistorical);
+                clientHistorical.StartClient(txtServer.Text, PortHistorical);
                 // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
                 var encoding = (EncodingEnum)cbxEncoding.SelectedItem;
                 DisplayEncodingResponse(logControlHistorical, encoding);
@@ -966,7 +966,7 @@ namespace TestClient
             btnDisconnectHistorical.Enabled = true;
             const string ClientName = "TestClientHistorical";
             _clientHistorical = new ClientDTC();
-            _clientHistorical.Start(txtServer.Text, PortHistorical);
+            _clientHistorical.StartClient(txtServer.Text, PortHistorical);
             RegisterClientEvents(_clientHistorical);
             try
             {
