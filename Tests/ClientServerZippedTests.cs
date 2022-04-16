@@ -5,22 +5,21 @@ using System.Threading.Tasks;
 using DTCClient;
 using DTCCommon;
 using DTCPB;
-using DTCServer;
 using FluentAssertions;
+using NLog;
+using TestServer;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Tests
+namespace TestsDTC
 {
-    [Collection("Logging collection")]
     public class ClientServerZippedTests : IDisposable
     {
-        private readonly ITestOutputHelper _output;
-        private readonly TestFixture _fixture;
 
-        public ClientServerZippedTests(TestFixture fixture, ITestOutputHelper output)
+        private readonly ITestOutputHelper _output;
+
+        public ClientServerZippedTests(ITestOutputHelper output)
         {
-            _fixture = fixture;
             _output = output;
         }
 
@@ -32,7 +31,7 @@ namespace Tests
         private ClientDTC ConnectClientHistorical(int port, EncodingEnum encoding = EncodingEnum.ProtocolBuffers)
         {
             var client = new ClientDTC();
-            client.StartClient("localhost", port);
+            client.Start("localhost", port);
             var (loginResponse, error) = client.Logon("TestClient", requestedEncoding: encoding);
             Assert.NotNull(loginResponse);
             return client;
@@ -53,7 +52,6 @@ namespace Tests
             // Set up the exampleService responses
             var port = ClientServerTests.NextServerPort;
             var server = new ExampleService(IPAddress.Loopback, port, 10, 20);
-            server.StartServer();
 
             // SierraChart supports compression only with BinaryEncoding, but we support it also with EncodingEnum.ProtocolBuffers
             using var clientHistorical = ConnectClientHistorical(port);
@@ -74,7 +72,7 @@ namespace Tests
                 numHistoricalPriceDataResponseHeader++;
             }
 
-            clientHistorical.HistoricalPriceDataResponseHeaderEvent += ResponseHeaderEvent!;
+            clientHistorical.HistoricalPriceDataResponseHeaderEvent += ResponseHeaderEvent;
 
             // Set up the handler to capture the HistoricalPriceDataRecordResponse events
             void HistoricalPriceDataRecordResponseEvent(object s, HistoricalPriceDataRecordResponse trade)
@@ -90,7 +88,7 @@ namespace Tests
                 }
             }
 
-            clientHistorical.HistoricalPriceDataRecordResponseEvent += HistoricalPriceDataRecordResponseEvent!;
+            clientHistorical.HistoricalPriceDataRecordResponseEvent += HistoricalPriceDataRecordResponseEvent;
             const string Symbol = "ESZ16";
             var (securityDefinitionResponse, result) = clientHistorical.GetSecurityDefinition(Symbol, "");
             result.IsError.Should().BeFalse();
@@ -148,10 +146,10 @@ namespace Tests
             Assert.Equal(server.NumHistoricalPriceDataRecordsToSend * 2, numTrades);
         }
 
-        // [Fact]
-        // public void BreakBuild()
-        // {
-        //     Assert.True(false);
-        // }
+        [Fact]
+        public void BreakBuild()
+        {
+            Assert.True(false);
+        }
     }
 }
