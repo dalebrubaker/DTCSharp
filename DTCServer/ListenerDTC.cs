@@ -6,13 +6,13 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using DTCCommon;
-using NLog;
+using Serilog;
 
 namespace DTCServer
 {
     public abstract class ListenerDTC : TcpListener, IDisposable
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         private readonly IPAddress _localaddr;
         private readonly int _port;
@@ -31,8 +31,7 @@ namespace DTCServer
             _cts = new CancellationTokenSource();
             _clientHandlers = new List<ClientHandlerDTC>();
             Address = new IPEndPoint(_localaddr, _port).ToString();
-            //s_logger.ConditionalTrace($"ctor {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
-            Task.Factory.StartNew(RunAsync, TaskCreationOptions.LongRunning);
+            //s_logger.Verbose($"ctor {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
         }
 
         public int NumberOfClientHandlers
@@ -58,6 +57,29 @@ namespace DTCServer
         }
 
         public bool IsConnected { get; private set; }
+        
+        /// <summary>
+        /// Use this method to start this server 
+        /// </summary>
+        public void StartServer()
+        {
+            try
+            {
+                s_logger.Verbose("Starting {This}", ToString());
+                Start();
+            }
+            catch (SocketException ex)
+            {
+                s_logger.Error(ex, ex.Message);
+                throw;
+            }
+            catch (ThreadAbortException)
+            {
+                // Dispose() has been called
+                CloseAllClientHandlers();
+            }
+            Task.Factory.StartNew(RunAsync, TaskCreationOptions.LongRunning);
+        }
 
         /// <summary>
         /// This method is called for every request received by a client connected to this server.
@@ -72,21 +94,6 @@ namespace DTCServer
         /// </summary>
         public async Task RunAsync()
         {
-            try
-            {
-                s_logger.ConditionalTrace($"Starting {nameof(ListenerDTC)} {this}"); // {Environment.StackTrace}");
-                Start();
-            }
-            catch (SocketException ex)
-            {
-                s_logger.Error(ex, ex.Message);
-                throw;
-            }
-            catch (ThreadAbortException)
-            {
-                // Dispose() has been called
-                CloseAllClientHandlers();
-            }
 #pragma warning disable 168
             IsConnected = true;
             while (!_cts.Token.IsCancellationRequested)
@@ -149,7 +156,7 @@ namespace DTCServer
                     }
                     catch (Exception ex)
                     {
-                        s_logger.Warn($"Ignoring {ex.Message} during dispose of clientHandler");
+                        s_logger.Warning($"Ignoring {ex.Message} during dispose of clientHandler");
                     }
                 }
             }
@@ -215,7 +222,7 @@ namespace DTCServer
             Stop();
             Server.Dispose();
             CloseAllClientHandlers();
-            //s_logger.ConditionalTrace($"Disposed {nameof(ListenerDTC)} {this}");
+            s_logger.Verbose("Disposed {This}", ToString());
         }
 
         public void Dispose()

@@ -4,12 +4,22 @@ using System.Linq;
 using DTCCommon;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
-namespace TestsDTC
+namespace Tests
 {
+    [Collection("Logging collection")]
     public class ScidTests
     {
+        private readonly TestFixture _fixture;
+        private readonly ITestOutputHelper _output;
         public const string TestFilePath = "MNQU21-CME.scid";
+
+        public ScidTests(TestFixture fixture, ITestOutputHelper output)
+        {
+            _fixture = fixture;
+            _output = output;
+        }
 
         [Fact]
         public void GetHeaderTest()

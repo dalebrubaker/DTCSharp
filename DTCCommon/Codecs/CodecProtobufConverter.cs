@@ -1,12 +1,12 @@
 ﻿using System;
 using Google.Protobuf;
-using NLog;
+using Serilog;
 
 namespace DTCCommon.Codecs
 {
     public static class CodecProtobufConverter
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILogger s_logger = Log.ForContext(typeof(CodecProtobufConverter));
 
         /// <summary>
         /// This is the Func used when the current encoding is EncodingEnum.ProtocolBuffers

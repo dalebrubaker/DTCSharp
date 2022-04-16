@@ -4,20 +4,18 @@ using System.Net;
 using System.Threading.Tasks;
 using DTCCommon;
 using DTCPB;
-using DTCServer;
-using NLog;
+using Serilog;
 
-namespace TestServer
+namespace DTCServer
 {
     /// <summary>
     /// The service implementation that provides responses to client requests.
     /// </summary>
     public sealed class ExampleService : ListenerDTC
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        public ExampleService(IPAddress ipAddress, int port, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) :
-            base(ipAddress, port)
+        public ExampleService(IPAddress ipAddress, int port, int numTradesAndBidAsksToSend, int numHistoricalPriceDataRecordsToSend) : base(ipAddress, port)
         {
             NumTradesAndBidAsksToSend = numTradesAndBidAsksToSend;
             MarketDataUpdateTradeCompacts = new List<MarketDataUpdateTradeCompact>(NumTradesAndBidAsksToSend);
@@ -227,7 +225,7 @@ namespace TestServer
                         MinPriceIncrement = 0.25f,
                         Description = "Description must not be empty."
                     };
-                    //s_logger.ConditionalDebug("Sending SecurityDefinitionResponse");
+                    //s_logger.Debug("Sending SecurityDefinitionResponse");
                     clientHandler.SendResponse(DTCMessageType.SecurityDefinitionResponse, securityDefinitionResponse);
                     break;
                 case DTCMessageType.MarketDataReject:
@@ -365,7 +363,7 @@ namespace TestServer
                     clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                 }
             }
-            s_logger.ConditionalDebug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
+            s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
         }
 
         private static void SendSnapshot(ClientHandlerDTC clientHandler)

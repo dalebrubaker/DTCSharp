@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
-using NLog;
+using Serilog;
 
 namespace DTCCommon
 {
@@ -11,8 +11,9 @@ namespace DTCCommon
     /// </summary>
     public class SymbolSettings
     {
+        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         private readonly string _path;
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
 
         private readonly Dictionary<string, XmlNode> _nodesBySymbolPattern = new Dictionary<string, XmlNode>();
         private readonly Dictionary<string, XmlNode> _nodesBySymbol = new Dictionary<string, XmlNode>();
@@ -43,7 +44,7 @@ namespace DTCCommon
 
         public string GetInnerText(string symbol, string elementName)
         {
-            // s_logger.ConditionalDebug($"Getting tickSizeStr from symbolSettings for {symbol}");
+            // s_logger.Debug($"Getting tickSizeStr from symbolSettings for {symbol}");
             var node = GetNode(symbol);
             if (node == null)
             {

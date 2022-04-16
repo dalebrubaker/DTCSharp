@@ -8,7 +8,7 @@ using DTCClient;
 using DTCCommon;
 using DTCPB;
 using Google.Protobuf;
-using Microsoft.Extensions.Logging;
+using SerilogTimings;
 
 namespace TestClient
 {
@@ -119,7 +119,7 @@ namespace TestClient
             try
             {
                 _clientListener = new ClientDTC();
-                _clientListener.Start(txtServer.Text, PortListener);
+                _clientListener.StartClient(txtServer.Text, PortListener);
                 if (_clientListener == null)
                 {
                     MessageBox.Show($"Cannot connect to {txtServer.Text}:{PortListener}");
@@ -132,7 +132,8 @@ namespace TestClient
                 var encoding = (EncodingEnum)cbxEncoding.SelectedItem;
                 DisplayEncodingResponse(logControlConnect, encoding);
                 var generalTextData = ""; // "cme";
-                var (logonResponse, error) = _clientListener.Logon(ClientName, HeartbeatIntervalInSeconds, encoding, txtUsername.Text, txtPassword.Text, generalTextData);
+                var (logonResponse, error) =
+                    _clientListener.Logon(ClientName, HeartbeatIntervalInSeconds, encoding, txtUsername.Text, txtPassword.Text, generalTextData);
                 if (logonResponse == null)
                 {
                     toolStripStatusLabel1.Text = "Disconnected";
@@ -151,7 +152,8 @@ namespace TestClient
                         DisplayLogonResponse(logControlConnect, _clientListener, logonResponse);
                         break;
                     case LogonStatusEnum.LogonErrorNoReconnect:
-                        logControlConnect.LogMessage($"{_clientListener} Login failed: {logonResponse.Result} {logonResponse.ResultText}. Reconnect not allowed.");
+                        logControlConnect.LogMessage(
+                            $"{_clientListener} Login failed: {logonResponse.Result} {logonResponse.ResultText}. Reconnect not allowed.");
                         await DisposeClientListenerAsync().ConfigureAwait(false);
                         break;
                     case LogonStatusEnum.LogonError:
@@ -626,11 +628,12 @@ namespace TestClient
             using var clientHistorical = new ClientDTC();
             try
             {
-                clientHistorical.Start(txtServer.Text, PortHistorical);
+                clientHistorical.StartClient(txtServer.Text, PortHistorical);
                 // Note that heartbeatIntervalInSeconds must be 0 so the server doesn't throw us a heartbeat 
                 var encoding = (EncodingEnum)cbxEncoding.SelectedItem;
                 DisplayEncodingResponse(logControlHistorical, encoding);
-                var (logonResponse, result) = clientHistorical.Logon(clientName, requestedEncoding: encoding, userName: txtUsername.Text, password: txtPassword.Text);
+                var (logonResponse, result) =
+                    clientHistorical.Logon(clientName, requestedEncoding: encoding, userName: txtUsername.Text, password: txtPassword.Text);
                 if (result.IsError)
                 {
                     logControlHistorical.LogMessage($"{result} on logon attempt to " + clientName);
@@ -669,9 +672,9 @@ namespace TestClient
 
             // Now we have successfully logged on
             _stopWatch = Stopwatch.StartNew();
-            var error = clientHistorical.GetHistoricalData(ClientDTC.NextRequestId, txtSymbolHistorical.Text, txtExchangeHistorical.Text,
-                recordInterval, dtpStart.Value.ToUniversalTime(), DateTime.MinValue, 0U, cbZip.Checked, false,
-                false, HistoricalPriceDataResponseHeaderCallback, HistoricalPriceDataRecordResponseCallback);
+            var error = clientHistorical.GetHistoricalData(ClientDTC.NextRequestId, txtSymbolHistorical.Text, txtExchangeHistorical.Text, recordInterval,
+                dtpStart.Value.ToUniversalTime(), DateTime.MinValue, 0U, cbZip.Checked, false, false, HistoricalPriceDataResponseHeaderCallback,
+                HistoricalPriceDataRecordResponseCallback);
             if (error.IsError)
             {
                 logControlHistorical.LogMessage(error.ResultText);
@@ -778,8 +781,8 @@ namespace TestClient
             try
             {
                 const int Timeout = 5000;
-                var reject = _clientListener.GetMarketDataUpdateTradeCompact(_symbolId1, Timeout, symbol, "",
-                    MarketDataSnapshotCallback, MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback);
+                var reject = _clientListener.GetMarketDataUpdateTradeCompact(_symbolId1, Timeout, symbol, "", MarketDataSnapshotCallback,
+                    MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback);
                 if (reject != null)
                 {
                     var message = $"Subscription to {symbol} rejected: {reject.RejectText}";
@@ -803,8 +806,8 @@ namespace TestClient
             logControlLevel1.LogMessage($"Getting market data for {symbol}");
             try
             {
-                var reject = _clientListener.GetMarketDataUpdateTradeCompact(_symbolId2, 5000, symbol, "",
-                    MarketDataSnapshotCallback, MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback);
+                var reject = _clientListener.GetMarketDataUpdateTradeCompact(_symbolId2, 5000, symbol, "", MarketDataSnapshotCallback,
+                    MarketDataUpdateTradeCompactCallback, MarketDataUpdateBidAskCompactCallback);
                 if (reject != null)
                 {
                     var message = $"Subscription to {symbol} rejected: {reject.RejectText}";
@@ -968,13 +971,14 @@ namespace TestClient
             btnDisconnectHistorical.Enabled = true;
             const string ClientName = "TestClientHistorical";
             _clientHistorical = new ClientDTC();
-            _clientHistorical.Start(txtServer.Text, PortHistorical);
+            _clientHistorical.StartClient(txtServer.Text, PortHistorical);
             RegisterClientEvents(_clientHistorical);
             try
             {
                 var encoding = (EncodingEnum)cbxEncoding.SelectedItem;
                 DisplayEncodingResponse(logControlConnect, encoding);
-                var (logonResponse, error) = _clientHistorical.Logon("Historical", requestedEncoding: encoding, userName: txtUsername.Text, password: txtPassword.Text);
+                var (logonResponse, error) =
+                    _clientHistorical.Logon("Historical", requestedEncoding: encoding, userName: txtUsername.Text, password: txtPassword.Text);
                 _logonResponseHistorical = logonResponse;
                 if (error.IsError)
                 {
@@ -993,7 +997,8 @@ namespace TestClient
                         DisplayLogonResponse(logControlConnect, _clientListener, logonResponse);
                         break;
                     case LogonStatusEnum.LogonErrorNoReconnect:
-                        logControlConnect.LogMessage($"{_clientHistorical} Login failed: {logonResponse.Result} {logonResponse.ResultText}. Reconnect not allowed.");
+                        logControlConnect.LogMessage(
+                            $"{_clientHistorical} Login failed: {logonResponse.Result} {logonResponse.ResultText}. Reconnect not allowed.");
                         await DisposeClientListenerAsync().ConfigureAwait(false);
                         break;
                     case LogonStatusEnum.LogonError:
@@ -1123,6 +1128,7 @@ namespace TestClient
             }
             PlaceOrder(OrderAction.Buy);
         }
+
         private void btnSell_Click(object sender, EventArgs e)
         {
             if (_clientListener == null)
@@ -1152,10 +1158,8 @@ namespace TestClient
             var orderTypeOCO = (OrderTypeEnum)cmbxOrderTypeOCO.SelectedItem;
             double.TryParse(txtPrice1OCO.Text, out var price1OCO);
             double.TryParse(txtPrice2OCO.Text, out var price2OCO);
-            _clientListener.SubmitOcoOrders(txtAccount.Text, txtSymbolTrade.Text, clientId, clientIdOCO, orderType, 
-                orderAction, qty, orderTypeOCO, orderAction, qtyOCO, price1, price2, price1OCO, price2OCO);
+            _clientListener.SubmitOcoOrders(txtAccount.Text, txtSymbolTrade.Text, clientId, clientIdOCO, orderType, orderAction, qty, orderTypeOCO, orderAction,
+                qtyOCO, price1, price2, price1OCO, price2OCO);
         }
-
-
     }
 }

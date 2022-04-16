@@ -3,10 +3,18 @@ using DTCCommon;
 using FluentAssertions;
 using Xunit;
 
-namespace TestsDTC
+namespace Tests
 {
+    [Collection("Logging collection")]
     public class SymbolTests
     {
+        private readonly TestFixture _fixture;
+
+        public SymbolTests(TestFixture fixture)
+        {
+            _fixture = fixture;
+        }
+
         [Fact]
         public void LoadSymbolSettingsTests()
         {

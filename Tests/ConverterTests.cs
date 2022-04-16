@@ -9,10 +9,18 @@ using Google.Protobuf;
 using Google.Protobuf.Reflection;
 using Xunit;
 
-namespace TestsDTC
+namespace Tests
 {
+    [Collection("Logging collection")]
     public class ConverterTests
     {
+        private readonly TestFixture _fixture;
+
+        public ConverterTests(TestFixture fixture)
+        {
+            _fixture = fixture;
+        }
+
         [Fact]
         public void ProtoToProtoRoundTrip()
         {
@@ -133,7 +141,7 @@ namespace TestsDTC
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        private IMessage CreateTestProtobuf(DTCMessageType messageType)
+        private IMessage? CreateTestProtobuf(DTCMessageType messageType)
         {
             if (messageType == DTCMessageType.MessageTypeUnset)
             {
@@ -159,38 +167,38 @@ namespace TestsDTC
                 switch (field.FieldType)
                 {
                     case FieldType.Double:
-                        value = ((double)value + count);
+                        value = ((double)value! + count);
                         break;
                     case FieldType.Float:
-                        value = ((float)value + count);
+                        value = ((float)value! + count);
                         break;
                     case FieldType.Int64:
-                        value = ((long)value + count);
+                        value = ((long)value! + count);
                         break;
                     case FieldType.UInt64:
-                        value = (ulong)value + (ulong)count;
+                        value = (ulong)value! + (ulong)count;
                         break;
                     case FieldType.Int32:
-                        value = ((int)value + count);
+                        value = ((int)value! + count);
                         break;
                     case FieldType.Bool:
-                        value = !(bool)value;
+                        value = !(bool)value!;
                         break;
                     case FieldType.String:
-                        value = ((string)value + count);
+                        value = ((string)value! + count);
                         break;
                     case FieldType.UInt32:
-                        value = (uint)value + (uint)count;
+                        value = (uint)value! + (uint)count;
                         break;
                     case FieldType.SFixed32:
-                        value = ((int)value + count);
+                        value = ((int)value! + count);
                         break;
                     case FieldType.SFixed64:
-                        value = ((long)value + count);
+                        value = ((long)value! + count);
                         break;
                     case FieldType.Enum:
                         // Set it to the 2nd enum value
-                        value = ((int)value + 1);
+                        value = ((int)value! + 1);
                         break;
                     case FieldType.Fixed64:
                     case FieldType.Fixed32:
@@ -216,7 +224,7 @@ namespace TestsDTC
         /// <returns></returns>
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        private IMessage CreateTestProtobuf(DTCSharpMessageType messageType)
+        private IMessage? CreateTestProtobuf(DTCSharpMessageType messageType)
         {
             if (messageType == DTCSharpMessageType.Unset)
             {
@@ -242,38 +250,38 @@ namespace TestsDTC
                 switch (field.FieldType)
                 {
                     case FieldType.Double:
-                        value = ((double)value + count);
+                        value = ((double)value! + count);
                         break;
                     case FieldType.Float:
-                        value = ((float)value + count);
+                        value = ((float)value! + count);
                         break;
                     case FieldType.Int64:
-                        value = ((long)value + count);
+                        value = ((long)value! + count);
                         break;
                     case FieldType.UInt64:
-                        value = (ulong)value + (ulong)count;
+                        value = (ulong)value! + (ulong)count;
                         break;
                     case FieldType.Int32:
-                        value = ((int)value + count);
+                        value = ((int)value! + count);
                         break;
                     case FieldType.Bool:
-                        value = !(bool)value;
+                        value = !(bool)value!;
                         break;
                     case FieldType.String:
-                        value = ((string)value + count);
+                        value = ((string)value! + count);
                         break;
                     case FieldType.UInt32:
-                        value = (uint)value + (uint)count;
+                        value = (uint)value! + (uint)count;
                         break;
                     case FieldType.SFixed32:
-                        value = ((int)value + count);
+                        value = ((int)value! + count);
                         break;
                     case FieldType.SFixed64:
-                        value = ((long)value + count);
+                        value = ((long)value! + count);
                         break;
                     case FieldType.Enum:
                         // Set it to the 2nd enum value
-                        value = ((int)value + 1);
+                        value = ((int)value! + 1);
                         break;
                     case FieldType.Message:
                         // Ignore this one

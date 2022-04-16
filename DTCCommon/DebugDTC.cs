@@ -1,12 +1,9 @@
 using System.Diagnostics;
-using NLog;
 
 namespace DTCCommon
 {
     public static class DebugDTC
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
-
         public static void Assert(bool condition, string message = null)
         {
 #if DEBUG

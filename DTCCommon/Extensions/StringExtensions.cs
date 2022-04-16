@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Text;
-using NLog;
+using Serilog;
 
 // ReSharper disable once CheckNamespace
 namespace DTCCommon
 {
     public static class StringExtensions
     {
-        private static readonly Logger s_logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILogger s_logger = Log.ForContext(typeof(StringExtensions));
         
         /// <summary>
         /// Convert a message string to bytes of a fixed width
