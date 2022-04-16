@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
-using Microsoft.Extensions.Configuration;
 using Serilog;
-using Serilog.Core.Enrichers;
-using Serilog.Enrichers;
 
 namespace TestClient
 {
@@ -21,14 +18,8 @@ namespace TestClient
 
             var seqURL = Environment.GetEnvironmentVariable("SeqURL");
             var apiKey = Environment.GetEnvironmentVariable("DTCSharpSeqApiKey");
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Verbose()
-                .Enrich.FromLogContext()
-                .Enrich.WithThreadId()
-                .Enrich.WithThreadName()
-                .Enrich.WithProperty("Application", nameof(TestClient))
-                .WriteTo.Seq(seqURL, apiKey:apiKey)
-                .CreateLogger();
+            Log.Logger = new LoggerConfiguration().MinimumLevel.Verbose().Enrich.FromLogContext().Enrich.WithThreadId().Enrich.WithThreadName().Enrich
+                .WithProperty("Application", nameof(TestClient)).WriteTo.Seq(seqURL, apiKey: apiKey).CreateLogger();
             try
             {
                 Log.Verbose("Starting");
