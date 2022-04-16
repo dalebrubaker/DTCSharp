@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Tests
 {
-    public class DateTimeTests : IDisposable
+    public class DateTimeTests : IClassFixture<TestFixture>, IDisposable
     {
         public void Dispose()
         {

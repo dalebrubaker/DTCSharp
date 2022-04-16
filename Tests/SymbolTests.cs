@@ -5,8 +5,16 @@ using Xunit;
 
 namespace Tests
 {
-    public class SymbolTests
+    [Collection("Logging collection")]
+    public class SymbolTests : IClassFixture<TestFixture>
     {
+        private readonly TestFixture _fixture;
+
+        public SymbolTests(TestFixture fixture)
+        {
+            _fixture = fixture;
+        }
+
         [Fact]
         public void LoadSymbolSettingsTests()
         {

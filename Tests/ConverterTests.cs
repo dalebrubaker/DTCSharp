@@ -11,8 +11,16 @@ using Xunit;
 
 namespace Tests
 {
-    public class ConverterTests
+    [Collection("Logging collection")]
+    public class ConverterTests : IClassFixture<TestFixture>
     {
+        private readonly TestFixture _fixture;
+
+        public ConverterTests(TestFixture fixture)
+        {
+            _fixture = fixture;
+        }
+
         [Fact]
         public void ProtoToProtoRoundTrip()
         {

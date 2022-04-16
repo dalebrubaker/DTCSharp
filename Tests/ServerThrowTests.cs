@@ -11,12 +11,15 @@ namespace Tests
     /// <summary>
     /// This tests needs to be in its own class or it causes others to fail
     /// </summary>
-    public class ServerThrowTests : IDisposable
+    [Collection("Logging collection")]
+    public class ServerThrowTests : IClassFixture<TestFixture>, IDisposable
     {
+        private readonly TestFixture _fixture;
         private readonly ITestOutputHelper _output;
 
-        public ServerThrowTests(ITestOutputHelper output)
+        public ServerThrowTests(TestFixture fixture, ITestOutputHelper output)
         {
+            _fixture = fixture;
             _output = output;
         }
 
