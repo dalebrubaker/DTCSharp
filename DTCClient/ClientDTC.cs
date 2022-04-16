@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -12,17 +13,17 @@ using DTCCommon.Codecs;
 using DTCPB;
 using Google.Protobuf;
 using Serilog;
-using ILogger = Serilog.ILogger;
+using SerilogTimings;
 using Timer = System.Timers.Timer;
 
 namespace DTCClient
 {
     public partial class ClientDTC : TcpClient
     {
-        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly ILogger s_logger = Log.ForContext(MethodBase.GetCurrentMethod().DeclaringType);
 
         private static int s_instanceId;
-        
+
         private const int TimeoutMs = 30 * 1000; // 5 is not enough // 10 is low for debugging // 30 is standard
         private const string TradeMessageLogging = "TradeMessage:";
 
@@ -44,7 +45,8 @@ namespace DTCClient
         /// <summary>
         /// SierraChart can't handle rapid requests for symbols, and they don't change over time. So we cache them here
         /// </summary>
-        private static readonly Dictionary<string, SecurityDefinitionResponse> s_securityDefinitionsBySymbol = new Dictionary<string, SecurityDefinitionResponse>();
+        private static readonly Dictionary<string, SecurityDefinitionResponse> s_securityDefinitionsBySymbol =
+            new Dictionary<string, SecurityDefinitionResponse>();
 
         /// <summary>
         /// Holds messages received from the server
@@ -91,23 +93,26 @@ namespace DTCClient
         {
             _hostname = hostname;
             _port = port;
-            
-            // Do a separate connect, because base(hostname, port) is VERY slow due to IPV6 check/fail
-            Connect(_hostname, _port);
-            _currentStream = GetStream();
-            
-            NoDelay = true;
-            ReceiveBufferSize = SendBufferSize = 65536; // maximum DTC message size
-            _currentEncoding = EncodingEnum.BinaryEncoding;
 
-            // Start off binary until changed
-            _encode = CodecBinaryConverter.EncodeBinary;
-            _decode = CodecBinaryConverter.DecodeBinary;
+            using (Operation.Time("Starting Client"))
+            {
+                // Do a separate connect, because base(hostname, port) is VERY slow due to IPV6 check/fail
+                Connect(_hostname, _port);
+                _currentStream = GetStream();
 
-            Task.Factory.StartNew(ResponsesReader, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
-            Task.Factory.StartNew(ResponsesProcessor, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+                NoDelay = true;
+                ReceiveBufferSize = SendBufferSize = 65536; // maximum DTC message size
+                _currentEncoding = EncodingEnum.BinaryEncoding;
+
+                // Start off binary until changed
+                _encode = CodecBinaryConverter.EncodeBinary;
+                _decode = CodecBinaryConverter.DecodeBinary;
+
+                Task.Factory.StartNew(ResponsesReader, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+                Task.Factory.StartNew(ResponsesProcessor, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            }
         }
-       
+
         /// <summary>
         /// <c>true</c> after a successful Logon
         /// </summary>
@@ -202,8 +207,9 @@ namespace DTCClient
         /// <param name="tradeAccount">optional identifier if that is required to login</param>
         /// <param name="hardwareIdentifier">optional computer hardware identifier</param>
         /// <returns>The LogonResponse, or null if not received before timeout</returns>
-        public (LogonResponse logonResponse, Result error) Logon(string clientName, int heartbeatIntervalInSeconds = 10, EncodingEnum requestedEncoding = EncodingEnum.ProtocolBuffers,
-            string userName = "", string password = "", string generalTextData = "", int integer1 = 0, int integer2 = 0, string tradeAccount = "", string hardwareIdentifier = "")
+        public (LogonResponse logonResponse, Result error) Logon(string clientName, int heartbeatIntervalInSeconds = 10,
+            EncodingEnum requestedEncoding = EncodingEnum.ProtocolBuffers, string userName = "", string password = "", string generalTextData = "",
+            int integer1 = 0, int integer2 = 0, string tradeAccount = "", string hardwareIdentifier = "")
         {
             if (clientName == null)
             {
@@ -230,7 +236,7 @@ namespace DTCClient
         {
             var error = new Result($"Client timed out after {TimeoutMs} seconds doing SetEncoding={requestedEncoding} in {this}", ErrorTypes.CannotConnect);
             var signal = new ManualResetEvent(false);
-            
+
             void Handler(object s, EncodingResponse response)
             {
                 EncodingResponseEvent -= Handler; // unregister to avoid a potential memory leak
@@ -400,7 +406,8 @@ namespace DTCClient
             }
             catch (InvalidProtocolBufferException ex)
             {
-                s_logger.Error(ex, $"Client {this}: error messageEncoded={messageEncoded} - {messageProto} {ex.Message} _currentEncoding={_currentEncoding} in {this}");
+                s_logger.Error(ex,
+                    $"Client {this}: error messageEncoded={messageEncoded} - {messageProto} {ex.Message} _currentEncoding={_currentEncoding} in {this}");
                 Dispose();
             }
             catch (EndOfStreamException)
@@ -438,7 +445,7 @@ namespace DTCClient
                     }
 
                     //s_logger.Verbose($"{this}.{nameof(ResponsesProcessor)} took from _responsesQueue: {messageProto}");
-                    if (messageProto.MessageType is DTCMessageType.OrderUpdate ) // or DTCMessageType.PositionUpdate) // or DTCMessageType.AccountBalanceUpdate)
+                    if (messageProto.MessageType is DTCMessageType.OrderUpdate) // or DTCMessageType.PositionUpdate) // or DTCMessageType.AccountBalanceUpdate)
                     {
                         s_logger.Verbose($"{TradeMessageLogging}{this}.{nameof(ResponsesProcessor)} took from _responsesQueue: {messageProto}");
                     }

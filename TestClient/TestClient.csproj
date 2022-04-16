@@ -21,9 +21,6 @@
     <None Remove="AnalysisReport.sarif" />
     <None Remove=".upgrade-assistant" />
     <None Remove="upgrade-assistant.clef" />
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DTCClient\DTCClient.csproj" />
@@ -40,6 +37,7 @@
     <PackageReference Include="Serilog.Settings.Configuration" Version="3.3.0" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="5.1.1" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
+    <PackageReference Include="SerilogTimings" Version="2.3.0" />
     <PackageReference Include="Universal.Microsoft.Extensions.Configuration.Json" Version="1.0.0" />
   </ItemGroup>
 </Project>

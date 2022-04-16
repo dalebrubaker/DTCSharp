@@ -2,6 +2,8 @@
 using System.Windows.Forms;
 using Microsoft.Extensions.Configuration;
 using Serilog;
+using Serilog.Core.Enrichers;
+using Serilog.Enrichers;
 
 namespace TestClient
 {
@@ -17,20 +19,28 @@ namespace TestClient
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
 
-            var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-            Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger();
+            var seqURL = Environment.GetEnvironmentVariable("SeqURL");
+            var apiKey = Environment.GetEnvironmentVariable("DTCSharpSeqApiKey");
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .Enrich.FromLogContext()
+                .Enrich.WithThreadId()
+                .Enrich.WithThreadName()
+                .Enrich.WithProperty("Application", nameof(TestClient))
+                .WriteTo.Seq(seqURL, apiKey:apiKey)
+                .CreateLogger();
             try
             {
-                Log.Verbose("{AppName} starting", nameof(TestClient));
+                Log.Verbose("Starting");
                 Application.Run(new ClientForm());
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "{AppName} failed to run", nameof(TestClient));
+                Log.Fatal(ex, "Failed to run");
             }
             finally
             {
-                Log.Verbose("{AppName} exiting", nameof(TestClient));
+                Log.Verbose("Exiting");
                 Log.CloseAndFlush();
             }
         }
