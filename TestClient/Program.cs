@@ -23,6 +23,7 @@ namespace TestClient
                 Log.Logger = new LoggerConfiguration()
                     .MinimumLevel.Verbose()
                     .Enrich.FromLogContext()
+                    .Enrich.WithProcessId()
                     .Enrich.WithThreadId()
                     .Enrich.WithThreadName()
                     .Enrich
