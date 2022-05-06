@@ -122,17 +122,7 @@ namespace DTCServer
 
         #endregion PropertiesForTesting
 
-        // These events just show a mechanism for having other parts of your server application hook up to client requests.
 
-        #region events
-
-        public event EventHandler<string> MessageEvent;
-
-        private void OnMessage(string message)
-        {
-            var temp = MessageEvent;
-            temp?.Invoke(this, message);
-        }
 
         protected override Task HandleRequestAsync(ClientHandlerDTC clientHandler, MessageProto messageProto)
         {
@@ -384,7 +374,19 @@ namespace DTCServer
             };
             clientHandler.SendResponse(DTCMessageType.MarketDataSnapshot, marketDataSnapshot);
         }
+        
+        
+        #region events
 
+        public event EventHandler<string> MessageEvent;
+
+        private void OnMessage(string message)
+        {
+            var temp = MessageEvent;
+            temp?.Invoke(this, message);
+        }
+        
         #endregion events
+
     }
 }

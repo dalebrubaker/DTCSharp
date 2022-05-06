@@ -83,7 +83,7 @@ namespace DTCClient
                 if (error.IsError || _logonResponse is not { Result: LogonStatusEnum.LogonSuccess })
                 {
                     var resultText = error.IsError ? error.ResultText : LastLogonResultText;
-                    s_logger.Verbose($"Client {this} logon failed because {resultText}, timer started to keep trying");
+                    s_logger.Verbose("Client {ClientConnector} logon failed because {ResultText}, timer started to keep trying", this, resultText);
                     // Tell the ClientHandler that we're done, rather than wait for this client to disappear
                     _client?.SendRequest(DTCMessageType.Logoff, new Logoff { Reason = "Unable to logon, giving up." });
                     _client = null;
@@ -100,18 +100,18 @@ namespace DTCClient
                     return;
                 }
                 _client.DisconnectedEvent += ClientOnDisconnectedEvent;
-                s_logger.Verbose($"Sending OnClientConnected with {_client}");
+                s_logger.Verbose("Sending OnClientConnected with {Client}", _client);
                 OnClientConnected(_client);
             }
             catch (SocketException sex)
             {
-                // ignore exception, but keep trying unti the server appears
-                s_logger.Verbose($"Client {this} logon failed because {sex.Message}, timer started to keep trying.");
+                // ignore exception, but keep trying until the server appears
+                s_logger.Verbose("Client {ClientConnector} logon failed because {Message}, timer started to keep trying.", this, sex.Message);
                 _timer?.Start();
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "Connection attempt failed");
                 throw;
             }
         }
