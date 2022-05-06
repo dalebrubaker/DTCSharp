@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Timers;
-using DTCCommon;
 using DTCPB;
 using Serilog;
 
@@ -12,7 +12,7 @@ namespace DTCClient
     /// </summary>
     public class ClientConnector : IDisposable
     {
-        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly ILogger s_logger = Log.ForContext(MethodBase.GetCurrentMethod().DeclaringType);
 
         private readonly string _hostname;
         private readonly int _port;
@@ -67,15 +67,19 @@ namespace DTCClient
                 TradeAccount = tradeAccount
             };
             _timer.Start();
-            //s_logger.Debug($"Started timer in ctor of {this}");
+            //s_logger.Debug("Started timer in ctor of {This}", this);
         }
 
         private void TimerOnElapsed(object sender, ElapsedEventArgs e)
         {
-            DebugDTC.Assert(_client == null, "timer is turned off while we have a connected client");
+            if (_client != null)
+            {
+                s_logger.Debug("Why is client not null in {This}. Timer is turned off while we have a connected client", this);
+            }
             try
             {
-                //s_logger.Debug($"Entered TimerOnElapsed, trying to connect {this}");
+                //s_logger.Debug("Entered TimerOnElapsed, trying to connect {This}", this);
+                _timer.Stop(); // don't allow re-entry during logon
                 _logonResponse = null;
                 _client = new ClientDTC();
                 _client.StartClient(_hostname, _port);
@@ -86,6 +90,7 @@ namespace DTCClient
                     s_logger.Verbose("Client {ClientConnector} logon failed because {ResultText}, timer started to keep trying", this, resultText);
                     // Tell the ClientHandler that we're done, rather than wait for this client to disappear
                     _client?.SendRequest(DTCMessageType.Logoff, new Logoff { Reason = "Unable to logon, giving up." });
+                    _client?.Dispose();
                     _client = null;
                     if (_timer == null)
                     {
@@ -96,17 +101,21 @@ namespace DTCClient
                     {
                         _timer.Interval = _interval; // Started very low in ctor so we get immediate check
                     }
+                    //s_logger.Debug("Timer started to keep trying after logon failed in {This}", this);
                     _timer.Start();
                     return;
                 }
                 _client.DisconnectedEvent += ClientOnDisconnectedEvent;
-                s_logger.Verbose("Sending OnClientConnected with {Client}", _client);
+                s_logger.Verbose("Sending OnClientConnected with {Client} in {This}", _client, this);
                 OnClientConnected(_client);
             }
             catch (SocketException sex)
             {
-                // ignore exception, but keep trying until the server appears
-                s_logger.Verbose("Client {ClientConnector} logon failed because {Message}, timer started to keep trying.", this, sex.Message);
+                // ignore exception, but keep trying unti the server appears
+                s_logger.Verbose("Client {This} logon failed because {Message}, timer started to keep trying", this, sex.Message);
+                _client?.Dispose();
+                _client = null;
+
                 _timer?.Start();
             }
             catch (Exception ex)
