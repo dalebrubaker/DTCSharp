@@ -17,29 +17,9 @@ namespace TestServer
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
             
-            var configuration = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
-                .Build();
-            var seqURL = Environment.GetEnvironmentVariable("SeqURL");
-            var apiKey = Environment.GetEnvironmentVariable("DTCSharpSeqApiKey");
-            if (string.IsNullOrEmpty(seqURL))
-            {
-                Log.Logger = new LoggerConfiguration()
-                    .ReadFrom
-                    .Configuration(configuration)
-                    .CreateLogger();
-            }
-            else
-            {
-                // Add Seq using environment variables, to keep them out of appsettings.json
-                Log.Logger = new LoggerConfiguration()
-                    .WriteTo.Seq(seqURL, apiKey:apiKey)
-                    .ReadFrom
-                    .Configuration(configuration)
-                    .CreateLogger();
-            }
             try
             {
+                CreateSerilogLogger();
                 Log.Verbose("Starting");
                 Application.Run(new ServerForm());
             }
@@ -53,5 +33,19 @@ namespace TestServer
                 Log.CloseAndFlush();
             }
         }
+        
+        private static void CreateSerilogLogger()
+        {
+            var configuration = new ConfigurationBuilder()
+                    .AddJsonFile("appsettings.json")
+                    .AddUserSecrets<ServerForm>()
+                    .Build();
+            Log.Logger = new LoggerConfiguration()
+                .ReadFrom
+                .Configuration(configuration)
+                .CreateLogger();
+        }
+
+
     }
 }

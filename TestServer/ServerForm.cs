@@ -11,7 +11,7 @@ namespace TestServer
 {
     public partial class ServerForm : Form
     {
-        private ExampleService _serverPrimary;
+        private ExampleService _serverListener;
         private ExampleService _serverHistorical;
         private IPAddress _ipAddress;
 
@@ -48,18 +48,18 @@ namespace TestServer
         {
             btnStartPrimary.Enabled = false;
             btnStopPrimary.Enabled = true;
-            _serverPrimary = new ExampleService(_ipAddress, PortListener, 100, 200);
-            _serverPrimary.MessageEvent += ExampleServiceMessageEvent;
-            _serverPrimary.StartServer();
-            logControl1.LogMessage($"Started {_serverPrimary}");
+            _serverListener = new ExampleService(_ipAddress, PortListener, 100, 200);
+            _serverListener.MessageEvent += ExampleServiceMessageEvent;
+            _serverListener.StartServer();
+            logControl1.LogMessage($"Started {_serverListener}");
         }
 
         private void btnStopPrimary_Click(object sender, EventArgs e)
         {
             btnStartPrimary.Enabled = true;
             btnStopPrimary.Enabled = false;
-            _serverPrimary.Dispose();
-            logControl1.LogMessage($"Stopped {_serverPrimary}");
+            _serverListener.Dispose();
+            logControl1.LogMessage($"Stopped {_serverListener}");
         }
 
         private void btnStartHistorical_Click(object sender, EventArgs e)

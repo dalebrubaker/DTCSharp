@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 using Serilog;
 
 namespace Tests;
@@ -15,24 +16,22 @@ public class TestFixture : IDisposable
     public TestFixture()
     {
         // Allow logging during Tests
-        var seqURL = Environment.GetEnvironmentVariable("SeqURL");
-        var apiKey = Environment.GetEnvironmentVariable("DTCSharpSeqApiKey");
-        if (seqURL != null)
-        {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Verbose()
-                .Enrich.FromLogContext()
-                .Enrich.WithProcessId()
-                .Enrich.WithThreadId()
-                .Enrich.WithThreadName()
-                .Enrich
-                .WithProperty("Application", nameof(Tests))
-                .WriteTo.Seq(seqURL, apiKey: apiKey)
-                .CreateLogger();
-        }
+        SetLogging();
         var method = (MethodBase.GetCurrentMethod());
         var stackTrace = Environment.StackTrace;
-        Log.Verbose("Starting {counter} {classType}", s_counterStart++, GetType().Name);
+        Log.Verbose("Starting {Counter} {ClassType}", s_counterStart++, GetType().Name);
+    }
+
+     public static void SetLogging()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json")
+            .AddUserSecrets<TestFixture>()
+            .Build();
+        Log.Logger = new LoggerConfiguration()
+            .ReadFrom
+            .Configuration(configuration)
+            .CreateLogger();
     }
 
     public void Dispose()

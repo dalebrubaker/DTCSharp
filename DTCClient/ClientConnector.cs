@@ -87,7 +87,7 @@ namespace DTCClient
                 if (error.IsError || _logonResponse is not { Result: LogonStatusEnum.LogonSuccess })
                 {
                     var resultText = error.IsError ? error.ResultText : LastLogonResultText;
-                    s_logger.Verbose("Client {This} logon failed because {ResultText}", this, resultText);
+                    s_logger.Verbose("Client {ClientConnector} logon failed because {ResultText}, timer started to keep trying", this, resultText);
                     // Tell the ClientHandler that we're done, rather than wait for this client to disappear
                     _client?.SendRequest(DTCMessageType.Logoff, new Logoff { Reason = "Unable to logon, giving up." });
                     _client?.Dispose();
@@ -120,7 +120,7 @@ namespace DTCClient
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, "{Message}", ex.Message);
+                s_logger.Error(ex, "Connection attempt failed");
                 throw;
             }
         }

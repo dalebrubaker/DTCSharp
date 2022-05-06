@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using Microsoft.Extensions.Configuration;
 using Serilog;
 
 namespace TestClient
@@ -16,23 +17,9 @@ namespace TestClient
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
 
-            var seqURL = Environment.GetEnvironmentVariable("SeqURL");
-            var apiKey = Environment.GetEnvironmentVariable("DTCSharpSeqApiKey");
-            if (seqURL != null)
-            {
-                Log.Logger = new LoggerConfiguration()
-                    .MinimumLevel.Verbose()
-                    .Enrich.FromLogContext()
-                    .Enrich.WithProcessId()
-                    .Enrich.WithThreadId()
-                    .Enrich.WithThreadName()
-                    .Enrich
-                    .WithProperty("Application", nameof(TestClient))
-                    .WriteTo.Seq(seqURL, apiKey: apiKey)
-                    .CreateLogger();
-            }
             try
             {
+                CreateSerilogLogger();
                 Log.Verbose("Starting");
                 Application.Run(new ClientForm());
             }
@@ -45,6 +32,18 @@ namespace TestClient
                 Log.Verbose("Exiting");
                 Log.CloseAndFlush();
             }
+        }
+
+        private static void CreateSerilogLogger()
+        {
+            var configuration = new ConfigurationBuilder()
+                    .AddJsonFile("appsettings.json")
+                    .AddUserSecrets<ClientForm>()
+                    .Build();
+            Log.Logger = new LoggerConfiguration()
+                .ReadFrom
+                .Configuration(configuration)
+                .CreateLogger();
         }
     }
 }
