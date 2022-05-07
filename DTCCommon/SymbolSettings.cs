@@ -11,7 +11,7 @@ namespace DTCCommon
     /// </summary>
     public class SymbolSettings
     {
-        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType!);
 
         private readonly string _path;
 

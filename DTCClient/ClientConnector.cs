@@ -12,7 +12,7 @@ namespace DTCClient
     /// </summary>
     public class ClientConnector : IDisposable
     {
-        private static readonly ILogger s_logger = Log.ForContext(MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly ILogger s_logger = Log.ForContext(MethodBase.GetCurrentMethod()?.DeclaringType!);
 
         private readonly string _hostname;
         private readonly int _port;

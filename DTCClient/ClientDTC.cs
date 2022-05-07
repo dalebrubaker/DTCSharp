@@ -20,7 +20,7 @@ namespace DTCClient
 {
     public partial class ClientDTC : TcpClient
     {
-        private static readonly ILogger s_logger = Log.ForContext(MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly ILogger s_logger = Log.ForContext(MethodBase.GetCurrentMethod()?.DeclaringType!);
 
         private static int s_instanceId;
 
