@@ -111,7 +111,7 @@ namespace DTCClient
                 throw new TimeoutException();
             }
 
-            s_logger.Verbose($"Received {countRecordsReceived:N0} records for {symbol} {recordInterval}");
+            s_logger.Verbose("Received {CountRecordsReceived:N0} records for {Symbol} {RecordInterval}", countRecordsReceived, symbol, recordInterval);
             return error;
         }
 
@@ -212,7 +212,7 @@ namespace DTCClient
                         throw new DTCSharpException("Why?");
                     }
                     error = new Result(reject.RejectText);
-                    s_logger.Debug($"SecurityDefinitionReject for {symbol} ={requestId} {reject.RejectText}");
+                    s_logger.Debug("SecurityDefinitionReject for {Symbol} ={RequestId} {RejectText}", symbol, requestId, reject.RejectText);
                     signal.Set();
                 }
 
@@ -343,7 +343,7 @@ namespace DTCClient
                     Symbol = symbol,
                     Exchange = exchange
                 };
-                s_logger.Information($"Subscribing to MarketData: {request}");
+                s_logger.Information("Subscribing to MarketData: {Request}", request);
                 SendRequest(DTCMessageType.MarketDataRequest, request);
                 return symbolId;
             }
@@ -364,7 +364,7 @@ namespace DTCClient
                 Symbol = symbol,
                 Exchange = exchange
             };
-            s_logger.Information($"Unsubscribing from MarketData: {request}");
+            s_logger.Information("Unsubscribing from MarketData: {Request}", request);
             SendRequest(DTCMessageType.MarketDataRequest, request);
         }
 
@@ -1001,7 +1001,7 @@ namespace DTCClient
 
             //s_logger.Debug($"SendRequest() {request}");
             SendRequest(DTCMessageType.SubmitNewSingleOrder, request);
-            s_logger.Information($"{TradeMessageLogging}Sent SubmitNewSingleOrder Request={request}");
+            s_logger.Information("{TradeMessageLogging}Sent SubmitNewSingleOrder Request={Request}", TradeMessageLogging, request);
         }
 
         /// <summary>
@@ -1107,7 +1107,7 @@ namespace DTCClient
             }
 
             SendRequest(DTCMessageType.SubmitNewOcoOrder, request);
-            s_logger.Information($"{TradeMessageLogging}Sent SubmitOcoOrder Request={request}");
+            s_logger.Information("{TradeMessageLogging}Sent SubmitOcoOrder Request={Request}", TradeMessageLogging, request);
         }
         // ReSharper restore InconsistentNaming
 
@@ -1122,8 +1122,8 @@ namespace DTCClient
                 FreeFormText = freeFormText,
                 IsAutomatedOrder = isAutomatedOrder ? 1u : 0
             };
-            SendRequest(DTCMessageType.SubmitFlattenPositionOrder, request);            
-            s_logger.Information($"{TradeMessageLogging}Sent SubmitFlattenPositionOrder Request={request}");
+            SendRequest(DTCMessageType.SubmitFlattenPositionOrder, request);
+            s_logger.Information("{TradeMessageLogging}Sent SubmitFlattenPositionOrder Request={Request}", TradeMessageLogging, request);
         }
 
         public void CancelOrder(string accountName, string clientOrderId, string serverOrderId)
@@ -1179,7 +1179,7 @@ namespace DTCClient
 
             //s_logger.Debug($"SendRequest() {request}");
             SendRequest(DTCMessageType.CancelOrder, request);
-            s_logger.Information($"{TradeMessageLogging}Sent CancelOrder Request={request}");
+            s_logger.Information("{TradeMessageLogging}Sent CancelOrder Request={Request}", TradeMessageLogging, request);
         }
 
         /// <summary>
@@ -1290,7 +1290,7 @@ namespace DTCClient
 
             //s_logger.Debug($"SendRequest() {request}");
             SendRequest(DTCMessageType.CancelReplaceOrder, request);
-            s_logger.Information($"{TradeMessageLogging} sent CancelReplaceOrder Request={request}");
+            s_logger.Information("{TradeMessageLogging} sent CancelReplaceOrder Request={Request}", TradeMessageLogging, request);
         }
     }
 }

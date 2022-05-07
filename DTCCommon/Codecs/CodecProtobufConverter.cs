@@ -42,7 +42,7 @@ namespace DTCCommon.Codecs
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, $"MessageType={messageEncoded.MessageType} {ex.Message}");
+                s_logger.Error(ex, "MessageType={MessageType} {Message}", messageEncoded.MessageType, ex.Message);
                 throw;
             }
         }

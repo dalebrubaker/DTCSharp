@@ -132,7 +132,7 @@ namespace DTCClient
                 // This is what we use for Historical connections. 0 means infinite
                 //throw new ArgumentException("heartbeatIntervalInSeconds must be at least 1");
             }
-            s_logger.Verbose($"Starting encoding/logon for {_clientName} in {this}");
+            s_logger.Verbose("Starting encoding/logon for {_clientName} in {ClientDTC}", _clientName, this);
             var encodingResult = SetEncoding(requestedEncoding);
             if (encodingResult.IsError)
             {
@@ -158,7 +158,7 @@ namespace DTCClient
             // Wait until the response is received or the networkStream times out
             if (LogonResponse == null)
             {
-                s_logger.Verbose($"Waiting for logon response in {this}");
+                s_logger.Verbose("Waiting for logon response in {ClientDTC}", this);
                 signal.WaitOne(TimeoutMs);
                 if (LogonResponse == null)
                 {
@@ -167,12 +167,12 @@ namespace DTCClient
                     var error = new Result(msg, ErrorTypes.LogonRefused);
                     return (null, error);
                 }
-                s_logger.Verbose($"Done waiting for logon response in {this}, received {LogonResponse}");
+                s_logger.Verbose("Done waiting for logon response in {ClientDTC}, received {LogonResponse}", this, LogonResponse);
             }
             if (LogonResponse.Result != LogonStatusEnum.LogonSuccess)
             {
                 // unsuccessful logon
-                s_logger.Verbose($"Unsuccessful logon for {_clientName} due to {LogonResponse.ResultText} in {this}");
+                s_logger.Verbose("Unsuccessful logon for {_clientName} due to {ResultText} in {ClientDTC}", _clientName, LogonResponse.ResultText, this);
                 var error = new Result(LogonResponse.ResultText);
                 return (null, error);
             }
@@ -306,18 +306,18 @@ namespace DTCClient
                     _currentStream.WriteMessageEncoded(messageEncoded);
                     if (messageProto.MessageType != DTCMessageType.Heartbeat)
                     {
-                        s_logger.Verbose($"{this} {nameof(SendRequest)} sent with {_currentEncoding} {messageProto}");
+                        s_logger.Verbose("{ClientDTC} {V} sent with {_currentEncoding} {MessageProto}", this, nameof(SendRequest), _currentEncoding, messageProto);
                     }
                 }
             }
             catch (ObjectDisposedException ex)
             {
-                s_logger.Error(ex, $"{ex.Message} in {this}");
+                s_logger.Error(ex, "{Message} in {ClientDTC}", ex.Message, this);
                 Dispose();
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, $"{ex.Message} in {this}");
+                s_logger.Error(ex, "{Message} in {ClientDTC}", ex.Message, this);
                 Dispose();
             }
         }
@@ -329,7 +329,7 @@ namespace DTCClient
             if (secondsSinceLastMessageReceived > 2 * _heartbeatIntervalInSeconds)
             {
                 // The server has disappeared
-                s_logger.Error($"Server disappeared from {this}");
+                s_logger.Error("Server disappeared from {ClientDTC}", this);
                 Dispose();
                 return;
             }
@@ -407,24 +407,24 @@ namespace DTCClient
             catch (InvalidProtocolBufferException ex)
             {
                 s_logger.Error(ex,
-                    $"Client {this}: error messageEncoded={messageEncoded} - {messageProto} {ex.Message} _currentEncoding={_currentEncoding} in {this}");
+"Client {ClientDTC}: error messageEncoded={MessageEncoded} - {MessageProto} {Message} _currentEncoding={_currentEncoding} in {ClientDTC1}", this, messageEncoded, messageProto, ex.Message, _currentEncoding, this);
                 Dispose();
             }
             catch (EndOfStreamException)
             {
-                s_logger.Verbose($"Client {this} reached end of stream {_currentStream} in {this}");
+                s_logger.Verbose("Client {ClientDTC} reached end of stream {_currentStream} in {ClientDTC1}", this, _currentStream, this);
                 Dispose();
             }
             catch (IOException)
             {
-                s_logger.Verbose($"Client {this} reached end of stream {_currentStream} in {this}");
+                s_logger.Verbose("Client {ClientDTC} reached end of stream {_currentStream} in {ClientDTC1}", this, _currentStream, this);
                 Dispose();
             }
             catch (Exception ex)
             {
                 if (!_cts.IsCancellationRequested)
                 {
-                    s_logger.Error(ex, $"{ex.Message} in {this}");
+                    s_logger.Error(ex, "{Message} in {ClientDTC}", ex.Message, this);
                 }
                 Dispose();
             }
@@ -447,7 +447,7 @@ namespace DTCClient
                     //s_logger.Verbose($"{this}.{nameof(ResponsesProcessor)} took from _responsesQueue: {messageProto}");
                     if (messageProto.MessageType is DTCMessageType.OrderUpdate) // or DTCMessageType.PositionUpdate) // or DTCMessageType.AccountBalanceUpdate)
                     {
-                        s_logger.Verbose($"{TradeMessageLogging}{this}.{nameof(ResponsesProcessor)} took from _responsesQueue: {messageProto}");
+                        s_logger.Verbose("{TradeMessageLogging}{ClientDTC}.{V} took from _responsesQueue: {MessageProto}", TradeMessageLogging, this, nameof(ResponsesProcessor), messageProto);
                     }
                     ProcessResponse(messageProto);
                 }
@@ -460,7 +460,7 @@ namespace DTCClient
                 {
                     if (!_cts.IsCancellationRequested)
                     {
-                        s_logger.Error(ex, $"{ex.Message} in {this}");
+                        s_logger.Error(ex, "{Message} in {ClientDTC}", ex.Message, this);
                     }
                     Dispose();
                     throw;
@@ -491,7 +491,7 @@ namespace DTCClient
             IsConnected = false;
             OnDisconnected();
             base.Dispose(disposing); // same as dispose
-            s_logger.Verbose($"Disposed {this}");
+            s_logger.Verbose("Disposed {ClientDTC}", this);
         }
 
         public override string ToString()

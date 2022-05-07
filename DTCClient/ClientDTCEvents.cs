@@ -368,7 +368,7 @@ namespace DTCClient
                     case EncodingEnum.BinaryEncoding:
                         _encode = CodecBinaryConverter.EncodeBinary;
                         _decode = CodecBinaryConverter.DecodeBinary;
-                        s_logger.Verbose($"Changed codec from {_currentEncoding} to {encodingResponse.Encoding} in {this}");
+                        s_logger.Verbose("Changed codec from {_currentEncoding} to {Encoding} in {ClientDTC}", _currentEncoding, encodingResponse.Encoding, this);
                         break;
                     case EncodingEnum.BinaryWithVariableLengthStrings:
                     case EncodingEnum.JsonEncoding:
@@ -377,7 +377,7 @@ namespace DTCClient
                     case EncodingEnum.ProtocolBuffers:
                         _encode = CodecProtobufConverter.EncodeProtobuf;
                         _decode = CodecProtobufConverter.DecodeProtobuf;
-                        s_logger.Verbose($"Changed codec from {_currentEncoding} to {encodingResponse.Encoding} in {this}");
+                        s_logger.Verbose("Changed codec from {_currentEncoding} to {Encoding} in {ClientDTC}", _currentEncoding, encodingResponse.Encoding, this);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -418,11 +418,11 @@ namespace DTCClient
             {
                 // Leave the network stream open, but wrap it with DeflateStream so future reads and writes are zipped.
                 _currentStream = new DeflateStream(_currentStream, CompressionMode.Decompress, true);
-                s_logger.Debug($"{this} switched stream to read zipped.");
+                s_logger.Debug("{ClientDTC} switched stream to read zipped.", this);
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, $"{ex.Message} in {this}");
+                s_logger.Error(ex, "{Message} in {ClientDTC}", ex.Message, this);
                 Dispose();
             }
         }

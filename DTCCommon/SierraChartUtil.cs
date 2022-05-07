@@ -429,7 +429,7 @@ namespace DTCCommon
                 {
                     responseRecord.IsFinalRecordBool = true;
                     yield return responseRecord;
-                    s_logger.Verbose($"Returned final record {responseRecord} from {path}");
+                    s_logger.Verbose("Returned final record {ResponseRecord} from {Path}", responseRecord, path);
                     yield break;
                 }
                 yield return responseRecord;

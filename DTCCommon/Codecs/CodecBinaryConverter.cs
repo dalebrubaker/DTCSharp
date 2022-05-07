@@ -287,7 +287,7 @@ namespace DTCCommon.Codecs
                 case DTCMessageType.AccountBalanceUpdate:
                 case DTCMessageType.PositionUpdate:
                     // Probably being thrown from SC on an open trade while connecting binary for Encoding change
-                    s_logger.Warning($"Ignoring binary message {messageEncoded}");
+                    s_logger.Warning("Ignoring binary message {MessageEncoded}", messageEncoded);
                     break;
                 case DTCMessageType.UserMessage:
                     var userMessage = (UserMessage)message;
