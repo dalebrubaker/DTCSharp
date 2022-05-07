@@ -15,10 +15,9 @@ namespace Tests
     [Collection("Logging collection")]
     public class ClientServerTests : IDisposable
     {
-        // ReSharper disable once InconsistentNaming
-        private static int _nextServerPort = 54321;
+        private static int s_nextServerPort = 54321;
 
-        private static readonly object s_lock = new object();
+        private static readonly object s_lock = new();
         private readonly ITestOutputHelper _output;
         private readonly TestFixture _fixture;
 
@@ -34,7 +33,7 @@ namespace Tests
             {
                 lock (s_lock)
                 {
-                    return _nextServerPort++;
+                    return s_nextServerPort++;
                 }
             }
         }
