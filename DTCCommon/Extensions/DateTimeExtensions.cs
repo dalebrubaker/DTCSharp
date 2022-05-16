@@ -8,6 +8,12 @@ namespace DTCCommon
         public static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Unspecified);
         private static readonly DateTime s_scMicrosecondsEpoch = new DateTime(1899, 12, 30, 0, 0, 0, DateTimeKind.Unspecified);
         private const long TicksPerMicrosecond = 10;
+        private static readonly long s_maxSeconds;
+
+        static DateTimeExtensions()
+        {
+            s_maxSeconds = (long)(DateTime.MaxValue - UnixEpoch).TotalSeconds;
+        }
 
         /// <summary>
         /// https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime
@@ -30,6 +36,10 @@ namespace DTCCommon
         /// <returns></returns>
         public static long UtcToDtcDateTime(this DateTime dateTimeUtc)
         {
+            if (dateTimeUtc == DateTime.MinValue)
+            {
+                return 0;
+            }
             var result = dateTimeUtc.ToUnixSeconds();
             return result;
         }
@@ -143,7 +153,7 @@ namespace DTCCommon
             {
                 return DateTime.MinValue;
             }
-            if (unixSeconds == long.MaxValue)
+            if (unixSeconds >= s_maxSeconds)
             {
                 return DateTime.MaxValue;
             }
