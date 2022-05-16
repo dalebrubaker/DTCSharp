@@ -164,7 +164,7 @@ namespace DTCCommon
         {
             if (dateTime == DateTime.MinValue)
             {
-                return 0;
+                return long.MinValue;
             }
             var result = (long)(dateTime - UnixEpoch).TotalSeconds;
             //var check = result.FromUnixSecondsToDateTime();
@@ -195,7 +195,7 @@ namespace DTCCommon
         {
             if (dateTime == DateTime.MinValue)
             {
-                return 0;
+                return long.MinValue;
             }
             var result = (dateTime - s_scMicrosecondsEpoch).Ticks / TicksPerMicrosecond;
             return result;
