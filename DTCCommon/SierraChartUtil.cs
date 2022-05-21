@@ -40,7 +40,7 @@ namespace DTCCommon
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "{Message}", ex.Message);
                 throw;
             }
         }
@@ -170,7 +170,7 @@ namespace DTCCommon
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "{Message}", ex.Message);
                 throw;
             }
         }
@@ -196,7 +196,7 @@ namespace DTCCommon
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "{Message}", ex.Message);
                 throw;
             }
         }
@@ -224,7 +224,7 @@ namespace DTCCommon
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "{Message}", ex.Message);
                 throw;
             }
         }
@@ -251,7 +251,7 @@ namespace DTCCommon
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "{Message}", ex.Message);
                 throw;
             }
         }
@@ -352,7 +352,7 @@ namespace DTCCommon
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "{Message}", ex.Message);
                 throw;
             }
         }
@@ -480,7 +480,7 @@ namespace DTCCommon
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "{Message}", ex.Message);
                 throw;
             }
 
@@ -630,7 +630,7 @@ namespace DTCCommon
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "{Message}", ex.Message);
                 throw;
             }
         }
@@ -670,7 +670,7 @@ namespace DTCCommon
                 }
                 catch (Exception ex)
                 {
-                    s_logger.Error(ex, ex.Message);
+                    s_logger.Error(ex, "{Message}", ex.Message);
                     throw;
                 }
             }
@@ -739,7 +739,7 @@ namespace DTCCommon
                 }
                 catch (Exception ex)
                 {
-                    s_logger.Error(ex, ex.Message);
+                    s_logger.Error(ex, "{Message}", ex.Message);
                     throw;
                 }
             }
@@ -799,7 +799,7 @@ namespace DTCCommon
                 }
                 catch (Exception ex)
                 {
-                    s_logger.Error(ex, ex.Message);
+                    s_logger.Error(ex, "{Message}", ex.Message);
                     throw;
                 }
             }
