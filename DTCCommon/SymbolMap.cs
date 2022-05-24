@@ -85,6 +85,12 @@ namespace DTCCommon
             }
         }
 
+        public void Clear()
+        {
+            _symbolBySymbolDTC.Clear();
+            _symbolDTCBySymbol.Clear();
+        }
+
         public override string ToString()
         {
             return $"{_name} Count={Count:N0}";
