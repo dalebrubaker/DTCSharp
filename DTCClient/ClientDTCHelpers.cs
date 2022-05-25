@@ -191,13 +191,14 @@ namespace DTCClient
                         s_logger.Debug(msg);
                         securityDefinitionResponse = null;
                     }
-                    else if (string.IsNullOrEmpty(response.Description) && response.SecurityType != SecurityTypeEnum.SecurityTypeStock)
-                    {
-                        // Sierra Chart never does reject, but unrecognized symbols seem to have null Description per https://www.sierrachart.com/SupportBoard.php?PostID=161327#P161327
-                        // But BarChart stocks do come back with empty Description
-                        error = new Result($"Unrecognized symbol={symbol} exchange={exchange}. Description is empty.", ErrorTypes.UnrecognizedSymbol);
-                        securityDefinitionResponse = null;
-                    }
+                    // else if (string.IsNullOrEmpty(response.Description) && response.SecurityType != SecurityTypeEnum.SecurityTypeStock)
+                    // {
+                    //     // Sierra Chart never does reject, but unrecognized symbols seem to have null Description per https://www.sierrachart.com/SupportBoard.php?PostID=161327#P161327
+                    //     // But BarChart stocks do come back with empty Description
+                    //     error = new Result($"Unrecognized symbol={symbol} exchange={exchange}. Description is empty.", ErrorTypes.UnrecognizedSymbol);
+                    //     securityDefinitionResponse = null;
+                    // }
+                    FixupSecurityDefinitionBugs(securityDefinitionResponse);
                     s_securityDefinitionsBySymbol[symbol] = securityDefinitionResponse; // Yes we even cache nulls. DTC won't have it next call, either.
                     signal.Set();
                 }
@@ -233,6 +234,24 @@ namespace DTCClient
                     throw new TimeoutException();
                 }
                 return (securityDefinitionResponse, error);
+            }
+        }
+
+        /// <summary>
+        /// Fix problems with SC responses
+        /// </summary>
+        /// <param name="securityDefinitionResponse"></param>
+        private void FixupSecurityDefinitionBugs(SecurityDefinitionResponse securityDefinitionResponse)
+        {
+            if (securityDefinitionResponse.SecurityType == SecurityTypeEnum.SecurityTypeUnset)
+            {
+                if (securityDefinitionResponse.Symbol.Contains("GLOBEX") || securityDefinitionResponse.Symbol.StartsWith("MNQ"))
+                {
+                    securityDefinitionResponse.SecurityType = SecurityTypeEnum.SecurityTypeFuture;
+                }
+                else
+                {
+                }
             }
         }
 
