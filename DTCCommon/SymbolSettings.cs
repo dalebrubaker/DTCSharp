@@ -49,7 +49,20 @@ namespace DTCCommon
             if (node == null)
             {
                 // unrecognized symbol
-                return null;
+                if (symbol.EndsWith("-GLOBEX"))
+                {
+                    // For some reason SC requires -USD for symbolSettings but NOT for data requests via DTC
+                    symbol += "-USD";
+                    node = GetNode(symbol);
+                    if (node == null)
+                    {
+                        return null;
+                    }
+                }
+                else
+                {
+                    return null;
+                }
             }
             foreach (XmlNode element in node.ChildNodes)
             {
