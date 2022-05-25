@@ -306,7 +306,7 @@ namespace DTCClient
                     _currentStream.WriteMessageEncoded(messageEncoded);
                     if (messageProto.MessageType != DTCMessageType.Heartbeat)
                     {
-                        s_logger.Verbose("{ClientDTC} {V} sent with {_currentEncoding} {MessageProto}", this, nameof(SendRequest), _currentEncoding, messageProto);
+                        s_logger.Verbose("{ClientDTC} {Method} sent with {_currentEncoding} {MessageProto}", this, nameof(SendRequest), _currentEncoding, messageProto);
                     }
                 }
             }
@@ -447,7 +447,7 @@ namespace DTCClient
                     //s_logger.Verbose($"{this}.{nameof(ResponsesProcessor)} took from _responsesQueue: {messageProto}");
                     if (messageProto.MessageType is DTCMessageType.OrderUpdate) // or DTCMessageType.PositionUpdate) // or DTCMessageType.AccountBalanceUpdate)
                     {
-                        s_logger.Verbose("{TradeMessageLogging}{ClientDTC}.{V} took from _responsesQueue: {MessageProto}", TradeMessageLogging, this, nameof(ResponsesProcessor), messageProto);
+                        s_logger.Verbose("{TradeMessageLogging}{ClientDTC}.{Method} took from _responsesQueue: {MessageProto}", TradeMessageLogging, this, nameof(ResponsesProcessor), messageProto);
                     }
                     ProcessResponse(messageProto);
                 }
