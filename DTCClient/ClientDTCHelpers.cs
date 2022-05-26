@@ -106,7 +106,7 @@ namespace DTCClient
 
             // Send the request
             GetHistoricalData(requestId, symbol, exchange, recordInterval, startDateTimeUtc, endDateTimeUtc, maxDaysToReturn, useZLibCompression, requestDividendAdjustedStockData, flag1);
-            if (!signal.WaitOne(TimeoutMs))
+            if (!signal.WaitOne(TimeoutMs * 10)) // Need much longer timeout for historical, especially when doing several at once
             {
                 throw new TimeoutException();
             }
