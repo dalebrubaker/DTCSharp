@@ -255,6 +255,32 @@ namespace DTCCommon
                 throw;
             }
         }
+        
+        public static (long count, DateTime lastStartDateTimeUtc) GetCountAndLastTimestamp(string path)
+        {
+            DebugDTC.Assert(path.EndsWith(".scid"));
+            if (!File.Exists(path))
+            {
+                return (0, DateTime.MinValue);
+            }
+            try
+            {
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var br = new BinaryReader(fs);
+                var header = GetHeader(fs);
+                var count = (fs.Length - header.HeaderSize) / header.RecordSize;
+                br.BaseStream.Seek(-header.RecordSize, SeekOrigin.End);
+                var lastStartDateTime = br.ReadInt64();
+                var lastStartDateTimeUtc = lastStartDateTime.FromScMicroSecondsToDateTime();
+                return (count, lastStartDateTimeUtc);
+            }
+            catch (Exception ex)
+            {
+                s_logger.Error(ex, "{Message}", ex.Message);
+                throw;
+            }
+        }
+
 
         /// <summary>
         ///  Get both the count and the startIndex for startTimestampUtc
