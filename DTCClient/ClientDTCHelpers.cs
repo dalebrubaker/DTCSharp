@@ -40,6 +40,8 @@ namespace DTCClient
             var countRecordsReceived = 0;
             var error = new Result();
             var signal = new ManualResetEvent(false);
+            var isDataReceivedDuringTimeout = false;
+            var isFinishedUpdating = false;
 
             // Set up handler to capture the reject event
             void OnHistoricalPriceDataRejectEvent(object s, HistoricalPriceDataReject historicalPriceDataReject)
@@ -52,6 +54,7 @@ namespace DTCClient
                 var message = $"{historicalPriceDataReject.RejectText} {historicalPriceDataReject.RejectReasonCode} for symbol={symbol} exchange={exchange}";
                 error = new Result(message, ErrorTypes.NoDataAvailableForSymbol);
                 rejectCallback?.Invoke(historicalPriceDataReject);
+                isFinishedUpdating = true;
                 signal.Set();
                 //s_logger.Debug($"Rejection historicalPriceDataReject={historicalPriceDataReject}");
             }
@@ -67,9 +70,11 @@ namespace DTCClient
                     return;
                 }
                 headerCallback(header);
+                isDataReceivedDuringTimeout = true;
                 if (header.IsNoRecordsAvailable)
                 {
                     error = new Result();
+                    isFinishedUpdating = true;
                     signal.Set();
                     //s_logger.Debug($"No records available for {symbol} {recordInterval} header={header}");
                 }
@@ -94,10 +99,12 @@ namespace DTCClient
                     //s_logger.Debug($"Sending for {symbol} response={response}");
                     dataCallback(response);
                     countRecordsReceived++;
+                    isDataReceivedDuringTimeout = true;
                 }
                 if (e.IsFinalRecordBool)
                 {
                     //s_logger.Debug($"Received final record for {symbol} e={e}");
+                    isFinishedUpdating = true;
                     signal.Set();
                 }
             }
@@ -106,11 +113,26 @@ namespace DTCClient
 
             // Send the request
             GetHistoricalData(requestId, symbol, exchange, recordInterval, startDateTimeUtc, endDateTimeUtc, maxDaysToReturn, useZLibCompression, requestDividendAdjustedStockData, flag1);
-            if (!signal.WaitOne(TimeoutMs * 10)) // Need much longer timeout for historical, especially when doing several at once
+            while (!isFinishedUpdating)
             {
-                throw new TimeoutException();
-            }
+                if (!signal.WaitOne(TimeoutMs))
+                {
+                    if (isFinishedUpdating)
+                    {
+                        // All done
+                        break;
+                    }
+                    if (!isDataReceivedDuringTimeout)
+                    {
+                        // No data arrived during TimeoutMs
+                        throw new TimeoutException();
+                    }
 
+                    // Loop until TimeoutMs after we stop receiving historical data
+                    isDataReceivedDuringTimeout = false;
+                    signal.Set();
+                }
+            }
             s_logger.Verbose("Received {CountRecordsReceived:N0} records for {Symbol} {RecordInterval}", countRecordsReceived, symbol, recordInterval);
             return error;
         }
@@ -248,9 +270,6 @@ namespace DTCClient
                 if (securityDefinitionResponse.Symbol.Contains("GLOBEX") || securityDefinitionResponse.Symbol.StartsWith("MNQ"))
                 {
                     securityDefinitionResponse.SecurityType = SecurityTypeEnum.SecurityTypeFuture;
-                }
-                else
-                {
                 }
             }
         }
