@@ -437,7 +437,7 @@ namespace DTCCommon
                 // https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html#s_IntradayRecord__DateTime
                 // https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime
                 var startDateTimeScidUtc = startDateTime.FromScMicroSecondsToDateTime();
-                var startDateTimeUnixSeconds = startDateTimeScidUtc.ToUnixSeconds();
+                var startDateTimeUnixSeconds = startDateTimeScidUtc.ToUnixSecondsDTC();
                 var responseRecord = new HistoricalPriceDataRecordResponse
                 {
                     StartDateTime = startDateTimeUnixSeconds,

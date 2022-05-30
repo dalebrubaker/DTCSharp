@@ -1295,7 +1295,7 @@ namespace DTCClient
                 ClientOrderID = clientOrderId,
                 ServerOrderID = serverOrderId,
                 TimeInForce = tif,
-                GoodTillDateTime = gtd.HasValue ? (ulong)gtd.Value.ToUnixSeconds() : 0,
+                GoodTillDateTime = gtd.HasValue ? (ulong)gtd.Value.ToUnixSecondsDTC() : 0,
                 UpdatePrice1OffsetToParent = updatePrice1OffsetToParent ? 1u : 0
             };
             if (quantity > 0)

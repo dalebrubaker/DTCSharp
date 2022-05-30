@@ -23,7 +23,7 @@ namespace DTCPB
             {
                 if (_orderReceivedDateTimeUtc == DateTime.MinValue)
                 {
-                    _orderReceivedDateTimeUtc = orderReceivedDateTime_.FromUnixSecondsToDateTime();
+                    _orderReceivedDateTimeUtc = orderReceivedDateTime_.FromUnixSecondsToDateTimeDTC();
                 }
                 return _orderReceivedDateTimeUtc;
             }
@@ -39,7 +39,7 @@ namespace DTCPB
                 }
                 return _orderReceivedDateTimeLocal;
             }
-            set => orderReceivedDateTime_ = value.ToUniversalTime().ToUnixSeconds();
+            set => orderReceivedDateTime_ = value.ToUniversalTime().ToUnixSecondsDTC();
         }
 
         public DateTime LastFillDateTimeUtc
@@ -48,7 +48,7 @@ namespace DTCPB
             {
                 if (_lastFillDateTimeUtc == DateTime.MinValue)
                 {
-                    _lastFillDateTimeUtc = lastFillDateTime_.FromUnixSecondsToDateTime();
+                    _lastFillDateTimeUtc = lastFillDateTime_.FromUnixSecondsToDateTimeDTC();
                 }
                 return _lastFillDateTimeUtc;
             }
@@ -64,7 +64,7 @@ namespace DTCPB
                 }
                 return _lastFillDateTimeLocal;
             }
-            set => lastFillDateTime_ = value.ToUniversalTime().ToUnixSeconds();
+            set => lastFillDateTime_ = value.ToUniversalTime().ToUnixSecondsDTC();
         }
 
         public DateTime GoodTillDateTimeUtc
@@ -73,7 +73,7 @@ namespace DTCPB
             {
                 if (_goodTillDateTimeUtc == DateTime.MinValue)
                 {
-                    _goodTillDateTimeUtc = goodTillDateTime_.FromUnixSecondsToDateTime();
+                    _goodTillDateTimeUtc = goodTillDateTime_.FromUnixSecondsToDateTimeDTC();
                 }
                 return _goodTillDateTimeUtc;
             }
@@ -89,7 +89,7 @@ namespace DTCPB
                 }
                 return _goodTillDateTimeLocal;
             }
-            set => goodTillDateTime_ = value.ToUniversalTime().ToUnixSeconds();
+            set => goodTillDateTime_ = value.ToUniversalTime().ToUnixSecondsDTC();
         }
 
         public DateTime LatestTransactionDateTimeUtc
@@ -114,7 +114,7 @@ namespace DTCPB
                 }
                 return _latestTransactionDateTimeLocal;
             }
-            set => latestTransactionDateTime_ = value.ToUniversalTime().ToUnixSeconds();
+            set => latestTransactionDateTime_ = value.ToUniversalTime().ToUnixSecondsDTC();
         }
 
         public OrderAction OrderAction => BuySell.ToOrderAction(OpenOrClose);

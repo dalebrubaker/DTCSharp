@@ -24,7 +24,7 @@ namespace DTCCommon
         /// <returns></returns>
         public static DateTime DtcDateTimeToUtc(this long unixSeconds)
         {
-            return unixSeconds.FromUnixSecondsToDateTime();
+            return unixSeconds.FromUnixSecondsToDateTimeDTC();
         }
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace DTCCommon
             {
                 return 0;
             }
-            var result = dateTimeUtc.ToUnixSeconds();
+            var result = dateTimeUtc.ToUnixSecondsDTC();
             return result;
         }
 
@@ -147,7 +147,7 @@ namespace DTCCommon
         /// Convert UNIX DateTime to Windows DateTime
         /// </summary>
         /// <param name="unixSeconds">time in seconds since Epoch</param>
-        public static DateTime FromUnixSecondsToDateTime(this long unixSeconds)
+        public static DateTime FromUnixSecondsToDateTimeDTC(this long unixSeconds)
         {
             if (unixSeconds == long.MinValue)
             {
@@ -164,7 +164,7 @@ namespace DTCCommon
         /// <summary>
         /// Convert Windows DateTime to UNIX seconds.
         /// </summary>
-        public static long ToUnixSeconds(this DateTime dateTime)
+        public static long ToUnixSecondsDTC(this DateTime dateTime)
         {
             if (dateTime == DateTime.MinValue)
             {

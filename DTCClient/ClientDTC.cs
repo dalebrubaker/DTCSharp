@@ -347,7 +347,7 @@ namespace DTCClient
             // Send a heartbeat to the server
             var heartbeat = new Heartbeat
             {
-                CurrentDateTime = DateTime.UtcNow.ToUnixSeconds()
+                CurrentDateTime = DateTime.UtcNow.ToUnixSecondsDTC()
             };
             try
             {

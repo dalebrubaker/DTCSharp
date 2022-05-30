@@ -8,7 +8,7 @@ namespace DTCPB
 {
     public partial class PositionUpdate : ICustomDiagnosticMessage
     {
-        public DateTime EntryDateTimeUtc => ((long)entryDateTime_).FromUnixSecondsToDateTime();
+        public DateTime EntryDateTimeUtc => ((long)entryDateTime_).FromUnixSecondsToDateTimeDTC();
 
         public bool IsNoPositions => NoPositions != 0;
         public string ToDiagnosticString()
