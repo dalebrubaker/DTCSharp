@@ -491,7 +491,7 @@ namespace DTCClient
             IsConnected = false;
             OnDisconnected();
             base.Dispose(disposing); // same as dispose
-            s_logger.Verbose("Disposed {ClientDTC}", this);
+            s_logger.Verbose("Disposed {ClientDtc}", this);
         }
 
         public override string ToString()

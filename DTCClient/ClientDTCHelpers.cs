@@ -115,7 +115,7 @@ namespace DTCClient
             GetHistoricalData(requestId, symbol, exchange, recordInterval, startDateTimeUtc, endDateTimeUtc, maxDaysToReturn, useZLibCompression, requestDividendAdjustedStockData, flag1);
             while (!isFinishedUpdating)
             {
-                if (!signal.WaitOne(TimeoutMs))
+                if (!signal.WaitOne(TimeoutMs * 2))
                 {
                     if (isFinishedUpdating)
                     {
