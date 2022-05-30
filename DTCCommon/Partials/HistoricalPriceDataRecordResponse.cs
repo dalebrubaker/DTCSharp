@@ -17,7 +17,7 @@ namespace DTCPB
             {
                 if (_startDateTimeUtc == System.DateTime.MinValue)
                 {
-                    _startDateTimeUtc = startDateTime_.FromUnixSecondsToDateTime();
+                    _startDateTimeUtc = startDateTime_.FromUnixSecondsToDateTimeDTC();
                 }
                 return _startDateTimeUtc;
             }
