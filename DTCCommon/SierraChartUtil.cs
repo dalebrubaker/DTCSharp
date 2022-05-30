@@ -405,7 +405,8 @@ namespace DTCCommon
             // Allow reading to the end of the file as it grows during this method
             var prevDateTime = 0L;
             var _ = (fs.Length - header.HeaderSize) / header.RecordSize;
-            for (var i = startIndex; i < (fs.Length - header.HeaderSize) / header.RecordSize; i++)
+            var count = (fs.Length - header.HeaderSize) / header.RecordSize;
+            for (var i = startIndex; i < count; i++)
             {
                 var startDateTime = br.ReadInt64();
                 var openPrice = br.ReadSingle();
