@@ -408,7 +408,27 @@ namespace DTCCommon
             var count = (fs.Length - header.HeaderSize) / header.RecordSize;
             for (var i = startIndex; i < count; i++)
             {
-                var startDateTime = br.ReadInt64();
+                var sendFinalRecordOnException = false;
+                var startDateTime = 0L;
+                try
+                {
+                    startDateTime = br.ReadInt64();
+                }
+                catch (EndOfStreamException)
+                {
+                    // This happens, perhaps because SierraChart has reduced the length of the file
+                    sendFinalRecordOnException = true;
+                }
+                if (sendFinalRecordOnException)
+                {
+                    var finalRecord = new HistoricalPriceDataRecordResponse
+                    {
+                        IsFinalRecordBool = true
+                    };
+                    yield return finalRecord;
+                    s_logger.Verbose("Because of exception returned final record {ResponseRecord} from {Path}", finalRecord, path);
+                    yield break;
+                }
                 var openPrice = br.ReadSingle();
                 var highPrice = br.ReadSingle();
                 var lowPrice = br.ReadSingle();

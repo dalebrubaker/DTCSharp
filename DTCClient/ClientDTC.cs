@@ -132,7 +132,7 @@ namespace DTCClient
                 // This is what we use for Historical connections. 0 means infinite
                 //throw new ArgumentException("heartbeatIntervalInSeconds must be at least 1");
             }
-            s_logger.Verbose("Starting encoding/logon for {_clientName} in {ClientDTC}", _clientName, this);
+            s_logger.Verbose("Starting encoding/logon for {ClientName} in {ClientDtc}", _clientName, this);
             var encodingResult = SetEncoding(requestedEncoding);
             if (encodingResult.IsError)
             {
@@ -407,24 +407,24 @@ namespace DTCClient
             catch (InvalidProtocolBufferException ex)
             {
                 s_logger.Error(ex,
-"Client {ClientDTC}: error messageEncoded={MessageEncoded} - {MessageProto} {Message} _currentEncoding={_currentEncoding} in {ClientDTC1}", this, messageEncoded, messageProto, ex.Message, _currentEncoding, this);
+"Client {ClientDTtc}: error messageEncoded={MessageEncoded} - {MessageProto} {Message} _currentEncoding={CurrentEncoding} in {ClientDtc1}", this, messageEncoded, messageProto, ex.Message, _currentEncoding, this);
                 Dispose();
             }
             catch (EndOfStreamException)
             {
-                s_logger.Verbose("Client {ClientDTC} reached end of stream {_currentStream} in {ClientDTC1}", this, _currentStream, this);
+                s_logger.Verbose("Client {ClientDtc} reached end of stream {@CurrentStream} in {ClientDtc1}", this, _currentStream, this);
                 Dispose();
             }
             catch (IOException)
             {
-                s_logger.Verbose("Client {ClientDTC} reached end of stream {_currentStream} in {ClientDTC1}", this, _currentStream, this);
+                s_logger.Verbose("Client {ClientDtc reached end of stream {CurrentStream} in {ClientDtc1}", this, _currentStream, this);
                 Dispose();
             }
             catch (Exception ex)
             {
                 if (!_cts.IsCancellationRequested)
                 {
-                    s_logger.Error(ex, "{Message} in {ClientDTC}", ex.Message, this);
+                    s_logger.Error(ex, "{Message} in {ClientDtc}", ex.Message, this);
                 }
                 Dispose();
             }
