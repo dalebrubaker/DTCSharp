@@ -33,7 +33,7 @@ namespace DTCClient
         /// <returns></returns>
         /// <exception cref="DTCSharpException"></exception>
         public Result GetHistoricalData(uint requestId, string symbol, string exchange, HistoricalDataIntervalEnum recordInterval, DateTime startDateTimeUtc, DateTime endDateTimeUtc,
-            uint maxDaysToReturn, bool useZLibCompression, bool requestDividendAdjustedStockData, UInt16 integer1,
+            uint maxDaysToReturn, bool useZLibCompression, bool requestDividendAdjustedStockData, ushort integer1,
             Action<HistoricalPriceDataResponseHeader> headerCallback, Action<HistoricalPriceDataRecordResponse> dataCallback, Action<HistoricalPriceDataReject> rejectCallback = null,
             CancellationToken cancellationToken = default)
         {
@@ -151,7 +151,7 @@ namespace DTCClient
         /// <param name="requestDividendAdjustedStockData"></param>
         /// <param name="integer1">Can be set to 0x10 to force SC to re-download per https://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer </param>
         public void GetHistoricalData(uint requestId, string symbol, string exchange, HistoricalDataIntervalEnum recordInterval, DateTime startDateTimeUtc, DateTime endDateTimeUtc,
-            uint maxDaysToReturn, bool useZLibCompression, bool requestDividendAdjustedStockData, UInt16 integer1)
+            uint maxDaysToReturn, bool useZLibCompression, bool requestDividendAdjustedStockData, ushort integer1)
         {
             var startDateTime = startDateTimeUtc == DateTime.MinValue ? 0 : startDateTimeUtc.UtcToDtcDateTime();
             var endDateTime = (endDateTimeUtc == DateTime.MinValue || endDateTimeUtc == DateTime.MaxValue) ? 0 : endDateTimeUtc.UtcToDtcDateTime();
