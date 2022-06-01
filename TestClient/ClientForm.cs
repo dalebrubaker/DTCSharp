@@ -671,7 +671,7 @@ namespace TestClient
             // Now we have successfully logged on
             _stopWatch = Stopwatch.StartNew();
             var error = clientHistorical.GetHistoricalData(ClientDTC.NextRequestId, txtSymbolHistorical.Text, txtExchangeHistorical.Text, recordInterval,
-                dtpStart.Value.ToUniversalTime(), DateTime.MinValue, 0U, cbZip.Checked, false, false, HistoricalPriceDataResponseHeaderCallback,
+                dtpStart.Value.ToUniversalTime(), DateTime.MinValue, 0U, cbZip.Checked, false, 0x10, HistoricalPriceDataResponseHeaderCallback,
                 HistoricalPriceDataRecordResponseCallback);
             if (error.IsError)
             {

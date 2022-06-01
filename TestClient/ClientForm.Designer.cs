@@ -123,8 +123,8 @@
             this.label16 = new System.Windows.Forms.Label();
             this.logControlTrades = new TestClient.LogControl();
             this.tabPageSCID = new System.Windows.Forms.TabPage();
-            this.timerLevel1Update = new System.Windows.Forms.Timer(this.components);
             this.scidUserControl11 = new TestClient.ScidUserControl();
+            this.timerLevel1Update = new System.Windows.Forms.Timer(this.components);
             this.statusStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPageConnect.SuspendLayout();
@@ -219,10 +219,10 @@
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatusLabel1});
-            this.statusStrip1.Location = new System.Drawing.Point(4, 682);
+            this.statusStrip1.Location = new System.Drawing.Point(4, 432);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Padding = new System.Windows.Forms.Padding(1, 0, 16, 0);
-            this.statusStrip1.Size = new System.Drawing.Size(1390, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(1051, 22);
             this.statusStrip1.TabIndex = 8;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -245,7 +245,7 @@
             this.tabControl1.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(857, 485);
+            this.tabControl1.Size = new System.Drawing.Size(1082, 485);
             this.tabControl1.TabIndex = 10;
             // 
             // tabPageConnect
@@ -274,7 +274,7 @@
             this.tabPageConnect.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.tabPageConnect.Name = "tabPageConnect";
             this.tabPageConnect.Padding = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            this.tabPageConnect.Size = new System.Drawing.Size(1398, 707);
+            this.tabPageConnect.Size = new System.Drawing.Size(1059, 457);
             this.tabPageConnect.TabIndex = 0;
             this.tabPageConnect.Text = "Connect";
             this.tabPageConnect.UseVisualStyleBackColor = true;
@@ -437,7 +437,7 @@
             this.tabPageSymbols.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.tabPageSymbols.Name = "tabPageSymbols";
             this.tabPageSymbols.Padding = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            this.tabPageSymbols.Size = new System.Drawing.Size(1398, 707);
+            this.tabPageSymbols.Size = new System.Drawing.Size(1059, 457);
             this.tabPageSymbols.TabIndex = 1;
             this.tabPageSymbols.Text = "Symbols";
             this.tabPageSymbols.UseVisualStyleBackColor = true;
@@ -563,7 +563,7 @@
             this.tabPageLevel1.Location = new System.Drawing.Point(4, 24);
             this.tabPageLevel1.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.tabPageLevel1.Name = "tabPageLevel1";
-            this.tabPageLevel1.Size = new System.Drawing.Size(1398, 707);
+            this.tabPageLevel1.Size = new System.Drawing.Size(1059, 457);
             this.tabPageLevel1.TabIndex = 2;
             this.tabPageLevel1.Text = "Level 1";
             this.tabPageLevel1.UseVisualStyleBackColor = true;
@@ -725,7 +725,7 @@
             this.tabPageHistorical.Location = new System.Drawing.Point(4, 24);
             this.tabPageHistorical.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.tabPageHistorical.Name = "tabPageHistorical";
-            this.tabPageHistorical.Size = new System.Drawing.Size(1398, 707);
+            this.tabPageHistorical.Size = new System.Drawing.Size(1074, 457);
             this.tabPageHistorical.TabIndex = 3;
             this.tabPageHistorical.Text = "Historical";
             this.tabPageHistorical.UseVisualStyleBackColor = true;
@@ -844,13 +844,15 @@
             // 
             // logControlHistorical
             // 
-            this.logControlHistorical.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.logControlHistorical.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.logControlHistorical.HideTimestamps = false;
-            this.logControlHistorical.Location = new System.Drawing.Point(0, 41);
+            this.logControlHistorical.Location = new System.Drawing.Point(4, 39);
             this.logControlHistorical.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.logControlHistorical.MaximumLogLengthChars = 104857600;
             this.logControlHistorical.Name = "logControlHistorical";
-            this.logControlHistorical.Size = new System.Drawing.Size(1398, 666);
+            this.logControlHistorical.Size = new System.Drawing.Size(1075, 418);
             this.logControlHistorical.TabIndex = 10;
             this.logControlHistorical.Title = "Log";
             // 
@@ -889,7 +891,7 @@
             this.tabPageTrade.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.tabPageTrade.Name = "tabPageTrade";
             this.tabPageTrade.Padding = new System.Windows.Forms.Padding(4, 3, 4, 3);
-            this.tabPageTrade.Size = new System.Drawing.Size(849, 457);
+            this.tabPageTrade.Size = new System.Drawing.Size(1059, 457);
             this.tabPageTrade.TabIndex = 4;
             this.tabPageTrade.Text = "Trade";
             this.tabPageTrade.UseVisualStyleBackColor = true;
@@ -1168,7 +1170,7 @@
             this.logControlTrades.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.logControlTrades.MaximumLogLengthChars = 104857600;
             this.logControlTrades.Name = "logControlTrades";
-            this.logControlTrades.Size = new System.Drawing.Size(841, 583);
+            this.logControlTrades.Size = new System.Drawing.Size(1051, 583);
             this.logControlTrades.TabIndex = 150;
             this.logControlTrades.Title = "Log";
             // 
@@ -1177,10 +1179,18 @@
             this.tabPageSCID.Controls.Add(this.scidUserControl11);
             this.tabPageSCID.Location = new System.Drawing.Point(4, 24);
             this.tabPageSCID.Name = "tabPageSCID";
-            this.tabPageSCID.Size = new System.Drawing.Size(849, 457);
+            this.tabPageSCID.Size = new System.Drawing.Size(1059, 457);
             this.tabPageSCID.TabIndex = 5;
             this.tabPageSCID.Text = "SCID";
             this.tabPageSCID.UseVisualStyleBackColor = true;
+            // 
+            // scidUserControl11
+            // 
+            this.scidUserControl11.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.scidUserControl11.Location = new System.Drawing.Point(0, 0);
+            this.scidUserControl11.Name = "scidUserControl11";
+            this.scidUserControl11.Size = new System.Drawing.Size(1059, 457);
+            this.scidUserControl11.TabIndex = 0;
             // 
             // timerLevel1Update
             // 
@@ -1188,19 +1198,11 @@
             this.timerLevel1Update.Interval = 200;
             this.timerLevel1Update.Tick += new System.EventHandler(this.timerLevel1Update_Tick);
             // 
-            // scidUserControl11
-            // 
-            this.scidUserControl11.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.scidUserControl11.Location = new System.Drawing.Point(0, 0);
-            this.scidUserControl11.Name = "scidUserControl11";
-            this.scidUserControl11.Size = new System.Drawing.Size(849, 457);
-            this.scidUserControl11.TabIndex = 0;
-            // 
             // ClientForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(857, 485);
+            this.ClientSize = new System.Drawing.Size(1082, 485);
             this.Controls.Add(this.tabControl1);
             this.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
             this.Name = "ClientForm";

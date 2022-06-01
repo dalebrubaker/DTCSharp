@@ -25,7 +25,7 @@ namespace DTCClient
         /// <param name="maxDaysToReturn"></param>
         /// <param name="useZLibCompression"></param>
         /// <param name="requestDividendAdjustedStockData"></param>
-        /// <param name="flag1"></param>
+        /// <param name="integer1">Can be set to 0x10 to force SC to re-download per https://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer </param>
         /// <param name="headerCallback"></param>
         /// <param name="dataCallback"></param>
         /// <param name="rejectCallback"></param>
@@ -33,7 +33,7 @@ namespace DTCClient
         /// <returns></returns>
         /// <exception cref="DTCSharpException"></exception>
         public Result GetHistoricalData(uint requestId, string symbol, string exchange, HistoricalDataIntervalEnum recordInterval, DateTime startDateTimeUtc, DateTime endDateTimeUtc,
-            uint maxDaysToReturn, bool useZLibCompression, bool requestDividendAdjustedStockData, bool flag1,
+            uint maxDaysToReturn, bool useZLibCompression, bool requestDividendAdjustedStockData, UInt16 integer1,
             Action<HistoricalPriceDataResponseHeader> headerCallback, Action<HistoricalPriceDataRecordResponse> dataCallback, Action<HistoricalPriceDataReject> rejectCallback = null,
             CancellationToken cancellationToken = default)
         {
@@ -112,7 +112,7 @@ namespace DTCClient
             HistoricalPriceDataRecordResponseEvent += Handler;
 
             // Send the request
-            GetHistoricalData(requestId, symbol, exchange, recordInterval, startDateTimeUtc, endDateTimeUtc, maxDaysToReturn, useZLibCompression, requestDividendAdjustedStockData, flag1);
+            GetHistoricalData(requestId, symbol, exchange, recordInterval, startDateTimeUtc, endDateTimeUtc, maxDaysToReturn, useZLibCompression, requestDividendAdjustedStockData, integer1);
             while (!isFinishedUpdating)
             {
                 if (!signal.WaitOne(TimeoutMs * 2))
@@ -149,9 +149,9 @@ namespace DTCClient
         /// <param name="maxDaysToReturn"></param>
         /// <param name="useZLibCompression"></param>
         /// <param name="requestDividendAdjustedStockData"></param>
-        /// <param name="flag1"></param>
+        /// <param name="integer1">Can be set to 0x10 to force SC to re-download per https://www.sierrachart.com/index.php?page=doc/DTCServer.php#HistoricalPriceDataServer </param>
         public void GetHistoricalData(uint requestId, string symbol, string exchange, HistoricalDataIntervalEnum recordInterval, DateTime startDateTimeUtc, DateTime endDateTimeUtc,
-            uint maxDaysToReturn, bool useZLibCompression, bool requestDividendAdjustedStockData, bool flag1)
+            uint maxDaysToReturn, bool useZLibCompression, bool requestDividendAdjustedStockData, UInt16 integer1)
         {
             var startDateTime = startDateTimeUtc == DateTime.MinValue ? 0 : startDateTimeUtc.UtcToDtcDateTime();
             var endDateTime = (endDateTimeUtc == DateTime.MinValue || endDateTimeUtc == DateTime.MaxValue) ? 0 : endDateTimeUtc.UtcToDtcDateTime();
@@ -166,7 +166,7 @@ namespace DTCClient
                 MaxDaysToReturn = maxDaysToReturn,
                 UseZLibCompression = useZLibCompression ? 1U : 0,
                 RequestDividendAdjustedStockData = requestDividendAdjustedStockData ? 1U : 0,
-                Integer1 = flag1 ? 1U : 0,
+                Integer1 = integer1
             };
             SendRequest(DTCMessageType.HistoricalPriceDataRequest, request);
         }
