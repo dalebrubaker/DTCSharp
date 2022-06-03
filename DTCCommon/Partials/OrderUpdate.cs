@@ -46,6 +46,10 @@ namespace DTCPB
         {
             get
             {
+                if (lastFillDateTime_ == 0 && latestTransactionDateTime_ > 0)
+                {
+                    return latestTransactionDateTime_.DtcDateTimeWithMillisecondsToUtc();
+                }
                 if (_lastFillDateTimeUtc == DateTime.MinValue)
                 {
                     _lastFillDateTimeUtc = lastFillDateTime_.FromUnixSecondsToDateTimeDTC();
