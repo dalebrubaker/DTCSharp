@@ -142,13 +142,13 @@ namespace DTCServer
                     case EncodingEnum.BinaryEncoding:
                     case EncodingEnum.ProtocolBuffers:
                         // Accept the encodingRequest
-                        s_logger.Verbose($"ClientHandler is changing encoding from {_currentEncoding} to {encodingRequest.Encoding} in {this}");
+                        s_logger.Verbose("ClientHandler is changing encoding from {_currentEncoding} to {Encoding} in {ClientHandlerDTC}", _currentEncoding, encodingRequest.Encoding, this);
                         encodingResponse.Encoding = encodingRequest.Encoding;
                         break;
                     case EncodingEnum.BinaryWithVariableLengthStrings:
                     case EncodingEnum.JsonEncoding:
                     case EncodingEnum.JsonCompactEncoding:
-                        s_logger.Verbose($"ClientHandler is rejecting the encoding request change to {encodingRequest.Encoding}, encoding remains {_currentEncoding} in {this}");
+                        s_logger.Verbose("ClientHandler is rejecting the encoding request change to {Encoding}, encoding remains {_currentEncoding} in {ClientHandlerDTC}", encodingRequest.Encoding, _currentEncoding, this);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -167,7 +167,7 @@ namespace DTCServer
                     case EncodingEnum.BinaryEncoding:
                         _encode = CodecBinaryConverter.EncodeBinary;
                         _decode = CodecBinaryConverter.DecodeBinary;
-                        s_logger.Verbose($"Changed codec from {_currentEncoding} to {encodingResponse.Encoding} in {this}");
+                        s_logger.Verbose("Changed codec from {_currentEncoding} to {Encoding} in {ClientHandlerDTC}", _currentEncoding, encodingResponse.Encoding, this);
                         break;
                     case EncodingEnum.BinaryWithVariableLengthStrings:
                     case EncodingEnum.JsonEncoding:
@@ -201,11 +201,11 @@ namespace DTCServer
             try
             {
                 _currentStream = new DeflateStream(_currentStream, CompressionMode.Compress, true);
-                s_logger.Debug($"Switched clientHandler to write zipped in {this}");
+                s_logger.Debug("Switched clientHandler to write zipped in {ClientHandlerDTC}", this);
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, $"{ex.Message} in {this}");
+                s_logger.Error(ex, "{Message} in {ClientHandlerDTC}", ex.Message, this);
                 throw;
             }
         }

@@ -70,7 +70,7 @@ namespace DTCServer
             }
             catch (SocketException ex)
             {
-                s_logger.Error(ex, ex.Message);
+                s_logger.Error(ex, "{Message}", ex.Message);
                 throw;
             }
             catch (ThreadAbortException)
@@ -156,7 +156,7 @@ namespace DTCServer
                     }
                     catch (Exception ex)
                     {
-                        s_logger.Warning($"Ignoring {ex.Message} during dispose of clientHandler");
+                        s_logger.Warning("Ignoring {Message} during dispose of clientHandler", ex.Message);
                     }
                 }
             }

@@ -210,7 +210,7 @@ namespace DTCClient
                         // But it isn't reliable, fails even realtime with BTCU21-CME
                         var msg = $"Unrecognized symbol={symbol}. Description is empty or null. {response}";
                         error = new Result(msg, ErrorTypes.UnrecognizedSymbol);
-                        s_logger.Debug(msg);
+                        s_logger.Debug("Unrecognized symbol={Symbol}. Description is empty or null. {Response}", symbol, response);
                         securityDefinitionResponse = null;
                     }
                     // else if (string.IsNullOrEmpty(response.Description) && response.SecurityType != SecurityTypeEnum.SecurityTypeStock)

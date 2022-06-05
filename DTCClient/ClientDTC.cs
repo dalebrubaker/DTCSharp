@@ -163,7 +163,7 @@ namespace DTCClient
                 if (LogonResponse == null)
                 {
                     var msg = $"LogonAsync timed out after {TimeoutMs} milliseconds in {this}";
-                    s_logger.Error(msg);
+                    s_logger.Error("LogonAsync timed out after {TimeoutMs} milliseconds in {This}", TimeoutMs, this);
                     var error = new Result(msg, ErrorTypes.LogonRefused);
                     return (null, error);
                 }
@@ -172,7 +172,7 @@ namespace DTCClient
             if (LogonResponse.Result != LogonStatusEnum.LogonSuccess)
             {
                 // unsuccessful logon
-                s_logger.Verbose("Unsuccessful logon for {_clientName} due to {ResultText} in {ClientDTC}", _clientName, LogonResponse.ResultText, this);
+                s_logger.Verbose("Unsuccessful logon for {ClientName} due to {ResultText} in {ClientDTC}", _clientName, LogonResponse.ResultText, this);
                 var error = new Result(LogonResponse.ResultText);
                 return (null, error);
             }
@@ -306,18 +306,19 @@ namespace DTCClient
                     _currentStream.WriteMessageEncoded(messageEncoded);
                     if (messageProto.MessageType != DTCMessageType.Heartbeat)
                     {
+                        s_logger.Verbose("{ClientDtc} {V} sent with {CurrentEncoding} {MessageProto}", this, nameof(SendRequest), _currentEncoding, messageProto);
                         s_logger.Verbose("{ClientDTC} {Method} sent with {_currentEncoding} {MessageProto}", this, nameof(SendRequest), _currentEncoding, messageProto);
                     }
                 }
             }
             catch (ObjectDisposedException ex)
             {
-                s_logger.Error(ex, "{Message} in {ClientDTC}", ex.Message, this);
+                s_logger.Error(ex, "{Message} in {ClientDtc}", ex.Message, this);
                 Dispose();
             }
             catch (Exception ex)
             {
-                s_logger.Error(ex, "{Message} in {ClientDTC}", ex.Message, this);
+                s_logger.Error(ex, "{Message} in {ClientDtc}", ex.Message, this);
                 Dispose();
             }
         }
@@ -358,11 +359,11 @@ namespace DTCClient
             {
                 // DTC disconnected? No point in continuing with heartbeats
                 _timerHeartbeat.Enabled = false;
-                s_logger.Debug(ex, ex.Message);
+                s_logger.Debug(ex, "Ignoring {Message}", ex.Message);
             }
             catch (Exception ex)
             {
-                s_logger.Debug(ex, ex.Message);
+                s_logger.Error(ex, "Ignoring {Message}", ex.Message);
                 throw;
             }
         }

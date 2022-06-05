@@ -353,7 +353,7 @@ namespace DTCServer
                     clientHandler.SendResponse(DTCMessageType.MarketDataUpdateBidAskCompact, marketDataUpdateBidAskCompact);
                 }
             }
-            s_logger.Debug($"Sent {numSentBidAsks} bid/asks", numSentBidAsks);
+            s_logger.Debug("Sent {NumSentBidAsks} bid/asks", numSentBidAsks, numSentBidAsks);
         }
 
         private static void SendSnapshot(ClientHandlerDTC clientHandler)
