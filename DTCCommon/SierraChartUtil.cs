@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using DTCPB;
 using Serilog;
 
@@ -912,6 +914,80 @@ namespace DTCCommon
                     result = ~result - 1;
                 }
                 return result;
+            }
+        }
+
+        /// <summary>
+        /// Read the .scid file starting with ticks after afterTimestampUtc into HistoricalPriceDataRecordResponse records.
+        /// Note that this causes timestamps to come in unix seconds, per DTC, rather than the SC microseconds in the .scid file
+        /// Ignore any data that is not a Tick.
+        /// Uses Thread.Sleep to wait for another tick to be added to the file
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="afterTimestampUtc">Don't return ticks at or before afterTimestampUtc</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public static IEnumerable<HistoricalPriceDataRecordResponse> ReadRealtimeTicks(string path, DateTime afterTimestampUtc, CancellationToken cancellationToken)
+        {
+            DebugDTC.Assert(path.EndsWith(".scid"));
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite); // FileShare.ReadWrite because SC is writing it
+            using var br = new BinaryReader(fs);
+            var header = GetHeader(fs);
+            var index = GetUpperBound(path, afterTimestampUtc);
+            fs.Position = header.HeaderSize + index * header.RecordSize;
+            var prevDateTime = 0L;
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                if (fs.Position >= fs.Length - header.RecordSize)
+                {
+                    // Wait for a tick to arrive
+                    Thread.Sleep(10);
+                    continue;
+                }
+                var startDateTime = br.ReadInt64();
+                var openPrice = br.ReadSingle();
+                var highPrice = br.ReadSingle();
+                var lowPrice = br.ReadSingle();
+                var lastPrice = br.ReadSingle();
+                var numTrades = br.ReadUInt32();
+                var volume = br.ReadUInt32();
+                var bidVolume = br.ReadUInt32();
+                var askVolume = br.ReadUInt32();
+                if (numTrades == 1)
+                {
+                    // Ticks are supposed to have 0 openPrice, but sometimes have huge negative values
+                    openPrice = 0;
+                }                
+                if (startDateTime < prevDateTime)
+                {
+                    // Skip this out-of-order record
+                    continue;
+                }
+                if (lastPrice == 0)
+                {
+                    // Skip this bad record. Seems rare but it does happen
+                    continue;
+                }
+                prevDateTime = startDateTime;
+                
+                // Convert the SCID StartDateTime (microseconds since 12/30/1899) to HistoricalPriceDataRecordResponse StartDateTime (unix seconds)
+                // https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html#s_IntradayRecord__DateTime
+                // https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime
+                var startDateTimeScidUtc = startDateTime.FromScMicroSecondsToDateTime();
+                var startDateTimeUnixSeconds = startDateTimeScidUtc.ToUnixSecondsDTC();
+                var responseRecord = new HistoricalPriceDataRecordResponse
+                {
+                    StartDateTime = startDateTimeUnixSeconds,
+                    OpenPrice = openPrice,
+                    HighPrice = highPrice,
+                    LowPrice = lowPrice,
+                    LastPrice = lastPrice,
+                    Volume = volume,
+                    BidVolume = bidVolume,
+                    AskVolume = askVolume,
+                    NumTrades = numTrades
+                };
+                yield return responseRecord;
             }
         }
     }
