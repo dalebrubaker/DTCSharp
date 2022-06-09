@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
 using DTCPB;
 using Serilog;
 
@@ -13,7 +13,7 @@ namespace DTCCommon
     /// </summary>
     public static class SierraChartUtil
     {
-        private static readonly ILogger s_logger = Log.ForContext(System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType!);
+        private static readonly ILogger s_logger = Log.ForContext(MethodBase.GetCurrentMethod()?.DeclaringType!);
 
         private const string TimeFormatStringSortsWithMsecs = "yyyyMMdd.HHmmss.fffffff";
         private static readonly Dictionary<string, SymbolSettings> s_symbolSettingsBySierraChartDirectoryAndSettingsFilename = new Dictionary<string, SymbolSettings>();
@@ -202,7 +202,7 @@ namespace DTCCommon
                 throw;
             }
         }
-        
+
         /// <summary>
         /// Get the number of records in the .scid file
         /// </summary>
@@ -257,7 +257,7 @@ namespace DTCCommon
                 throw;
             }
         }
-        
+
         public static (long count, DateTime lastStartDateTimeUtc) GetCountAndLastTimestamp(string path)
         {
             DebugDTC.Assert(path.EndsWith(".scid"));
@@ -282,7 +282,6 @@ namespace DTCCommon
                 throw;
             }
         }
-
 
         /// <summary>
         ///  Get both the count and the startIndex for startTimestampUtc
@@ -384,7 +383,7 @@ namespace DTCCommon
                 throw;
             }
         }
-        
+
         /// <summary>
         /// Read the .scid file into HistoricalPriceDataRecordResponse records
         /// Note that this causes timestamps to come in unix seconds, per DTC, rather than the SC microseconds in the .scid file
@@ -901,7 +900,7 @@ namespace DTCCommon
                     {
                         result--;
                         br.BaseStream.Seek(-header.RecordSize, SeekOrigin.Current);
-                        arrayValue =  br.ReadInt64();
+                        arrayValue = br.ReadInt64();
                     }
 
                     // we went one too far
@@ -934,61 +933,89 @@ namespace DTCCommon
             using var br = new BinaryReader(fs);
             var header = GetHeader(fs);
             var index = GetUpperBound(path, afterTimestampUtc);
-            fs.Position = header.HeaderSize + index * header.RecordSize;
+            var recordSize = header.RecordSize;
+            var position = header.HeaderSize + index * recordSize;
+            fs.Seek(position, SeekOrigin.Begin);
             var prevDateTime = 0L;
             while (!cancellationToken.IsCancellationRequested)
             {
-                if (fs.Position >= fs.Length - header.RecordSize)
+                var count = (fs.Length - position) / recordSize;
+                if (count == 0)
                 {
                     // Wait for a tick to arrive
-                    Thread.Sleep(10);
+                    Thread.Sleep(1);
                     continue;
                 }
-                var startDateTime = br.ReadInt64();
-                var openPrice = br.ReadSingle();
-                var highPrice = br.ReadSingle();
-                var lowPrice = br.ReadSingle();
-                var lastPrice = br.ReadSingle();
-                var numTrades = br.ReadUInt32();
-                var volume = br.ReadUInt32();
-                var bidVolume = br.ReadUInt32();
-                var askVolume = br.ReadUInt32();
-                if (numTrades == 1)
+                s_logger.Debug("{Method} reading {Count} ticks", nameof(ReadRealtimeTicks), count);
+                while (count-- > 0)
                 {
-                    // Ticks are supposed to have 0 openPrice, but sometimes have huge negative values
-                    openPrice = 0;
-                }                
-                if (startDateTime < prevDateTime)
-                {
-                    // Skip this out-of-order record
-                    continue;
+                    var responseRecord = ReadRecord(br, prevDateTime);
+                    if (responseRecord != null)
+                    {
+                        yield return responseRecord;
+                        prevDateTime = responseRecord.StartDateTime;
+                    }
+                    position += recordSize;
                 }
-                if (lastPrice == 0)
-                {
-                    // Skip this bad record. Seems rare but it does happen
-                    continue;
-                }
-                prevDateTime = startDateTime;
-                
-                // Convert the SCID StartDateTime (microseconds since 12/30/1899) to HistoricalPriceDataRecordResponse StartDateTime (unix seconds)
-                // https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html#s_IntradayRecord__DateTime
-                // https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime
-                var startDateTimeScidUtc = startDateTime.FromScMicroSecondsToDateTime();
-                var startDateTimeUnixSeconds = startDateTimeScidUtc.ToUnixSecondsDTC();
-                var responseRecord = new HistoricalPriceDataRecordResponse
-                {
-                    StartDateTime = startDateTimeUnixSeconds,
-                    OpenPrice = openPrice,
-                    HighPrice = highPrice,
-                    LowPrice = lowPrice,
-                    LastPrice = lastPrice,
-                    Volume = volume,
-                    BidVolume = bidVolume,
-                    AskVolume = askVolume,
-                    NumTrades = numTrades
-                };
-                yield return responseRecord;
             }
+        }
+
+        /// <summary>
+        /// Read a record
+        /// </summary>
+        /// <param name="br"></param>
+        /// <param name="prevDateTime"></param>
+        /// <returns><c>null</c> if error</returns>
+        private static HistoricalPriceDataRecordResponse ReadRecord(BinaryReader br, long prevDateTime)
+        {
+            var startDateTime = br.ReadInt64();
+            var openPrice = br.ReadSingle();
+            var highPrice = br.ReadSingle();
+            var lowPrice = br.ReadSingle();
+            var lastPrice = br.ReadSingle();
+            var numTrades = br.ReadUInt32();
+            var volume = br.ReadUInt32();
+            var bidVolume = br.ReadUInt32();
+            var askVolume = br.ReadUInt32();
+            if (startDateTime < prevDateTime)
+            {
+                // Skip this out-of-order record
+                var prev = prevDateTime.FromScMicroSecondsToDateTime().ToLocalTime();
+                var start = startDateTime.FromScMicroSecondsToDateTime().ToLocalTime();
+                s_logger.Debug("{Method} skipping out of order record {Start} before {Prev}", nameof(ReadRecord), start, prev);
+                return null;
+            }
+            if (lastPrice == 0)
+            {
+                // Skip this bad record. Seems rare but it does happen
+                var start = startDateTime.FromScMicroSecondsToDateTime().ToLocalTime();
+                s_logger.Debug("{Method} skipping bad record {Start} with lastPrice == 0", nameof(ReadRecord), start);
+                return null;
+            }
+            if (numTrades == 1)
+            {
+                // Ticks are supposed to have 0 openPrice, but sometimes have huge negative values
+                openPrice = 0;
+            }
+
+            // Convert the SCID StartDateTime (microseconds since 12/30/1899) to HistoricalPriceDataRecordResponse StartDateTime (unix seconds)
+            // https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html#s_IntradayRecord__DateTime
+            // https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime
+            var startDateTimeScidUtc = startDateTime.FromScMicroSecondsToDateTime();
+            var startDateTimeUnixSeconds = startDateTimeScidUtc.ToUnixSecondsDTC();
+            var responseRecord = new HistoricalPriceDataRecordResponse
+            {
+                StartDateTime = startDateTimeUnixSeconds,
+                OpenPrice = openPrice,
+                HighPrice = highPrice,
+                LowPrice = lowPrice,
+                LastPrice = lastPrice,
+                Volume = volume,
+                BidVolume = bidVolume,
+                AskVolume = askVolume,
+                NumTrades = numTrades
+            };
+            return responseRecord;
         }
     }
 }
