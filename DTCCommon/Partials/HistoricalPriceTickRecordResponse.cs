@@ -8,10 +8,31 @@ namespace DTCPB
 {
     public partial class HistoricalPriceDataTickRecordResponse : ICustomDiagnosticMessage
     {
-        public DateTime StartDateTimeUtc
+        private DateTime _dateTimeUtc;
+        private DateTime _dateTimeLocal;
+        
+        public DateTime DateTimeUtc
         {
-            get => dateTime_.DtcIntradayDateTimeWithMillisecondsToUtc();
-            set => dateTime_ = value.UtcToDtcDateTime();
+            get
+            {
+                if (_dateTimeUtc == System.DateTime.MinValue)
+                {
+                    _dateTimeUtc = dateTime_.DtcDateTimeWithMillisecondsToUtc();
+                }
+                return _dateTimeUtc;
+            }
+        }
+
+        public DateTime DateTimeLocal
+        {
+            get
+            {
+                if (_dateTimeLocal == System.DateTime.MinValue)
+                {
+                    _dateTimeLocal = DateTimeUtc.ToLocalTime();
+                }
+                return _dateTimeLocal;
+            }
         }
 
         public bool IsFinalRecordBool
@@ -22,7 +43,7 @@ namespace DTCPB
 
         public string ToDiagnosticString()
         {
-            return $"{StartDateTimeUtc}(UTC) O:{Price} V:{Volume} AtBidOrAskEnum:{AtBidOrAsk} Final{IsFinalRecordBool}";
+            return $"{DateTimeLocal}(Local) O:{Price} V:{Volume} AtBidOrAskEnum:{AtBidOrAsk} Final{IsFinalRecordBool}";
         }
     }
 }

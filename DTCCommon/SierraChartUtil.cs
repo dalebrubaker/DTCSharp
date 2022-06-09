@@ -926,7 +926,7 @@ namespace DTCCommon
         /// <param name="afterTimestampUtc">Don't return ticks at or before afterTimestampUtc</param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public static IEnumerable<HistoricalPriceDataRecordResponse> ReadRealtimeTicks(string path, DateTime afterTimestampUtc, CancellationToken cancellationToken)
+        public static IEnumerable<HistoricalPriceDataTickRecordResponse> ReadRealtimeTicks(string path, DateTime afterTimestampUtc, CancellationToken cancellationToken)
         {
             DebugDTC.Assert(path.EndsWith(".scid"));
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite); // FileShare.ReadWrite because SC is writing it
@@ -936,7 +936,7 @@ namespace DTCCommon
             var recordSize = header.RecordSize;
             var position = header.HeaderSize + index * recordSize;
             fs.Seek(position, SeekOrigin.Begin);
-            var prevDateTime = 0L;
+            var prevDateTime = 0.0;
             while (!cancellationToken.IsCancellationRequested)
             {
                 var count = (fs.Length - position) / recordSize;
@@ -946,14 +946,14 @@ namespace DTCCommon
                     Thread.Sleep(1);
                     continue;
                 }
-                s_logger.Debug("{Method} reading {Count} ticks", nameof(ReadRealtimeTicks), count);
+                //s_logger.Debug("{Method} reading {Count} ticks", nameof(ReadRealtimeTicks), count);
                 while (count-- > 0)
                 {
-                    var responseRecord = ReadRecord(br, prevDateTime);
+                    var responseRecord = ReadTickRecord(br, prevDateTime);
                     if (responseRecord != null)
                     {
                         yield return responseRecord;
-                        prevDateTime = responseRecord.StartDateTime;
+                        prevDateTime = responseRecord.DateTime;
                     }
                     position += recordSize;
                 }
@@ -966,7 +966,7 @@ namespace DTCCommon
         /// <param name="br"></param>
         /// <param name="prevDateTime"></param>
         /// <returns><c>null</c> if error</returns>
-        private static HistoricalPriceDataRecordResponse ReadRecord(BinaryReader br, long prevDateTime)
+        private static HistoricalPriceDataTickRecordResponse ReadTickRecord(BinaryReader br, double prevDateTime)
         {
             var startDateTime = br.ReadInt64();
             var openPrice = br.ReadSingle();
@@ -977,44 +977,44 @@ namespace DTCCommon
             var volume = br.ReadUInt32();
             var bidVolume = br.ReadUInt32();
             var askVolume = br.ReadUInt32();
+            var dateTime = startDateTime.FromScMicroSecondsToDateTime();
             if (startDateTime < prevDateTime)
             {
                 // Skip this out-of-order record
-                var prev = prevDateTime.FromScMicroSecondsToDateTime().ToLocalTime();
-                var start = startDateTime.FromScMicroSecondsToDateTime().ToLocalTime();
-                s_logger.Debug("{Method} skipping out of order record {Start} before {Prev}", nameof(ReadRecord), start, prev);
+                var prev = prevDateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
+                s_logger.Debug("{Method} skipping out of order record {Start} before {Prev}", nameof(ReadTickRecord), dateTime.ToLocalTime(), prev);
                 return null;
             }
             if (lastPrice == 0)
             {
                 // Skip this bad record. Seems rare but it does happen
-                var start = startDateTime.FromScMicroSecondsToDateTime().ToLocalTime();
-                s_logger.Debug("{Method} skipping bad record {Start} with lastPrice == 0", nameof(ReadRecord), start);
+                s_logger.Debug("{Method} skipping bad record {Start} with lastPrice == 0", nameof(ReadTickRecord), dateTime.ToLocalTime());
                 return null;
-            }
-            if (numTrades == 1)
-            {
-                // Ticks are supposed to have 0 openPrice, but sometimes have huge negative values
-                openPrice = 0;
             }
 
             // Convert the SCID StartDateTime (microseconds since 12/30/1899) to HistoricalPriceDataRecordResponse StartDateTime (unix seconds)
             // https://www.sierrachart.com/index.php?page=doc/IntradayDataFileFormat.html#s_IntradayRecord__DateTime
             // https://dtcprotocol.org/index.php?page=doc/DTCMessageDocumentation.php#t_DateTime
-            var startDateTimeScidUtc = startDateTime.FromScMicroSecondsToDateTime();
-            var startDateTimeUnixSeconds = startDateTimeScidUtc.ToUnixSecondsDTC();
-            var responseRecord = new HistoricalPriceDataRecordResponse
+            var atBidOrAsk = AtBidOrAskEnum.BidAskUnset;
+            if (bidVolume > 0)
             {
-                StartDateTime = startDateTimeUnixSeconds,
-                OpenPrice = openPrice,
-                HighPrice = highPrice,
-                LowPrice = lowPrice,
-                LastPrice = lastPrice,
-                Volume = volume,
-                BidVolume = bidVolume,
-                AskVolume = askVolume,
-                NumTrades = numTrades
+                atBidOrAsk = AtBidOrAskEnum.AtBid;
+            }
+            else if (askVolume > 0)
+            {
+                atBidOrAsk = AtBidOrAskEnum.AtAsk;
+            }
+            var dateTimeWithMilliseconds = dateTime.UtcToDtcDateTimeWithMilliseconds();
+            var responseRecord = new HistoricalPriceDataTickRecordResponse
+            {
+                DateTime = dateTimeWithMilliseconds,
+                AtBidOrAsk = atBidOrAsk,
+                Price = lastPrice,
+                Volume = volume
             };
+            // var now = DateTime.Now;
+            // var lateMs = (int)(now - responseRecord.DateTimeLocal).TotalMilliseconds;
+            // s_logger.Debug("{Method} Tick received at {Now} stamped {Timestamp}: Late {Late} ms", nameof(ReadRecord), now, responseRecord.DateTimeLocal, lateMs);
             return responseRecord;
         }
     }

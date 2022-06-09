@@ -8,7 +8,6 @@ using DTCClient;
 using DTCCommon;
 using DTCPB;
 using Google.Protobuf;
-using SerilogTimings;
 
 namespace TestClient
 {
