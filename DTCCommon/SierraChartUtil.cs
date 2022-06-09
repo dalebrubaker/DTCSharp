@@ -936,10 +936,17 @@ namespace DTCCommon
             var recordSize = header.RecordSize;
             var position = header.HeaderSize + index * recordSize;
             fs.Seek(position, SeekOrigin.Begin);
-            var prevDateTime = 0.0;
+            var prevDateTime = DateTime.MinValue;
+            var prevLength = fs.Length;
             while (!cancellationToken.IsCancellationRequested)
             {
-                var count = (fs.Length - position) / recordSize;
+                var length = fs.Length;
+                if (length < prevLength)
+                {
+                    throw new InvalidOperationException($"Truncated from {prevLength} to {length}");
+                }
+                prevLength = length;
+                var count = (length - position) / recordSize;
                 if (count == 0)
                 {
                     // Wait for a tick to arrive
@@ -953,20 +960,21 @@ namespace DTCCommon
                     if (responseRecord != null)
                     {
                         yield return responseRecord;
-                        prevDateTime = responseRecord.DateTime;
+                        prevDateTime = responseRecord.DateTimeUtc;
                     }
                     position += recordSize;
                 }
             }
         }
 
+
         /// <summary>
         /// Read a record
         /// </summary>
         /// <param name="br"></param>
-        /// <param name="prevDateTime"></param>
+        /// <param name="prevDateTimeUtc"></param>
         /// <returns><c>null</c> if error</returns>
-        private static HistoricalPriceDataTickRecordResponse ReadTickRecord(BinaryReader br, double prevDateTime)
+        private static HistoricalPriceDataTickRecordResponse ReadTickRecord(BinaryReader br, DateTime prevDateTimeUtc)
         {
             var startDateTime = br.ReadInt64();
             var openPrice = br.ReadSingle();
@@ -977,18 +985,18 @@ namespace DTCCommon
             var volume = br.ReadUInt32();
             var bidVolume = br.ReadUInt32();
             var askVolume = br.ReadUInt32();
-            var dateTime = startDateTime.FromScMicroSecondsToDateTime();
-            if (startDateTime < prevDateTime)
+            var dateTimeUtc = startDateTime.FromScMicroSecondsToDateTime();
+            if (dateTimeUtc < prevDateTimeUtc)
             {
                 // Skip this out-of-order record
-                var prev = prevDateTime.DtcDateTimeWithMillisecondsToUtc().ToLocalTime();
-                s_logger.Debug("{Method} skipping out of order record {Start} before {Prev}", nameof(ReadTickRecord), dateTime.ToLocalTime(), prev);
+                s_logger.Debug("{Method} skipping out of order record {Start} before {Prev}", nameof(ReadTickRecord), dateTimeUtc.ToLocalTime(), 
+                    prevDateTimeUtc.ToLocalTime());
                 return null;
             }
             if (lastPrice == 0)
             {
                 // Skip this bad record. Seems rare but it does happen
-                s_logger.Debug("{Method} skipping bad record {Start} with lastPrice == 0", nameof(ReadTickRecord), dateTime.ToLocalTime());
+                s_logger.Debug("{Method} skipping bad record {Start} with lastPrice == 0", nameof(ReadTickRecord), dateTimeUtc.ToLocalTime());
                 return null;
             }
 
@@ -1004,7 +1012,7 @@ namespace DTCCommon
             {
                 atBidOrAsk = AtBidOrAskEnum.AtAsk;
             }
-            var dateTimeWithMilliseconds = dateTime.UtcToDtcDateTimeWithMilliseconds();
+            var dateTimeWithMilliseconds = dateTimeUtc.UtcToDtcDateTimeWithMilliseconds();
             var responseRecord = new HistoricalPriceDataTickRecordResponse
             {
                 DateTime = dateTimeWithMilliseconds,
@@ -1012,9 +1020,9 @@ namespace DTCCommon
                 Price = lastPrice,
                 Volume = volume
             };
-            // var now = DateTime.Now;
-            // var lateMs = (int)(now - responseRecord.DateTimeLocal).TotalMilliseconds;
-            // s_logger.Debug("{Method} Tick received at {Now} stamped {Timestamp}: Late {Late} ms", nameof(ReadRecord), now, responseRecord.DateTimeLocal, lateMs);
+            var now = DateTime.Now;
+            var lateMs = (int)(now - responseRecord.DateTimeLocal).TotalMilliseconds;
+            s_logger.Debug("{Method} Tick received at {Now} stamped {Timestamp}: Late {Late} ms", nameof(ReadTickRecord), now, responseRecord.DateTimeLocal, lateMs);
             return responseRecord;
         }
     }

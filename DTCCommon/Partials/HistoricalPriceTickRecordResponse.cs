@@ -43,7 +43,7 @@ namespace DTCPB
 
         public string ToDiagnosticString()
         {
-            return $"{DateTimeLocal}(Local) O:{Price} V:{Volume} AtBidOrAskEnum:{AtBidOrAsk} Final{IsFinalRecordBool}";
+            return $"{DateTimeLocal}(Local) P:{Price} V:{Volume} AtBidOrAskEnum:{AtBidOrAsk} Final{IsFinalRecordBool}";
         }
     }
 }
