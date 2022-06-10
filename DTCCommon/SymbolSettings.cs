@@ -104,8 +104,6 @@ namespace DTCCommon
                 {
                     foreach (var symbolPattern in _nodesBySymbolPattern.Keys)
                     {
-                        if (symbolPattern.Contains("ADR"))
-                        {}
                         if (IsMatch(symbolPattern, symbol))
                         {
                             node = _nodesBySymbolPattern[symbolPattern];
