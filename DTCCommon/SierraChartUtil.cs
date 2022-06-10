@@ -967,7 +967,6 @@ namespace DTCCommon
             }
         }
 
-
         /// <summary>
         /// Read a record
         /// </summary>
@@ -989,7 +988,7 @@ namespace DTCCommon
             if (dateTimeUtc < prevDateTimeUtc)
             {
                 // Skip this out-of-order record
-                s_logger.Debug("{Method} skipping out of order record {Start} before {Prev}", nameof(ReadTickRecord), dateTimeUtc.ToLocalTime(), 
+                s_logger.Debug("{Method} skipping out of order record {Start} before {Prev}", nameof(ReadTickRecord), dateTimeUtc.ToLocalTime(),
                     prevDateTimeUtc.ToLocalTime());
                 return null;
             }

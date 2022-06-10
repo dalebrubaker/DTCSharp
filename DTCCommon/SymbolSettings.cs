@@ -33,10 +33,17 @@ namespace DTCCommon
                 var settings = doc.GetElementsByTagName("settings");
                 foreach (XmlNode setting in settings)
                 {
-                    var symbolPattern = setting.FirstChild.InnerText;
-                    if (!_nodesBySymbolPattern.ContainsKey(symbolPattern))
+                    foreach (XmlNode childNode in setting.ChildNodes)
                     {
-                        _nodesBySymbolPattern.Add(symbolPattern, setting);
+                        if (childNode.Name == "symbol")
+                        {
+                            var symbolPattern = childNode.InnerText;
+                            if (!_nodesBySymbolPattern.ContainsKey(symbolPattern))
+                            {
+                                _nodesBySymbolPattern.Add(symbolPattern, setting);
+                            }
+                            break;
+                        }
                     }
                 }
             }
@@ -97,6 +104,8 @@ namespace DTCCommon
                 {
                     foreach (var symbolPattern in _nodesBySymbolPattern.Keys)
                     {
+                        if (symbolPattern.Contains("ADR"))
+                        {}
                         if (IsMatch(symbolPattern, symbol))
                         {
                             node = _nodesBySymbolPattern[symbolPattern];
