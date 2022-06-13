@@ -1021,7 +1021,7 @@ namespace DTCCommon
             };
             var now = DateTime.Now;
             var lateMs = (int)(now - responseRecord.DateTimeLocal).TotalMilliseconds;
-            s_logger.Debug("{Method} Tick received at {Now} stamped {Timestamp}: Late {Late} ms", nameof(ReadTickRecord), now, responseRecord.DateTimeLocal, lateMs);
+            //s_logger.Debug("{Method} Tick received at {Now} stamped {Timestamp}: Late {Late} ms", nameof(ReadTickRecord), now, responseRecord.DateTimeLocal, lateMs);
             return responseRecord;
         }
     }
