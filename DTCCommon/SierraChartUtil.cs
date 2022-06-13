@@ -830,7 +830,7 @@ namespace DTCCommon
                         {
                             var arrayValue = br.ReadInt64();
 #if DEBUG
-                            var startDateTimeUtc = arrayValue.FromScMicroSecondsToDateTime();
+                            // can crash on bad data var startDateTimeUtc = arrayValue.FromScMicroSecondsToDateTime();
 #endif
                             if (!arrayValue.Equals(givenStartDateTime))
                             {
