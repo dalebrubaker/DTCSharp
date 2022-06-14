@@ -19,7 +19,7 @@ namespace DTCCommon
                         case OpenCloseTradeEnum.TradeClose:
                             return OrderAction.BuyToCover;
                         case OpenCloseTradeEnum.TradeUnset:
-                            return OrderAction.Unset;
+                            return OrderAction.Buy; // If TradeUnset, assume TradeOpen
                         default:
                             throw new ArgumentOutOfRangeException(nameof(openClose), openClose, null);
                     }
@@ -31,7 +31,7 @@ namespace DTCCommon
                         case OpenCloseTradeEnum.TradeClose:
                             return OrderAction.Sell;
                         case OpenCloseTradeEnum.TradeUnset:
-                            return OrderAction.Unset;
+                            return OrderAction.Sell; // If TradeUnset, assume TradeClose
                         default:
                             throw new ArgumentOutOfRangeException(nameof(openClose), openClose, null);
                     }
