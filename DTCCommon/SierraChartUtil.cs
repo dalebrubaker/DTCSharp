@@ -654,6 +654,7 @@ namespace DTCCommon
         {
             if (!Directory.Exists(sierraChartDirectory))
             {
+                var cwd = Directory.GetCurrentDirectory();
                 return null;
             }
             try
@@ -666,6 +667,7 @@ namespace DTCCommon
                         var xmlPath = Path.Combine(sierraChartDirectory, "SymbolSettings", settingsFilename);
                         if (!File.Exists(xmlPath))
                         {
+                            var cwd = Directory.GetCurrentDirectory();
                             throw new FileNotFoundException(xmlPath);
                         }
                         symbolSettings = new SymbolSettings(xmlPath);
