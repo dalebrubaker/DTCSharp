@@ -7,8 +7,13 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
     <UserSecretsId>dbaac2ee-90c0-4669-b471-ddc64fe60cf5</UserSecretsId>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugMostly|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\DebugMostly\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugMostly|x64'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\DebugMostly\</OutputPath>
   </PropertyGroup>
