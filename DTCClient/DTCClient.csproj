@@ -14,7 +14,7 @@
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	</PropertyGroup>
 	<PropertyGroup>
-		<StartupObject/>
+		<StartupObject />
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
 		<OutputPath>bin\x64\Debug\</OutputPath>
@@ -42,17 +42,17 @@
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\DTCCommon\DTCCommon.csproj"/>
+		<ProjectReference Include="..\DTCCommon\DTCCommon.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf">
-			<Version>3.21.1</Version>
+			<Version>3.21.2</Version>
 		</PackageReference>
-		<PackageReference Include="Microsoft.CSharp" Version="4.7.0"/>
-		<PackageReference Include="Serilog" Version="2.11.0"/>
-		<PackageReference Include="SerilogTimings" Version="2.3.0"/>
+		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+		<PackageReference Include="Serilog" Version="2.11.0" />
+		<PackageReference Include="SerilogTimings" Version="3.0.0" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Remove="upgrade-assistant.clef"/>
+		<None Remove="upgrade-assistant.clef" />
 	</ItemGroup>
 </Project>
