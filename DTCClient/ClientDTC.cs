@@ -67,6 +67,7 @@ public partial class ClientDTC : TcpClient
     /// </summary>
     public ClientDTC()
     {
+
         InstanceId = s_instanceId++;
         _cts = new CancellationTokenSource();
         _responsesQueue = new BlockingCollection<MessageProto>(1024 * 1024);
