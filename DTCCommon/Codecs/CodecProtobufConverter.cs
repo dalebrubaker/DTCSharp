@@ -2,49 +2,48 @@
 using Google.Protobuf;
 using Serilog;
 
-namespace DTCCommon.Codecs
+namespace DTCCommon.Codecs;
+
+public static class CodecProtobufConverter
 {
-    public static class CodecProtobufConverter
+    private static readonly ILogger s_logger = Log.ForContext(typeof(CodecProtobufConverter));
+
+    /// <summary>
+    ///     This is the Func used when the current encoding is EncodingEnum.ProtocolBuffers
+    /// </summary>
+    /// <param name="messageProto"></param>
+    /// <returns>MessageEncoded with bytes for ProtocolBuffers</returns>
+    public static MessageEncoded EncodeProtobuf(MessageProto messageProto)
     {
-        private static readonly ILogger s_logger = Log.ForContext(typeof(CodecProtobufConverter));
+        var bytes = messageProto.Message.ToByteArray();
+        return messageProto.IsExtended ? new MessageEncoded(messageProto.MessageTypeExtended, bytes) : new MessageEncoded(messageProto.MessageType, bytes);
+    }
 
-        /// <summary>
-        /// This is the Func used when the current encoding is EncodingEnum.ProtocolBuffers
-        /// </summary>
-        /// <param name="messageProto"></param>
-        /// <returns>MessageEncoded with bytes for ProtocolBuffers</returns>
-        public static MessageEncoded EncodeProtobuf(MessageProto messageProto)
+    /// <summary>
+    ///     This is the Func used when the current encoding is EncodingEnum.ProtocolBuffers
+    /// </summary>
+    /// <param name="messageEncoded"></param>
+    /// <returns></returns>
+    public static MessageProto DecodeProtobuf(MessageEncoded messageEncoded)
+    {
+        if (messageEncoded.IsExtended)
         {
-            var bytes = messageProto.Message.ToByteArray();
-            return messageProto.IsExtended ? new MessageEncoded(messageProto.MessageTypeExtended, bytes) : new MessageEncoded(messageProto.MessageType, bytes);
+            var message1 = EmptyProtobufs.GetEmptyProtobuf(messageEncoded.MessageTypeExtended);
+            message1.MergeFrom(messageEncoded.MessageBytes);
+            var result1 = new MessageProto(messageEncoded.MessageTypeExtended, message1);
+            return result1;
         }
-
-        /// <summary>
-        /// This is the Func used when the current encoding is EncodingEnum.ProtocolBuffers
-        /// </summary>
-        /// <param name="messageEncoded"></param>
-        /// <returns></returns>
-        public static MessageProto DecodeProtobuf(MessageEncoded messageEncoded)
+        try
         {
-            if (messageEncoded.IsExtended)
-            {
-                var message1 = EmptyProtobufs.GetEmptyProtobuf(messageEncoded.MessageTypeExtended);
-                message1.MergeFrom(messageEncoded.MessageBytes);
-                var result1 = new MessageProto(messageEncoded.MessageTypeExtended, message1);
-                return result1;
-            }
-            try
-            {
-                var message = EmptyProtobufs.GetEmptyProtobuf(messageEncoded.MessageType);
-                message.MergeFrom(messageEncoded.MessageBytes);
-                var result = new MessageProto(messageEncoded.MessageType, message);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                s_logger.Error(ex, "MessageType={MessageType} {Message}", messageEncoded.MessageType, ex.Message);
-                throw;
-            }
+            var message = EmptyProtobufs.GetEmptyProtobuf(messageEncoded.MessageType);
+            message.MergeFrom(messageEncoded.MessageBytes);
+            var result = new MessageProto(messageEncoded.MessageType, message);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            s_logger.Error(ex, "MessageType={MessageType} {Message}", messageEncoded.MessageType, ex.Message);
+            throw;
         }
     }
 }

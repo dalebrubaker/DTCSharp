@@ -2,26 +2,25 @@
 using System.Runtime.Serialization;
 
 // ReSharper disable once CheckNamespace
-namespace DTCCommon
+namespace DTCCommon;
+
+[Serializable]
+public class DTCSharpException : Exception
 {
-    [Serializable]
-    public class DTCSharpException : Exception
+    public DTCSharpException()
     {
-        public DTCSharpException()
-        {
-        }
+    }
 
-        public DTCSharpException(string message) : base(message)
-        {
-        }
+    public DTCSharpException(string message) : base(message)
+    {
+    }
 
-        public DTCSharpException(string message, Exception inner) : base(message, inner)
-        {
-        }
+    public DTCSharpException(string message, Exception inner) : base(message, inner)
+    {
+    }
 
-        // Ensure Exception is Serializable
-        protected DTCSharpException(SerializationInfo info, StreamingContext ctxt) : base(info, ctxt)
-        {
-        }
+    // Ensure Exception is Serializable
+    protected DTCSharpException(SerializationInfo info, StreamingContext ctxt) : base(info, ctxt)
+    {
     }
 }

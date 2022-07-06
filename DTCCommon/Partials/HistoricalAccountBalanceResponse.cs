@@ -4,18 +4,17 @@ using Google.Protobuf;
 
 // ReSharper disable once CheckNamespace
 // ReSharper disable once IdentifierTypo
-namespace DTCPB
+namespace DTCPB;
+
+public partial class HistoricalAccountBalanceResponse : ICustomDiagnosticMessage
 {
-    public partial class HistoricalAccountBalanceResponse : ICustomDiagnosticMessage
+    public DateTime DateTimeUtc => dateTime_.DtcDateTimeWithMillisecondsToUtc();
+
+    public bool IsNoAccountBalances => NoAccountBalances != 0;
+
+    public string ToDiagnosticString()
     {
-        public DateTime DateTimeUtc => dateTime_.DtcDateTimeWithMillisecondsToUtc();
-
-        public bool IsNoAccountBalances => NoAccountBalances != 0;
-
-        public string ToDiagnosticString()
-        {
-            var result = $"'{TradeAccount} {CashBalance}";
-            return result;
-        }
+        var result = $"'{TradeAccount} {CashBalance}";
+        return result;
     }
 }

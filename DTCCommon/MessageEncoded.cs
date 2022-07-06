@@ -1,59 +1,58 @@
 ﻿using DTCPB;
 
-namespace DTCCommon
+namespace DTCCommon;
+
+/// <summary>
+///     Pairs messageType with the message bytes as they are encoded over the wire, according to the current protocol (e.g. BinaryEncoding, ProtocolBuffers...
+/// </summary>
+public class MessageEncoded
 {
-    /// <summary>
-    /// Pairs messageType with the message bytes as they are encoded over the wire, according to the current protocol (e.g. BinaryEncoding, ProtocolBuffers... 
-    /// </summary>
-    public class MessageEncoded
+    public MessageEncoded(DTCSharpMessageType messageType, byte[] messageBytes)
     {
-        public bool IsExtended { get; } // using MessageTypeExtended instead of MessageType
+        MessageTypeExtended = messageType;
+        MessageBytes = messageBytes;
+        IsExtended = true;
+    }
 
-        /// <summary>
-        /// Pairs messageType with the corresponding Protobuf IMessage
-        /// </summary>
-        public DTCSharpMessageType MessageTypeExtended { get; private set; }
+    public MessageEncoded(DTCMessageType messageType, byte[] messageBytes)
+    {
+        MessageType = messageType;
+        MessageBytes = messageBytes;
+    }
 
-        public DTCMessageType MessageType { get; private set; }
-
-        /// <summary>
-        /// The message bytes as they are encoded over the wire, according to the current protocol (e.g. BinaryEncoding, ProtocolBuffers...
-        /// These do NOT include the header size/type
-        /// </summary>
-        public byte[] MessageBytes { get; }
-
-        public MessageEncoded(DTCSharpMessageType messageType, byte[] messageBytes)
+    public MessageEncoded(short messageTypeShort, byte[] messageBytes)
+    {
+        if (messageTypeShort >= 10000)
         {
-            MessageTypeExtended = messageType;
-            MessageBytes = messageBytes;
+            MessageTypeExtended = (DTCSharpMessageType)messageTypeShort;
             IsExtended = true;
         }
-
-        public MessageEncoded(DTCMessageType messageType, byte[] messageBytes)
+        else
         {
-            MessageType = messageType;
-            MessageBytes = messageBytes;
+            MessageType = (DTCMessageType)messageTypeShort;
         }
+        MessageBytes = messageBytes;
+    }
 
-        public MessageEncoded(short messageTypeShort, byte[] messageBytes)
-        {
-            if (messageTypeShort >= 10000)
-            {
-                MessageTypeExtended = (DTCSharpMessageType)messageTypeShort;
-                IsExtended = true;
-            }
-            else
-            {
-                MessageType = (DTCMessageType)messageTypeShort;
-            }
-            MessageBytes = messageBytes;
-        }
+    public bool IsExtended { get; } // using MessageTypeExtended instead of MessageType
 
-        internal short MessageTypeAsShort => IsExtended ? (short)MessageTypeExtended : (short)MessageType;
+    /// <summary>
+    ///     Pairs messageType with the corresponding Protobuf IMessage
+    /// </summary>
+    public DTCSharpMessageType MessageTypeExtended { get; }
 
-        public override string ToString()
-        {
-            return IsExtended ? $"{MessageTypeExtended}: count={MessageBytes.Length:N0} bytes" : $"{MessageType}: count={MessageBytes.Length:N0} bytes";
-        }
+    public DTCMessageType MessageType { get; }
+
+    /// <summary>
+    ///     The message bytes as they are encoded over the wire, according to the current protocol (e.g. BinaryEncoding, ProtocolBuffers...
+    ///     These do NOT include the header size/type
+    /// </summary>
+    public byte[] MessageBytes { get; }
+
+    internal short MessageTypeAsShort => IsExtended ? (short)MessageTypeExtended : (short)MessageType;
+
+    public override string ToString()
+    {
+        return IsExtended ? $"{MessageTypeExtended}: count={MessageBytes.Length:N0} bytes" : $"{MessageType}: count={MessageBytes.Length:N0} bytes";
     }
 }

@@ -11,18 +11,24 @@ public class TestFixture : IDisposable
     private static int s_counterExit;
 
     /// <summary>
-    /// must be parameterless
+    ///     must be parameterless
     /// </summary>
     public TestFixture()
     {
         // Allow logging during Tests
         SetLogging();
-        var method = (MethodBase.GetCurrentMethod());
+        var method = MethodBase.GetCurrentMethod();
         var stackTrace = Environment.StackTrace;
         Log.Verbose("Starting {Counter} {ClassType}", s_counterStart++, GetType().Name);
     }
 
-     public static void SetLogging()
+    public void Dispose()
+    {
+        Log.Verbose("Exiting {counter} {classType}", s_counterExit++, GetType().Name);
+        Log.CloseAndFlush();
+    }
+
+    public static void SetLogging()
     {
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
@@ -32,11 +38,5 @@ public class TestFixture : IDisposable
             .ReadFrom
             .Configuration(configuration)
             .CreateLogger();
-    }
-
-    public void Dispose()
-    {
-        Log.Verbose("Exiting {counter} {classType}", s_counterExit++, GetType().Name);
-        Log.CloseAndFlush();
     }
 }

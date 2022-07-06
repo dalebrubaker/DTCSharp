@@ -1,9 +1,8 @@
 ﻿using Google.Protobuf;
 
-namespace DTCPB
+namespace DTCPB;
+
+public interface IMessageSymbolId : IMessage
 {
-    public interface IMessageSymbolId : IMessage
-    {
-        uint SymbolID { get; set; }
-    }
+    uint SymbolID { get; set; }
 }

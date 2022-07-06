@@ -12,10 +12,10 @@
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	</PropertyGroup>
 	<PropertyGroup>
-		<StartupObject />
+		<StartupObject/>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
 		<OutputPath>bin\x64\Debug\</OutputPath>
@@ -32,11 +32,11 @@
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugMostly|x64'">
-	  <DebugSymbols>true</DebugSymbols>
-	  <OutputPath>bin\DebugMostly\</OutputPath>
-	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-	  <LangVersion>latest</LangVersion>
+		<DebugSymbols>true</DebugSymbols>
+		<OutputPath>bin\DebugMostly\</OutputPath>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugMostly|x64'">
 		<DebugSymbols>true</DebugSymbols>
@@ -46,8 +46,8 @@
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
-		<Protobuf Include="**/*proto" ProtoRoot="protos" />
-		<Protobuf Include="**/proto/google/protobuf/*proto" />
+		<Protobuf Include="**/*proto" ProtoRoot="protos"/>
+		<Protobuf Include="**/proto/google/protobuf/*proto"/>
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf">
@@ -72,15 +72,15 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-		<Compile Remove="Codecs\Codec.cs" />
-		<Compile Remove="Codecs\CodecBinary.cs" />
-		<Compile Remove="Codecs\CodecProtobuf.cs" />
-		<Compile Remove="Codecs\ICodecConverter.cs" />
-		<Compile Remove="Codecs\ICodecDTC.cs" />
+		<Compile Remove="Codecs\Codec.cs"/>
+		<Compile Remove="Codecs\CodecBinary.cs"/>
+		<Compile Remove="Codecs\CodecProtobuf.cs"/>
+		<Compile Remove="Codecs\ICodecConverter.cs"/>
+		<Compile Remove="Codecs\ICodecDTC.cs"/>
 	</ItemGroup>
 	<ItemGroup>
-		<None Remove="upgrade-assistant.clef" />
-		<None Remove=".upgrade-assistant" />
+		<None Remove="upgrade-assistant.clef"/>
+		<None Remove=".upgrade-assistant"/>
 	</ItemGroup>
-	<PropertyGroup />
+	<PropertyGroup/>
 </Project>
